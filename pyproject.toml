@@ -43,6 +43,7 @@ torchvision = { index = "pytorch-cu128" }
 
 [dependency-groups]
 dev = [
+    "nbstripout>=0.9.1",
     "pytest>=9.1.1",
     "ruff>=0.16.9",
 ]
