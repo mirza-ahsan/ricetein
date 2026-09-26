@@ -1,0 +1,77 @@
+# Virtual environment
+.venv/
+venv/
+env/
+ENV/
+
+# Python bytecode & cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Data and caching
+data/raw/
+data/downloads/
+data/tmp/
+cache/
+*.zip
+*.tar
+*.tar.gz
+*.tgz
+*.7z
+
+# Model checkpoints & artifacts
+runs/**/*.pt
+runs/**/*.pth
+runs/**/*.bin
+runs/**/*.ckpt
+runs/**/*.safetensors
+runs/**/*.onnx
+runs/**/*.npz
+
+# Environment variables & secrets / tokens
+.env
+.env.*
+*.env
+*.token
+*_token
+*token.txt
+*token.json
+kaggle.json
+*.key
+*.secret
+*.pem
+
+# LaTeX build artifacts
+*.aux
+*.bbl
+*.bcf
+*.blg
+*.fdb_latexmk
+*.fls
+*.log
+*.out
+*.run.xml
+*.synctex.gz
+*.toc
+*.lot
+*.lof
+paper/*.pdf
+
+# IDEs and OS files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
