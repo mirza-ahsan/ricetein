@@ -75,3 +75,12 @@ paper/*.pdf
 *~
 .DS_Store
 Thumbs.db
+
+# Kaggle CLI staging and downloads (keep only the metadata files)
+kaggle/outputs/
+kaggle/paddy_upload/*
+!kaggle/paddy_upload/dataset-metadata.json
+kaggle/code_dataset/*
+!kaggle/code_dataset/dataset-metadata.json
+kaggle/kernels/*/*.ipynb
+!kaggle/kernels/00-smoke/*.ipynb
