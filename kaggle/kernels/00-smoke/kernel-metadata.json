@@ -12,7 +12,8 @@
   "dataset_sources": [
     "minhhuy2810/rice-diseases-image-dataset",
     "aztrek/paddy-doctor-full",
-    "aztrek/ricetein-code"
+    "aztrek/ricetein-code",
+    "aztrek/ricetein-weights"
   ],
   "competition_sources": [],
   "kernel_sources": [],
