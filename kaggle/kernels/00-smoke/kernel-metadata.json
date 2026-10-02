@@ -1,0 +1,20 @@
+{
+  "id": "aztrek/ricetein-00-smoke",
+  "title": "ricetein-00-smoke",
+  "code_file": "smoke_test.ipynb",
+  "language": "python",
+  "kernel_type": "notebook",
+  "is_private": "true",
+  "enable_gpu": "true",
+  "enable_tpu": "false",
+  "enable_internet": "true",
+  "machine_shape": "NvidiaTeslaT4",
+  "dataset_sources": [
+    "minhhuy2810/rice-diseases-image-dataset",
+    "aztrek/paddy-doctor-full",
+    "aztrek/ricetein-code"
+  ],
+  "competition_sources": [],
+  "kernel_sources": [],
+  "model_sources": []
+}
