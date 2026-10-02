@@ -28,10 +28,10 @@ from typing import Any, Mapping
 
 import psutil
 
+from src.kaggle_bootstrap import CODE_DATASET_SLUG, find_kaggle_input
+
 REPO_ROOT = Path(__file__).resolve().parents[1]
-KAGGLE_INPUT = Path("/kaggle/input")
 KAGGLE_WORKING = Path("/kaggle/working")
-CODE_DATASET_SLUG = "ricetein-code"
 
 # Package versions written into every record (missing ones are recorded as None).
 TRACKED_PACKAGES = ("torch", "torchvision", "timm", "transformers", "numpy", "scikit-learn", "pandas")
@@ -44,21 +44,6 @@ def on_kaggle() -> bool:
 def get_default_runs_dir() -> Path:
     """``/kaggle/working/runs`` on Kaggle, otherwise ``<repo>/runs`` (whatever the working directory)."""
     return KAGGLE_WORKING / "runs" if on_kaggle() else REPO_ROOT / "runs"
-
-
-def find_kaggle_input(slug: str) -> Path | None:
-    """Locate a mounted Kaggle dataset or notebook output by its slug.
-
-    Kaggle has used both ``/kaggle/input/<slug>`` and
-    ``/kaggle/input/datasets/<owner>/<slug>`` layouts, so both are searched.
-    """
-    if not KAGGLE_INPUT.exists():
-        return None
-    direct = KAGGLE_INPUT / slug
-    if direct.is_dir():
-        return direct
-    matches = sorted(p for p in KAGGLE_INPUT.glob(f"*/*/{slug}") if p.is_dir())
-    return matches[0] if matches else None
 
 
 def _git(*args: str) -> str:
