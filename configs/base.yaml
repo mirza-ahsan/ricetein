@@ -1,2 +1,186 @@
-SEED: 0
-DATA_DIR: "../data/raw"
+# ===================================================================
+# configs/base.yaml: project-wide settings shared by every stage
+# ===================================================================
+# Every experiment file starts with `extends: base.yaml` and only adds or
+# overrides what it needs (src/config.py merges them).
+#
+# Rules:
+#   - Paths are relative to the REPOSITORY ROOT, never to the current folder.
+#     src/config.py turns them into real paths on each machine (laptop, Kaggle).
+#   - Stage-specific settings (learning rates, epochs, batch sizes, ...) do NOT
+#     belong here; they go in that stage's own file under configs/.
+#   - Values must agree with the pre-declared methodology
+#     (deliverables/phase3/source/sections/methodology.tex). If they disagree,
+#     the methodology wins.
+# ===================================================================
+
+# -------------------------------------------------------------------
+# Seeds (any fixed integers; never change them once results exist)
+# -------------------------------------------------------------------
+seed: 0               # training seed: model start, shuffling, version picks, dropout
+split_seed: 2026      # 5-fold split only (Stage 3); kept separate so changing `seed` never moves photos between folds
+
+# -------------------------------------------------------------------
+# Classes: this order defines class ids 0-3 and the column order of every
+# predictions file. NEVER reorder.
+# -------------------------------------------------------------------
+classes: [healthy, leaf_blast, brown_spot, hispa]
+
+# -------------------------------------------------------------------
+# Datasets
+#   local_dir   : repo-relative folder on the laptop (data/raw is git-ignored)
+#   kaggle_slug : name of the attached Kaggle dataset (found by name on Kaggle)
+#   image_subdir: folder inside the dataset that holds the class folders
+#   class_folders: our class name -> folder name in that dataset
+# -------------------------------------------------------------------
+datasets:
+  primary:                          # Rice Diseases Image Dataset (Do, 2019): training, tuning, in-domain test
+    local_dir: data/raw/rice_diseases
+    kaggle_slug: rice-diseases-image-dataset
+    image_subdir: LabelledRice/Labelled
+    ignored_subdirs: [RiceDiseaseDataset]   # 2,092 exact copies of LabelledRice/Labelled (verified); never read
+    image_extension: .jpg
+    version: "2019-11-15"           # Kaggle "last updated" date (single release)
+    licence: MIT
+    expected_counts: {healthy: 1488, leaf_blast: 779, brown_spot: 523, hispa: 565}   # verified 2026-10-02; total 3,355
+    class_folders:
+      healthy: Healthy
+      leaf_blast: LeafBlast
+      brown_spot: BrownSpot
+      hispa: Hispa
+
+  paddy:                            # Paddy Doctor full release: zero-shot test ONLY (never train, tune or select on it)
+    local_dir: data/raw/paddy_doctor
+    kaggle_slug: paddy-doctor-full
+    image_subdir: ""                # class folders sit at the top level
+    metadata_file: metadata.csv     # image_id, label, variety, age (16,225 rows)
+    image_extension: .jpg
+    version: "IEEE DataPort full release (16,225 images, 13 classes)"
+    licence: CC BY 4.0
+    expected_counts: {healthy: 2405, leaf_blast: 2351, brown_spot: 1257, hispa: 2151}  # 8,164 test photos
+    class_folders:                  # the 4 classes shared with the primary dataset
+      healthy: normal
+      leaf_blast: blast
+      brown_spot: brown_spot
+      hispa: hispa
+    calibration_folders:            # the 9 other classes: only for leaf-width (zoom) calibration, never scored
+      [bacterial_leaf_blight, bacterial_leaf_streak, bacterial_panicle_blight, black_stem_borer,
+       downy_mildew, leaf_roller, tungro, white_stem_borer, yellow_stem_borer]
+
+# -------------------------------------------------------------------
+# Where things are written / read (repo-relative on the laptop).
+# On Kaggle, writable folders go under /kaggle/working/<same name>, and
+# splits/ + configs/ are read from the attached ricetein-code dataset.
+# -------------------------------------------------------------------
+paths:
+  configs: configs
+  splits: splits                    # committed fold files (Stage 3)
+  runs: runs                        # one folder per run (RunRecorder)
+  cache: cache                      # tile descriptions (git-ignored)
+  results: results                  # final tables and figures (Stage 14)
+  reports: docs/reports             # stage reports
+
+kaggle:
+  working_dir: /kaggle/working
+  code_slug: ricetein-code          # src/, configs/, splits/, requirements-kaggle.txt, CODE_VERSION
+  weights_slug: ricetein-weights    # pinned DINOv3 copies + LICENSE.md + REVISIONS.txt
+
+# -------------------------------------------------------------------
+# Images and tiles
+# -------------------------------------------------------------------
+tiling:
+  tile_size: 224                    # px; tiles per side n(L) = ceil((L - 224) / 224) + 1, evenly spaced, edges touch borders
+
+normalisation:                      # ImageNet statistics (used by every encoder and fine-tuned model here)
+  mean: [0.485, 0.456, 0.406]
+  std: [0.229, 0.224, 0.225]
+
+# -------------------------------------------------------------------
+# Frozen tile encoders (methodology Table I). Always load through
+# pretrained_source(name) and pass `revision` so every machine uses identical weights.
+#   dim              : descriptor size per token
+#   register_tokens  : tokens after the class token that carry no image content
+#                      (patch average = mean of tokens[1 + register_tokens:])
+# -------------------------------------------------------------------
+main_encoder: E1
+
+encoders:
+  E1:                               # main encoder
+    library: transformers
+    name: facebook/dinov3-vitb16-pretrain-lvd1689m
+    revision: 5931719e67bbdb9737e363e781fb0c67687896bc
+    params_m: 85.7
+    dim: 768
+    patch_size: 16
+    register_tokens: 4
+    on_kaggle_weights: true         # copy exists in ricetein-weights
+  E2:                               # supervised CNN comparison
+    library: timm
+    name: convnext_tiny.fb_in1k
+    revision: b43a6303c9fcf176d2d707478a128c2c91e93528   # HF repo timm/convnext_tiny.fb_in1k
+    params_m: 27.8
+    dim: 768
+    on_kaggle_weights: false        # public, downloaded on demand
+  E3:                               # DINO-version check (no registers)
+    library: transformers
+    name: facebook/dinov2-base
+    revision: f9e44c814b77203eaa57a6bdbbd535f21ede1415
+    params_m: 86.6
+    dim: 768
+    patch_size: 14
+    register_tokens: 0
+    on_kaggle_weights: false        # public, downloaded on demand
+  E4:                               # small encoder for the compression study
+    library: transformers
+    name: facebook/dinov3-vits16-pretrain-lvd1689m
+    revision: 114c1379950215c8b35dfcd4e90a5c251dde0d32
+    params_m: 21.6
+    dim: 384
+    patch_size: 16
+    register_tokens: 4
+    on_kaggle_weights: true
+  E5:                               # optional, only if the compute budget allows
+    library: transformers
+    name: facebook/dinov3-vitl16-pretrain-lvd1689m
+    revision: ea8dc2863c51be0a264bab82070e3e8836b02d51
+    params_m: 303.1
+    dim: 1024
+    patch_size: 16
+    register_tokens: 4
+    on_kaggle_weights: false        # not uploaded yet: INCLUDE_LARGE=1 ./scripts/kaggle_upload_weights.sh
+
+# -------------------------------------------------------------------
+# Partitioning (Stage 3): stratified, near-duplicate-grouped 5-fold split
+# -------------------------------------------------------------------
+split:
+  n_folds: 5                        # each fold is the test set once (~20 %)
+  val_fraction: 0.125               # of the 4 non-test folds (~10 % of all photos); rest is training (~70 %)
+  stratify_by: class
+  group_by: near_duplicate_group    # groups never cross partitions
+  exclude_label_conflicts: true     # duplicates with different labels are dropped and reported
+  max_class_share_deviation: 0.02   # each role's class shares within +/-2 points of the overall shares
+
+# -------------------------------------------------------------------
+# Loss defaults shared by the fine-tuned models and the tile aggregators
+# -------------------------------------------------------------------
+loss:
+  class_weighting: inverse_frequency   # w_c = N_train / (K * N_train_c), computed per round from training data
+  label_smoothing: 0.1
+
+# -------------------------------------------------------------------
+# Scoring and reporting (Stage 4 toolkit; decision rules in handbook section 20)
+# -------------------------------------------------------------------
+evaluation:
+  primary_metric: macro_f1
+  secondary_metric: balanced_accuracy
+  also_report: [accuracy, per_class_precision, per_class_recall, confusion_matrix, ece]
+  diagnostic_class: hispa           # its recall is a pre-declared diagnostic
+  bootstrap:
+    resamples: 2000
+    confidence: 0.95
+    stratified: true                # resample within each class
+  calibration_bins: 15              # expected calibration error, equal-width bins
+  comparison:                       # "A beats B" only if both hold:
+    ci_excludes_zero: true          #   95 % paired-bootstrap interval of the difference is above 0
+    min_round_wins: 4               #   A wins in at least 4 of the 5 rounds
+  report_decimals: 1                # percentages to one decimal place
