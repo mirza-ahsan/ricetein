@@ -84,7 +84,24 @@ The dataset comprises 16,225 high-resolution smartphone images across 13 classes
 
 ---
 
-## 3. Optional Datasets (Future Work / Ablations)
+## 3. Pretrained Model Weights: DINOv3 (private Kaggle copy)
+
+* **Role**: Frozen encoders E1 (ViT-B/16) and E4 (ViT-S/16); E5 (ViT-L/16) is optional and not uploaded yet.
+* **Source**: Hugging Face (gated; access granted to the team), web-image versions `lvd1689m`.
+* **Private Kaggle copy**: `aztrek/ricetein-weights`, uploaded 2026-10-02 by Ahsan Baig with `scripts/kaggle_upload_weights.sh`. Includes `LICENSE.md` and `REVISIONS.txt`. Kaggle notebooks load from it via `pretrained_source()`, so every run uses these exact weights.
+* **Pinned versions (Hugging Face commits)**:
+
+| Model | Commit |
+|---|---|
+| `facebook/dinov3-vits16-pretrain-lvd1689m` | `114c1379950215c8b35dfcd4e90a5c251dde0d32` |
+| `facebook/dinov3-vitb16-pretrain-lvd1689m` | `5931719e67bbdb9737e363e781fb0c67687896bc` |
+
+* **License Terms**: **DINOv3 License** (Meta, last updated 19 August 2025). Copies and redistribution are allowed only with the licence attached (§1.b.i); publications must acknowledge the use of DINOv3 (§1.b.ii). The Kaggle copy is private.
+* **Laptop note**: the laptop loads the same models from Hugging Face. To pin the laptop too, pass the commit above as `revision=` when loading.
+
+---
+
+## 4. Optional Datasets (Future Work / Ablations)
 
 * **Dhan-Shomadhan** (Mendeley, DOI: 10.17632/znsxdctwtt.1): Secondary zero-shot candidate if time permits.
 * **RiceSeg-5932** (Mendeley, 2025): Pixel-level segmentation masks for quantitative lesion attention overlap testing.
