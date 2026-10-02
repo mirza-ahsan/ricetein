@@ -37,6 +37,14 @@ runs/**/*.ckpt
 runs/**/*.safetensors
 runs/**/*.onnx
 runs/**/*.npz
+runs/**/*.h5
+runs/**/*.pkl
+
+# ML experiment logging
+wandb/
+lightning_logs/
+mlruns/
+runs/**/events.out.tfevents.*
 
 # Environment variables & secrets / tokens
 .env
@@ -46,10 +54,15 @@ runs/**/*.npz
 *_token
 *token.txt
 *token.json
+access_token
+*access_token*
 kaggle.json
+credentials.json
 *.key
 *.secret
 *.pem
+id_rsa*
+id_ed25519*
 
 # LaTeX build artifacts
 *.aux
@@ -67,14 +80,24 @@ kaggle.json
 *.lof
 paper/*.pdf
 
-# IDEs and OS files
+# IDEs, editors & OS files
 .vscode/
 .idea/
 *.swp
 *.swo
 *~
+*.orig
+*.rej
 .DS_Store
+.directory
 Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Scratch and temporary folders
+tmp/
+.tmp/
+scratch/
 
 # Kaggle CLI staging & outputs (keep only metadata files)
 kaggle/outputs/
@@ -84,4 +107,3 @@ kaggle/code_dataset/*
 !kaggle/code_dataset/dataset-metadata.json
 kaggle/kernels/*/*.ipynb
 !kaggle/kernels/00-smoke/*.ipynb
-
