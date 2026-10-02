@@ -1,0 +1,35 @@
+{
+  "run_name": "smoke_test",
+  "status": "completed",
+  "start_time": "2026-10-02T17:14:46.403055+00:00",
+  "end_time": "2026-10-02T17:14:46.422836+00:00",
+  "duration_seconds": 0.02,
+  "code_version": "5aa70a1",
+  "split_checksum": null,
+  "data_version": null,
+  "hardware": {
+    "environment": "kaggle",
+    "os": "Linux-6.18.48+-x86_64-with-glibc2.35",
+    "python": "3.12.13",
+    "cpu_count": 4,
+    "ram_total_gb": 31.35,
+    "cuda_available": true,
+    "gpu_name": "Tesla T4",
+    "gpu_count": 2,
+    "gpu_total_memory_gb": 14.56,
+    "cuda_version": "12.8",
+    "peak_gpu_memory_mb": 12.12
+  },
+  "packages": {
+    "torch": "2.11.0+cu128",
+    "torchvision": "0.26.0+cu128",
+    "timm": "1.0.30",
+    "transformers": "5.17.0",
+    "numpy": "2.5.3",
+    "scikit-learn": "1.9.1",
+    "pandas": "3.0.6"
+  },
+  "config": {
+    "purpose": "kaggle plumbing check"
+  }
+}

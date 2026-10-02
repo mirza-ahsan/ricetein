@@ -1,0 +1,9 @@
+[2026-10-02 17:14:46] [INFO] ============================================================
+[2026-10-02 17:14:46] [INFO] Run: smoke_test
+[2026-10-02 17:14:46] [INFO] Folder: /kaggle/working/runs/smoke_test
+[2026-10-02 17:14:46] [INFO] Code version: 5aa70a1
+[2026-10-02 17:14:46] [INFO] GPU: Tesla T4 (14.56 GB)
+[2026-10-02 17:14:46] [INFO] ============================================================
+[2026-10-02 17:14:46] [INFO] Epoch 001 -> dummy_metric: 1.0000
+[2026-10-02 17:14:46] [INFO] Saved metrics.json
+[2026-10-02 17:14:46] [INFO] Run finished in 0.02s (status: completed); saved record.json
