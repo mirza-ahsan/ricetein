@@ -25,20 +25,38 @@ from pathlib import Path
 
 KAGGLE_INPUT = Path("/kaggle/input")
 CODE_DATASET_SLUG = "ricetein-code"
+WEIGHTS_DATASET_SLUG = "ricetein-weights"
 DEFAULT_VENV = Path(tempfile.gettempdir()) / "ricetein-venv"  # not /kaggle/working: that is saved as output
 
 
-def find_kaggle_input(slug: str, root: Path = KAGGLE_INPUT) -> Path | None:
+def find_kaggle_input(slug: str, root: Path | None = None) -> Path | None:
     """Locate a mounted Kaggle dataset or notebook output by its slug.
 
     Kaggle has used both ``/kaggle/input/<slug>`` and ``/kaggle/input/<kind>/<owner>/<slug>``.
     """
+    root = root or KAGGLE_INPUT
     if not root.exists():
         return None
     if (root / slug).is_dir():
         return root / slug
     matches = sorted(p for p in root.glob(f"*/*/{slug}") if p.is_dir())
     return matches[0] if matches else None
+
+
+def pretrained_source(repo_id: str) -> str:
+    """Where to load a pretrained model from.
+
+    On Kaggle with the private ``ricetein-weights`` dataset attached: its local folder for
+    ``repo_id`` (no token or download needed, and the exact pinned version is used).
+    Otherwise: the Hugging Face id itself (the laptop uses its logged-in cache).
+    """
+    root = find_kaggle_input(WEIGHTS_DATASET_SLUG)
+    if root is not None:
+        folder = repo_id.replace("/", "--")
+        for candidate in [root / folder, *sorted(root.glob(f"*/{folder}"))]:
+            if (candidate / "config.json").exists():
+                return str(candidate)
+    return repo_id
 
 
 def code_dir() -> Path:

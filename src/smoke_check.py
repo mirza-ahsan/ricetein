@@ -1,6 +1,6 @@
 """Environment smoke check: packages, GPU, datasets, run records and (optionally) DINOv3.
 
-Kaggle:  run("src.smoke_check", "--require-dinov3", env={"HF_TOKEN": token})  (see the 00-smoke notebook)
+Kaggle:  run("src.smoke_check", "--require-dinov3")  (see the 00-smoke notebook)
 Laptop:  uv run python -m src.smoke_check [--require-dinov3]
 """
 
@@ -8,13 +8,12 @@ from __future__ import annotations
 
 import argparse
 import importlib
-import os
 import re
 import sys
 from importlib import metadata
 from pathlib import Path
 
-from src.kaggle_bootstrap import find_kaggle_input
+from src.kaggle_bootstrap import find_kaggle_input, pretrained_source
 from src.records import REPO_ROOT, RunRecorder, on_kaggle
 
 CHECKED_PACKAGES = {  # import name -> distribution name in the lock file
@@ -92,9 +91,13 @@ def check_dinov3() -> None:
     import torch
     from transformers import AutoModel
 
-    assert os.environ.get("HF_TOKEN") or not on_kaggle(), "HF_TOKEN not passed in (attach the Kaggle secret)"
+    repo_id = "facebook/dinov3-vitb16-pretrain-lvd1689m"
+    source = pretrained_source(repo_id)
+    if on_kaggle():
+        assert source != repo_id, "ricetein-weights dataset not attached (add it to dataset_sources)"
+    print(f"  loading from: {source}")
     device = "cuda" if torch.cuda.is_available() else "cpu"
-    model = AutoModel.from_pretrained("facebook/dinov3-vitb16-pretrain-lvd1689m").eval().to(device)
+    model = AutoModel.from_pretrained(source).eval().to(device)
     with torch.no_grad():
         tokens = model(pixel_values=torch.randn(2, 3, 224, 224, device=device)).last_hidden_state
     assert tokens.shape[1:] == (201, 768), tokens.shape
