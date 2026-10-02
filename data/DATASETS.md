@@ -96,6 +96,14 @@ The dataset comprises 16,225 high-resolution smartphone images across 13 classes
 | `facebook/dinov3-vits16-pretrain-lvd1689m` | `114c1379950215c8b35dfcd4e90a5c251dde0d32` |
 | `facebook/dinov3-vitb16-pretrain-lvd1689m` | `5931719e67bbdb9737e363e781fb0c67687896bc` |
 
+**Other encoders, pinned the same way in `configs/base.yaml`** (downloaded from Hugging Face on demand; not in the Kaggle copy):
+
+| Encoder | Model | Commit |
+|---|---|---|
+| E2 | `timm/convnext_tiny.fb_in1k` (supervised ImageNet-1k) | `b43a6303c9fcf176d2d707478a128c2c91e93528` |
+| E3 | `facebook/dinov2-base` | `f9e44c814b77203eaa57a6bdbbd535f21ede1415` |
+| E5 (optional) | `facebook/dinov3-vitl16-pretrain-lvd1689m` | `ea8dc2863c51be0a264bab82070e3e8836b02d51` |
+
 * **License Terms**: **DINOv3 License** (Meta, last updated 19 August 2025). Copies and redistribution are allowed only with the licence attached (§1.b.i); publications must acknowledge the use of DINOv3 (§1.b.ii). The Kaggle copy is private.
 * **Laptop note**: the laptop loads the same models from Hugging Face. To pin the laptop too, pass the commit above as `revision=` when loading.
 
