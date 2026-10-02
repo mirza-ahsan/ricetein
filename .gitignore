@@ -107,5 +107,7 @@ kaggle/paddy_upload/*
 !kaggle/paddy_upload/dataset-metadata.json
 kaggle/code_dataset/*
 !kaggle/code_dataset/dataset-metadata.json
+kaggle/weights_dataset/*
+!kaggle/weights_dataset/dataset-metadata.json
 kaggle/kernels/*/*.ipynb
 !kaggle/kernels/00-smoke/*.ipynb

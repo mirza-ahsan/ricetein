@@ -1,0 +1,11 @@
+{
+  "title": "ricetein-weights",
+  "id": "aztrek/ricetein-weights",
+  "subtitle": "Pinned DINOv3 weights for the ricetein project (private)",
+  "description": "DINOv3 model weights by Meta, copied from Hugging Face at the commits listed in REVISIONS.txt. Distributed under the DINOv3 License (LICENSE.md, included). Private copy for the ricetein research project; not for redistribution.",
+  "licenses": [
+    {
+      "name": "other"
+    }
+  ]
+}
