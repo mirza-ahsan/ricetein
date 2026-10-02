@@ -79,6 +79,8 @@ id_ed25519*
 *.lot
 *.lof
 paper/*.pdf
+# Local LaTeX toolchain and build output (portable TinyTeX + biber; see .texbuild/build.sh)
+.texbuild/
 # ...but keep each experiment's run.log (small, and part of the run record)
 !runs/**/run.log
 
