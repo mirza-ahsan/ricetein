@@ -1,10 +1,10 @@
 {
   "run_name": "smoke_test",
   "status": "completed",
-  "start_time": "2026-10-02T17:14:46.403055+00:00",
-  "end_time": "2026-10-02T17:14:46.422836+00:00",
-  "duration_seconds": 0.02,
-  "code_version": "5aa70a1",
+  "start_time": "2026-10-02T18:20:21.965863+00:00",
+  "end_time": "2026-10-02T18:20:21.981030+00:00",
+  "duration_seconds": 0.01,
+  "code_version": "e7bbc7c",
   "split_checksum": null,
   "data_version": null,
   "hardware": {
@@ -18,7 +18,7 @@
     "gpu_count": 2,
     "gpu_total_memory_gb": 14.56,
     "cuda_version": "12.8",
-    "peak_gpu_memory_mb": 12.12
+    "peak_gpu_memory_mb": 9.13
   },
   "packages": {
     "torch": "2.11.0+cu128",
@@ -30,6 +30,6 @@
     "pandas": "3.0.6"
   },
   "config": {
-    "purpose": "kaggle plumbing check"
+    "purpose": "environment smoke check"
   }
 }
