@@ -36,13 +36,16 @@ elif [ ! -f "$KERNEL_DIR/$CODE_FILE" ]; then
     exit 1
 fi
 
-# 2. Refuse to run against stale code.
+# 2. Refuse to run against stale code: the code on Kaggle must match what's in src/, configs/,
+#    splits/ and the lock file now (commits that only touch notebooks or docs are fine).
 if [ "$USES_CODE" = "1" ] && [ "${SKIP_SYNC_CHECK:-0}" != "1" ]; then
     SYNCED=$(cat kaggle/code_dataset/CODE_VERSION 2>/dev/null || echo "none")
-    HEAD=$(git rev-parse --short HEAD)
-    if [ "${SYNCED%-dirty}" != "$HEAD" ]; then
-        echo "Error: the Kaggle code dataset has code '$SYNCED' but HEAD is '$HEAD'."
-        echo "Run ./scripts/kaggle_sync_code.sh first (or SKIP_SYNC_CHECK=1 to push anyway)."
+    CODE_PATHS=(src configs splits pyproject.toml uv.lock)
+    if [ "$SYNCED" = "none" ] || [[ "$SYNCED" == *-dirty ]] \
+        || ! git cat-file -e "$SYNCED^{commit}" 2>/dev/null \
+        || ! git diff --quiet "$SYNCED" -- "${CODE_PATHS[@]}"; then
+        echo "Error: the Kaggle code dataset ($SYNCED) doesn't match your current code."
+        echo "Commit, then run ./scripts/kaggle_sync_code.sh (or SKIP_SYNC_CHECK=1 to push anyway)."
         exit 1
     fi
 fi
