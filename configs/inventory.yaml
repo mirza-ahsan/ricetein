@@ -14,6 +14,6 @@ inventory:
 
 pixel_scale:
   measurements_file: data/leaf_width_measurements.csv
-  n_photos: 30                 # drawn across the shorter-side range: one per equal-count size band
+  n_photos: 30                 # one per equal-width band of the shorter side (log scale), min to max
   measurers: 2                 # independent measurements per photo; their mean is used
   spearman_threshold: 0.5      # rho >= 0.5 -> rescale every photo to the median leaf width before tiling
