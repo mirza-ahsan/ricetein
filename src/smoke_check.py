@@ -13,8 +13,9 @@ import sys
 from importlib import metadata
 from pathlib import Path
 
+from src.config import dataset_dir, load_config, on_kaggle
 from src.kaggle_bootstrap import find_kaggle_input, pretrained_source
-from src.records import REPO_ROOT, RunRecorder, on_kaggle
+from src.records import RunRecorder
 
 CHECKED_PACKAGES = {  # import name -> distribution name in the lock file
     "torch": "torch",
@@ -70,34 +71,29 @@ def check_gpu() -> None:
     print(f"  {torch.cuda.get_device_name(0)} | CUDA {torch.version.cuda} | matmul sum {total:.1f}")
 
 
-def check_datasets() -> None:
-    if on_kaggle():
-        primary = find_kaggle_input("rice-diseases-image-dataset")
-        paddy = find_kaggle_input("paddy-doctor-full")
-    else:
-        primary = REPO_ROOT / "data/raw/rice_diseases"
-        paddy = REPO_ROOT / "data/raw/paddy_doctor"
-    assert primary and primary.exists(), "primary dataset not found"
-    assert paddy and paddy.exists(), "Paddy Doctor not found"
-    labelled = primary / "LabelledRice" / "Labelled"
+def check_datasets(config: dict) -> None:
+    """Both datasets are where base.yaml says (the same lookup every stage uses)."""
+    labelled = dataset_dir(config, "primary")
     for cls in sorted(p.name for p in labelled.iterdir()):
         print(f"  primary {cls:10s} {sum(1 for _ in (labelled / cls).glob('*.jpg')):5d} images")
-    paddy_root = next((p for p in [paddy, *paddy.glob("*")] if (p / "metadata.csv").exists()), None)
-    assert paddy_root is not None, "Paddy Doctor metadata.csv not found"
-    print(f"  paddy   {paddy_root} ({sum(1 for p in paddy_root.iterdir() if p.is_dir())} classes)")
+    paddy = dataset_dir(config, "paddy")
+    assert (paddy / config["datasets"]["paddy"]["metadata_file"]).exists(), "Paddy Doctor metadata missing"
+    print(f"  paddy   {paddy} ({sum(1 for p in paddy.iterdir() if p.is_dir())} classes)")
 
 
-def check_dinov3() -> None:
+def check_dinov3(config: dict) -> None:
     import torch
     from transformers import AutoModel
 
-    repo_id = "facebook/dinov3-vitb16-pretrain-lvd1689m"
+    spec = config["encoders"]["E1"]
+    repo_id = spec["name"]
     source = pretrained_source(repo_id)
     if on_kaggle():
         assert source != repo_id, "ricetein-weights dataset not attached (add it to dataset_sources)"
-    print(f"  loading from: {source}")
+    pinned = {"revision": spec["revision"]} if source == repo_id else {}  # the Kaggle copy is already pinned
+    print(f"  loading from: {source} {pinned or '(pinned copy)'}")
     device = "cuda" if torch.cuda.is_available() else "cpu"
-    model = AutoModel.from_pretrained(source).eval().to(device)
+    model = AutoModel.from_pretrained(source, **pinned).eval().to(device)
     with torch.no_grad():
         tokens = model(pixel_values=torch.randn(2, 3, 224, 224, device=device)).last_hidden_state
     assert tokens.shape[1:] == (201, 768), tokens.shape
@@ -109,6 +105,7 @@ def main() -> None:
     parser.add_argument("--require-dinov3", action="store_true")
     parser.add_argument("--run-name", default="smoke_test")
     args = parser.parse_args()
+    config = load_config("configs/base.yaml")
 
     print("Python", sys.version.split()[0], "| on Kaggle:", on_kaggle())
     print("1. Packages")
@@ -116,10 +113,10 @@ def main() -> None:
     print("2. GPU")
     check_gpu()
     print("3. Datasets")
-    check_datasets()
+    check_datasets(config)
     if args.require_dinov3:
         print("4. DINOv3")
-        check_dinov3()
+        check_dinov3(config)
 
     rec = RunRecorder(args.run_name, config={"purpose": "environment smoke check"}, overwrite=True)
     rec.log_epoch(1, {"dummy_metric": 1.0})
