@@ -31,6 +31,9 @@ import psutil
 from src.config import REPO_ROOT, on_kaggle, output_root
 from src.kaggle_bootstrap import CODE_DATASET_SLUG, find_kaggle_input
 
+# What counts as "the code" for a run's code version (also checked by scripts/kaggle_*.sh).
+CODE_PATHS = ("src", "configs", "splits", "pyproject.toml", "uv.lock")
+
 # Package versions written into every record (missing ones are recorded as None).
 TRACKED_PACKAGES = ("torch", "torchvision", "timm", "transformers", "numpy", "scikit-learn", "pandas")
 
@@ -59,7 +62,7 @@ def get_code_version() -> str:
 
     try:
         commit = _git("rev-parse", "--short", "HEAD")
-        dirty = _git("status", "--porcelain", "--", "src", "configs", "splits", "pyproject.toml", "uv.lock")
+        dirty = _git("status", "--porcelain", "--", *CODE_PATHS)
         return f"{commit}-dirty" if dirty else commit
     except Exception:
         return "unknown"

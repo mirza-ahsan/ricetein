@@ -26,11 +26,9 @@ from sklearn.metrics import accuracy_score, balanced_accuracy_score, f1_score
 from torch import nn
 
 from src.config import REPO_ROOT, dataset_dir, load_config, path_for
-from src.kaggle_bootstrap import pretrained_source
-from src.records import RunRecorder
+from src.kaggle_bootstrap import pinned_pretrained
+from src.records import CODE_PATHS, RunRecorder
 from src.seeding import seed_everything
-
-CODE_PATHS = ["src", "configs", "splits", "pyproject.toml", "uv.lock"]
 
 
 # ---------------------------------------------------------------- data
@@ -58,7 +56,7 @@ def tile_starts(length: int, tile: int) -> list[int]:
     """Smallest number of tiles covering ``length``, evenly spread, first and last touching the edges."""
     if length <= tile:
         return [0]
-    n = -(-(length - tile) // tile) + 1  # ceil((L - t) / t) + 1
+    n = -(-length // tile)  # ceil(L / t), the same as the handbook's ceil((L - t) / t) + 1
     return [i * (length - tile) // (n - 1) for i in range(n)]
 
 
@@ -77,8 +75,7 @@ def load_encoder(config: dict[str, Any], device: torch.device) -> nn.Module:
     from transformers import AutoModel
 
     spec = config["encoders"][config["skeleton"]["encoder"]]
-    source = pretrained_source(spec["name"])
-    pinned = {"revision": spec["revision"]} if source == spec["name"] else {}  # Kaggle copy is already pinned
+    source, pinned = pinned_pretrained(spec["name"], spec["revision"])
     return AutoModel.from_pretrained(source, dtype=torch.float32, **pinned).eval().to(device)
 
 
@@ -89,9 +86,10 @@ def describe_tiles(
     """Class-token description of every tile, (N, dim), on the CPU."""
     mean = torch.tensor(config["normalisation"]["mean"], device=device).view(1, 3, 1, 1)
     std = torch.tensor(config["normalisation"]["std"], device=device).view(1, 3, 1, 1)
+    batch_size = config["skeleton"]["encode_batch"]
     out = []
-    for start in range(0, len(tiles), config["skeleton"]["encode_batch"]):
-        batch = torch.from_numpy(tiles[start:start + config["skeleton"]["encode_batch"]]).to(device)
+    for start in range(0, len(tiles), batch_size):
+        batch = torch.from_numpy(tiles[start:start + batch_size]).to(device)
         pixels = (batch.permute(0, 3, 1, 2).float() / 255 - mean) / std
         out.append(model(pixel_values=pixels).last_hidden_state[:, 0].cpu())
     return torch.cat(out)
@@ -106,16 +104,17 @@ class GatedAttentionHead(nn.Module):
         self.project = nn.Sequential(nn.Linear(in_dim, projection_dim), nn.ReLU())
         self.attention_v = nn.Linear(projection_dim, attention_dim)
         self.attention_u = nn.Linear(projection_dim, attention_dim)
-        self.attention_w = nn.Linear(attention_dim, 1)
+        # No bias (as in Ilse et al.): softmax ignores a shift shared by all tiles, so its
+        # gradient is pure rounding noise, which Adam would blow up into full-size steps.
+        self.attention_w = nn.Linear(attention_dim, 1, bias=False)
         self.classify = nn.Linear(projection_dim, n_classes)
 
-    def forward(self, tiles: torch.Tensor, mask: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
-        """tiles (B, N, in_dim), mask (B, N) True for real tiles -> logits (B, C), weights (B, N)."""
+    def forward(self, tiles: torch.Tensor, mask: torch.Tensor) -> torch.Tensor:
+        """tiles (B, N, in_dim), mask (B, N) True for real tiles -> logits (B, n_classes)."""
         h = self.project(tiles)
         gated = torch.tanh(self.attention_v(h)) * torch.sigmoid(self.attention_u(h))
-        scores = self.attention_w(gated).squeeze(-1)
-        weights = torch.softmax(scores.masked_fill(~mask, float("-inf")), dim=1)
-        return self.classify((weights.unsqueeze(-1) * h).sum(dim=1)), weights
+        scores = self.attention_w(gated).squeeze(-1).masked_fill(~mask, float("-inf"))
+        return self.classify((torch.softmax(scores, dim=1).unsqueeze(-1) * h).sum(dim=1))
 
 
 def pad_bags(bags: list[torch.Tensor]) -> tuple[torch.Tensor, torch.Tensor]:
@@ -129,19 +128,53 @@ def pad_bags(bags: list[torch.Tensor]) -> tuple[torch.Tensor, torch.Tensor]:
     return x, mask
 
 
+def train_head(photos: list[dict[str, Any]], config: dict[str, Any], rec: RunRecorder,
+               device: torch.device) -> GatedAttentionHead:
+    """Full batch over the training photos: one AdamW step per epoch."""
+    sk, training = config["skeleton"], config["skeleton"]["training"]
+    x, mask = (t.to(device) for t in pad_bags([p["features"] for p in photos]))
+    y = torch.tensor([p["label"] for p in photos], device=device)
+    # Built on the CPU first, so its starting weights match on every machine.
+    head = GatedAttentionHead(x.shape[-1], n_classes=len(config["classes"]), **sk["head"]).to(device)
+    # Training is balanced (train_per_class of each class), so class weights would all be 1.
+    loss_fn = nn.CrossEntropyLoss(label_smoothing=config["loss"]["label_smoothing"])
+    optimiser = torch.optim.AdamW(
+        head.parameters(), lr=training["lr"], weight_decay=training["weight_decay"], eps=training["adam_eps"]
+    )
+    for epoch in range(1, training["steps"] + 1):
+        optimiser.zero_grad()
+        loss = loss_fn(head(x, mask), y)
+        loss.backward()
+        optimiser.step()
+        rec.log_epoch(epoch, {"train_loss": loss.item()})
+    return head.eval()
+
+
+@torch.inference_mode()
+def predict(head: GatedAttentionHead, photos: list[dict[str, Any]], classes: list[str],
+            device: torch.device) -> pd.DataFrame:
+    x, mask = (t.to(device) for t in pad_bags([p["features"] for p in photos]))
+    probs = torch.softmax(head(x, mask), dim=1).cpu()
+    return pd.DataFrame([{
+        "photo_id": p["photo_id"], "partition": p["partition"], "true_class": classes[p["label"]],
+        "pred_class": classes[int(row.argmax())], **{f"prob_{c}": float(v) for c, v in zip(classes, row)},
+        "n_tiles": len(p["features"]),
+    } for p, row in zip(photos, probs)])
+
+
 # ---------------------------------------------------------------- run
 def run(config_path: str, run_name: str) -> dict[str, Any]:
     config = load_config(config_path)
     seed_everything(config["seed"], config["determinism"])
-    sk, classes = config["skeleton"], config["classes"]
+    classes = config["classes"]
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    photos = sample_photos(config)
+    encoder = load_encoder(config, device)
 
     rec = RunRecorder(
         run_name, config=config, base_dir=path_for(config, "runs"),
         data_version={"primary": config["datasets"]["primary"]["version"]},
     )
-    photos = sample_photos(config)
-    encoder = load_encoder(config, device)
     for photo in photos:  # one photo at a time keeps memory low (photos are up to 3120 x 3120)
         with Image.open(photo["path"]) as img:
             image = np.asarray(ImageOps.exif_transpose(img).convert("RGB"))
@@ -149,40 +182,11 @@ def run(config_path: str, run_name: str) -> dict[str, Any]:
         photo["features"] = describe_tiles(encoder, tiles, config, device)
         rec.logger.info(f"{photo['photo_id']}: {image.shape[1]} x {image.shape[0]} px -> {len(tiles)} tiles")
     del encoder
+    # Kept (git-ignored) so --compare can tell encoder differences from training differences.
+    torch.save({p["photo_id"]: p["features"] for p in photos}, rec.run_dir / "features.pt")
 
-    train = [p for p in photos if p["partition"] == "train"]
-    x, mask = (t.to(device) for t in pad_bags([p["features"] for p in train]))
-    y = torch.tensor([p["label"] for p in train], device=device)
-    counts = torch.bincount(y, minlength=len(classes)).float()
-    weights = len(y) / (len(classes) * counts.clamp(min=1))  # inverse frequency (base.yaml loss)
-
-    # Built on the CPU first, so its starting weights match on every machine.
-    dims = sk["head"]
-    head = GatedAttentionHead(x.shape[-1], dims["projection_dim"], dims["attention_dim"], len(classes))
-    head = head.to(device)
-    loss_fn = nn.CrossEntropyLoss(weight=weights, label_smoothing=config["loss"]["label_smoothing"])
-    training = sk["training"]
-    optimiser = torch.optim.AdamW(head.parameters(), lr=training["lr"], weight_decay=training["weight_decay"])
-    for epoch in range(1, training["steps"] + 1):  # full batch: one step per epoch
-        optimiser.zero_grad()
-        loss = loss_fn(head(x, mask)[0], y)
-        loss.backward()
-        optimiser.step()
-        rec.log_epoch(epoch, {"train_loss": loss.item()})
-
-    head.eval()
-    rows = []
-    with torch.inference_mode():
-        for photo in photos:
-            bag = photo["features"].unsqueeze(0).to(device)
-            logits, _ = head(bag, torch.ones(bag.shape[:2], dtype=torch.bool, device=device))
-            probs = torch.softmax(logits, dim=1)[0].cpu().tolist()
-            rows.append({
-                "photo_id": photo["photo_id"], "partition": photo["partition"],
-                "true_class": classes[photo["label"]], "pred_class": classes[int(np.argmax(probs))],
-                **{f"prob_{c}": p for c, p in zip(classes, probs)}, "n_tiles": len(photo["features"]),
-            })
-    predictions = pd.DataFrame(rows)
+    head = train_head([p for p in photos if p["partition"] == "train"], config, rec, device)
+    predictions = predict(head, photos, classes, device)
     rec.save_predictions(predictions)
 
     test = predictions[predictions["partition"] == "test"]
@@ -205,29 +209,54 @@ def run(config_path: str, run_name: str) -> dict[str, Any]:
 
 
 # ---------------------------------------------------------------- compare
+def same_code(va: str, vb: str) -> tuple[bool, str]:
+    """Both runs come from committed code, and the code paths do not differ between the commits."""
+    if any(v == "unknown" or v.endswith("-dirty") for v in (va, vb)):
+        return False, f"{va} vs {vb}: only runs from committed code can be compared"
+    if va == vb:
+        return True, f"{va}"
+    try:
+        result = subprocess.run(["git", "diff", "--quiet", va, vb, "--", *CODE_PATHS],
+                                cwd=REPO_ROOT, capture_output=True)
+    except FileNotFoundError:
+        return False, f"{va} vs {vb}: git is not available"
+    if result.returncode == 1:
+        return False, f"{va} vs {vb}: the code differs"
+    if result.returncode != 0:
+        return False, f"{va} vs {vb}: git cannot resolve one of the commits"
+    return True, f"{va} vs {vb}: code paths identical"
+
+
 def compare_runs(run_a: str | Path, run_b: str | Path, atol: float) -> bool:
     """Stage 0 'done when': same predicted labels and scores, probabilities within ``atol``."""
     a, b = Path(run_a), Path(run_b)
-    pa = pd.read_csv(a / "predictions.csv").sort_values("photo_id").reset_index(drop=True)
-    pb = pd.read_csv(b / "predictions.csv").sort_values("photo_id").reset_index(drop=True)
-    checks = {"same photos": pa["photo_id"].equals(pb["photo_id"])}
-    if checks["same photos"]:
-        prob_cols = [c for c in pa.columns if c.startswith("prob_")]
-        max_diff = float((pa[prob_cols] - pb[prob_cols]).abs().max().max())
-        checks["same tile counts"] = pa["n_tiles"].equals(pb["n_tiles"])
-        checks["same predicted labels"] = pa["pred_class"].equals(pb["pred_class"])
-        checks[f"probabilities within {atol:g} (max diff {max_diff:.2e})"] = max_diff <= atol
+    pa, pb = (pd.read_csv(r / "predictions.csv").sort_values("photo_id", ignore_index=True) for r in (a, b))
     ma, mb = (json.loads((r / "metrics.json").read_text()) for r in (a, b))
+    ra, rb = (json.loads((r / "record.json").read_text()) for r in (a, b))
+
+    checks: dict[str, bool] = {}
+    checks["same photos, partitions, true classes and tile counts"] = all(
+        pa[c].equals(pb[c]) for c in ("photo_id", "partition", "true_class", "n_tiles")
+    )
+    if checks["same photos, partitions, true classes and tile counts"]:
+        prob_cols = [c for c in pa.columns if c.startswith("prob_")]
+        diff = (pa[prob_cols] - pb[prob_cols]).to_numpy()
+        finite = bool(np.isfinite(diff).all())
+        max_diff = float(np.abs(diff).max()) if finite else float("nan")
+        checks["same predicted labels"] = pa["pred_class"].equals(pb["pred_class"])
+        checks[f"probabilities within {atol:g} (max diff {max_diff:.2e})"] = finite and max_diff <= atol
     checks["same scores"] = all(ma[k] == mb[k] for k in ("macro_f1", "balanced_accuracy", "accuracy"))
+    ok, detail = same_code(ra["code_version"], rb["code_version"])
+    checks[f"same code ({detail})"] = ok
+    checks["same package versions"] = ra["packages"] == rb["packages"]
+    checks["same determinism mode"] = ra["config"].get("determinism") == rb["config"].get("determinism")
 
-    va, vb = (json.loads((r / "record.json").read_text())["code_version"] for r in (a, b))
-    same_code = va == vb or subprocess.run(
-        ["git", "diff", "--quiet", va, vb, "--", *CODE_PATHS], cwd=REPO_ROOT, capture_output=True
-    ).returncode == 0
-    checks[f"same code ({va} vs {vb})"] = same_code
-
-    for name, ok in checks.items():
-        print(f"  [{'ok' if ok else 'FAIL'}] {name}")
+    for name, passed in checks.items():
+        print(f"  [{'ok' if passed else 'FAIL'}] {name}")
+    if (a / "features.pt").exists() and (b / "features.pt").exists():  # diagnostic only
+        fa, fb = torch.load(a / "features.pt"), torch.load(b / "features.pt")
+        rel = max(float((fa[k] - fb[k]).abs().max() / fb[k].abs().max()) for k in fa if k in fb)
+        print(f"  [info] max relative encoder feature difference: {rel:.2e}")
     return all(checks.values())
 
 

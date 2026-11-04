@@ -19,4 +19,6 @@ skeleton:
     steps: 50
     lr: 1.0e-3
     weight_decay: 1.0e-4
+    adam_eps: 1.0e-5          # default 1e-8 lets rounding noise in tiny gradients become full steps;
+                              # 1e-5 keeps local-vs-Kaggle differences ~40x below compare_atol
   compare_atol: 1.0e-3        # Stage 0 "done when": probabilities agree within this
