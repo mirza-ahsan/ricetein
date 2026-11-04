@@ -28,17 +28,11 @@ from typing import Any, Mapping
 
 import psutil
 
+from src.config import KAGGLE_WORKING, REPO_ROOT, on_kaggle
 from src.kaggle_bootstrap import CODE_DATASET_SLUG, find_kaggle_input
-
-REPO_ROOT = Path(__file__).resolve().parents[1]
-KAGGLE_WORKING = Path("/kaggle/working")
 
 # Package versions written into every record (missing ones are recorded as None).
 TRACKED_PACKAGES = ("torch", "torchvision", "timm", "transformers", "numpy", "scikit-learn", "pandas")
-
-
-def on_kaggle() -> bool:
-    return KAGGLE_WORKING.exists()
 
 
 def get_default_runs_dir() -> Path:

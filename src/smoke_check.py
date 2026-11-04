@@ -13,8 +13,9 @@ import sys
 from importlib import metadata
 from pathlib import Path
 
+from src.config import REPO_ROOT, on_kaggle
 from src.kaggle_bootstrap import find_kaggle_input, pretrained_source
-from src.records import REPO_ROOT, RunRecorder, on_kaggle
+from src.records import RunRecorder
 
 CHECKED_PACKAGES = {  # import name -> distribution name in the lock file
     "torch": "torch",
