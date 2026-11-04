@@ -1,0 +1,9 @@
+[2026-11-04 22:02:13] [INFO] ============================================================
+[2026-11-04 22:02:13] [INFO] Run: smoke_halo
+[2026-11-04 22:02:13] [INFO] Folder: /home/aztrek/projects/ricetein/runs/smoke_halo
+[2026-11-04 22:02:13] [INFO] Code version: 9722855
+[2026-11-04 22:02:13] [INFO] GPU: NVIDIA GeForce RTX 4060 (7.68 GB)
+[2026-11-04 22:02:13] [INFO] ============================================================
+[2026-11-04 22:02:13] [INFO] Epoch 001 -> dummy_metric: 1.0000
+[2026-11-04 22:02:13] [INFO] Saved metrics.json
+[2026-11-04 22:02:13] [INFO] Run finished in 0.01s (status: completed); saved record.json
