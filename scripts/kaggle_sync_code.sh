@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Upload src/, configs/, splits/, the locked package list and the commit ID to the
+# Upload src/, configs/, splits/, the pinned Python, the locked package list and the commit ID to the
 # private Kaggle dataset described in kaggle/code_dataset/dataset-metadata.json.
 #
 # Usage: ./scripts/kaggle_sync_code.sh
@@ -14,7 +14,7 @@ TORCH_INDEX="https://download.pytorch.org/whl/cu128"   # keep in sync with [[too
 
 # 1. The uploaded code must match a commit, or runs can't be traced.
 COMMIT=$(git rev-parse --short HEAD)
-if [ -n "$(git status --porcelain -- src configs splits pyproject.toml uv.lock)" ]; then
+if [ -n "$(git status --porcelain -- src configs splits pyproject.toml uv.lock .python-version)" ]; then
     if [ "${ALLOW_DIRTY:-0}" != "1" ]; then
         echo "Error: src/, configs/, splits/, pyproject.toml or uv.lock have uncommitted changes."
         echo "Commit them first (or run with ALLOW_DIRTY=1 for a throwaway test)."

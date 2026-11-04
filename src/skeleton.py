@@ -248,8 +248,9 @@ def compare_runs(run_a: str | Path, run_b: str | Path, atol: float) -> bool:
     checks["same scores"] = all(ma[k] == mb[k] for k in ("macro_f1", "balanced_accuracy", "accuracy"))
     ok, detail = same_code(ra["code_version"], rb["code_version"])
     checks[f"same code ({detail})"] = ok
-    checks["same Python and package versions"] = (
-        ra["hardware"]["python"] == rb["hardware"]["python"] and ra["packages"] == rb["packages"])
+    pya, pyb = ra["hardware"]["python"], rb["hardware"]["python"]
+    checks[f"same Python ({pya} vs {pyb})"] = pya == pyb
+    checks["same package versions"] = ra["packages"] == rb["packages"]
     checks["same determinism mode"] = ra["config"].get("determinism") == rb["config"].get("determinism")
 
     for name, passed in checks.items():

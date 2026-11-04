@@ -17,7 +17,6 @@ Typical Kaggle notebook:
 from __future__ import annotations
 
 import os
-import shutil
 import subprocess
 import sys
 import tempfile
@@ -27,6 +26,8 @@ KAGGLE_INPUT = Path("/kaggle/input")
 CODE_DATASET_SLUG = "ricetein-code"
 WEIGHTS_DATASET_SLUG = "ricetein-weights"
 DEFAULT_VENV = Path(tempfile.gettempdir()) / "ricetein-venv"  # not /kaggle/working: that is saved as output
+PYTHON_PIN = Path(__file__).resolve().parents[1] / ".python-version"  # in the code dataset on Kaggle
+UV_VERSION = "0.13.4"  # pinned: an older preinstalled uv may not know the pinned Python
 
 
 def find_kaggle_input(slug: str, root: Path | None = None) -> Path | None:
@@ -112,14 +113,11 @@ def setup_env(requirements: Path | None = None, venv_dir: Path = DEFAULT_VENV) -
     if python.exists():
         return python
     requirements = requirements or code_dir() / "requirements-kaggle.txt"
-    if shutil.which("uv"):
-        uv = ["uv"]
-    else:
-        _stream([sys.executable, "-m", "pip", "install", "--quiet", "uv"])
-        uv = [sys.executable, "-m", "uv"]
-    pin = requirements.parent / ".python-version"
-    interpreter = pin.read_text().strip() if pin.exists() else sys.executable
-    _stream([*uv, "venv", str(venv_dir), "--python", interpreter, "--quiet"])
+    if not PYTHON_PIN.exists():
+        raise FileNotFoundError(f"{PYTHON_PIN} missing: re-run scripts/kaggle_sync_code.sh")
+    _stream([sys.executable, "-m", "pip", "install", "--quiet", f"uv=={UV_VERSION}"])
+    uv = [sys.executable, "-m", "uv"]
+    _stream([*uv, "venv", str(venv_dir), "--python", PYTHON_PIN.read_text().strip(), "--quiet"])
     # unsafe-best-match: every version is pinned, so take each package from whichever
     # index has that exact version (torch from the PyTorch index, the rest from PyPI).
     _stream(

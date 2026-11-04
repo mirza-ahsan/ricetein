@@ -108,7 +108,8 @@ def main() -> None:
 
     print("Python", platform.python_version(), "| on Kaggle:", on_kaggle())
     pin = REPO_ROOT / ".python-version"  # on Kaggle REPO_ROOT is the code dataset, which carries it
-    assert not pin.exists() or platform.python_version() == pin.read_text().strip(), (
+    assert pin.exists(), f"{pin} missing (on Kaggle: re-run scripts/kaggle_sync_code.sh)"
+    assert platform.python_version() == pin.read_text().strip(), (
         f"Python {platform.python_version()} is not the pinned {pin.read_text().strip()}")
     print("1. Packages")
     check_packages()
