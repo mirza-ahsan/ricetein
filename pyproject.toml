@@ -2,7 +2,7 @@
 name = "ricetein"
 version = "0.1.0"
 description = "Resolution-preserving weakly supervised rice leaf disease recognition"
-requires-python = ">=3.11,<3.13"
+requires-python = "==3.12.*"
 dependencies = [
     "huggingface-hub>=1.33.0",
     "imagehash>=4.3.2",

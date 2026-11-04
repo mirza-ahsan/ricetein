@@ -73,7 +73,7 @@ More folders (`configs/`, `splits/`, `notebooks/`, `tests/`, `results/`) are add
 
 Requirements: Linux, an NVIDIA GPU with a CUDA 12.8-capable driver (development uses an RTX 4060, 8 GB), [uv](https://docs.astral.sh/uv/), git.
 
-**1. Clone and install** (Python 3.12; PyTorch 2.11 with CUDA 12.8; every version pinned in `uv.lock`):
+**1. Clone and install** (Python 3.12.13, pinned in `.python-version` to match Kaggle; PyTorch 2.11 with CUDA 12.8; every package version pinned in `uv.lock`):
 ```bash
 git clone git@github.com:mirza-ahsan/ricetein.git
 cd ricetein
