@@ -1,0 +1,21 @@
+# ===================================================================
+# configs/inventory.yaml: Stage 1 inventory and pixel-scale check
+# ===================================================================
+# Values for the pixel-scale rule are fixed in the pre-declared methodology
+# (Section III, "Pixel scale"); do not change them after measuring.
+# ===================================================================
+extends: base.yaml
+
+inventory:
+  primary_file: data/inventory.csv
+  paddy_file: data/paddy_inventory.csv
+  report_file: docs/reports/inventory_report.md
+  hash_size: 8                 # 64-bit perceptual hash (Stage 2b compares at most 8 differing bits)
+  hash_draft_size: 256         # decode JPEGs at reduced scale before hashing (the hash itself works on 32 x 32)
+  workers: null                # null = all CPU cores
+
+pixel_scale:
+  measurements_file: data/leaf_width_measurements.csv
+  n_photos: 30                 # drawn across the shorter-side range: one per equal-count size band
+  measurers: 2                 # independent measurements per photo; their mean is used
+  spearman_threshold: 0.5      # rho >= 0.5 -> rescale every photo to the median leaf width before tiling
