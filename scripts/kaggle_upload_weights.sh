@@ -52,7 +52,8 @@ fi
 
 echo "==> Waiting for Kaggle to process the upload ..."
 for _ in $(seq 1 90); do
-    STATUS=$(uv run kaggle datasets status "$DATASET_ID" 2>/dev/null || echo "unknown")
+    # Last line only: the CLI may print warnings (e.g. "outdated kaggle version") before the status.
+    STATUS=$( (uv run kaggle datasets status "$DATASET_ID" 2>/dev/null || echo "unknown") | tail -n 1)
     if [ "$STATUS" = "ready" ]; then
         echo "==> $DATASET_ID is ready."
         exit 0
