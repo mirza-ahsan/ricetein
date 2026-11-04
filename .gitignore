@@ -115,8 +115,3 @@ kaggle/kernels/*/*.ipynb
 !kaggle/kernels/00-smoke/*.ipynb
 !kaggle/kernels/00-skeleton/*.ipynb
 
-# Paper working copy (submitted PDFs and their sources live in deliverables/)
-paper/
-
-# Local working manuals (per-stage to-do guides)
-manuals/

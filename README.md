@@ -63,6 +63,8 @@ kaggle/          Kaggle settings for each dataset and notebook
 data/            DATASETS.md (raw data in data/raw/, not in git)
 runs/            one folder per experiment run (settings, scores, predictions, log)
 deliverables/    submitted documents (PDFs) with the LaTeX sources they were built from
+paper/           working LaTeX sources of the article (shared ref.bib, one file per chapter)
+manuals/         per-stage to-do guides
 ```
 
 More folders (`configs/`, `splits/`, `notebooks/`, `tests/`, `results/`) are added as the stages need them. The full planned tree is in `docs/HANDBOOK.md` §9.2.
