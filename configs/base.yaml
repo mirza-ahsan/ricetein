@@ -6,7 +6,7 @@
 #
 # Rules:
 #   - Paths are relative to the REPOSITORY ROOT, never to the current folder.
-#     src/config.py turns them into real paths on each machine (laptop, Kaggle).
+#     src/config.py turns them into real paths on each machine (local machine, Kaggle).
 #   - Stage-specific settings (learning rates, epochs, batch sizes, ...) do NOT
 #     belong here; they go in that stage's own file under configs/.
 #   - Values must agree with the pre-declared methodology
@@ -28,7 +28,7 @@ classes: [healthy, leaf_blast, brown_spot, hispa]
 
 # -------------------------------------------------------------------
 # Datasets
-#   local_dir   : repo-relative folder on the laptop (data/raw is git-ignored)
+#   local_dir   : repo-relative folder on the local machine (data/raw is git-ignored)
 #   kaggle_slug : name of the attached Kaggle dataset (found by name on Kaggle)
 #   image_subdir: folder inside the dataset that holds the class folders
 #   class_folders: our class name -> folder name in that dataset
@@ -68,7 +68,7 @@ datasets:
        downy_mildew, leaf_roller, tungro, white_stem_borer, yellow_stem_borer]
 
 # -------------------------------------------------------------------
-# Where things are written / read (repo-relative on the laptop).
+# Where things are written / read (repo-relative on the local machine).
 # On Kaggle, writable folders go under /kaggle/working/<same name>, and
 # splits/ + configs/ are read from the attached ricetein-code dataset.
 # -------------------------------------------------------------------

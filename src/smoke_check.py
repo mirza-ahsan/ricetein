@@ -1,7 +1,7 @@
 """Environment smoke check: packages, GPU, datasets, run records and (optionally) DINOv3.
 
 Kaggle:  run("src.smoke_check", "--require-dinov3")  (see the 00-smoke notebook)
-Laptop:  uv run python -m src.smoke_check [--require-dinov3]
+Local:   uv run python -m src.smoke_check [--require-dinov3]
 """
 
 from __future__ import annotations
@@ -51,7 +51,7 @@ def check_packages() -> None:
         from_env = str(Path(module.__file__).resolve()).startswith(str(Path(sys.prefix).resolve()))
         ok = want in (None, installed) and from_env
         note = "" if ok else ("   <-- VERSION MISMATCH" if from_env else "   <-- LOADED FROM OUTSIDE THE ENV")
-        print(f"  {dist:24s} installed {installed:22s} locked {want or '(laptop: uv.lock)'}{note}")
+        print(f"  {dist:24s} installed {installed:22s} locked {want or '(local: uv.lock)'}{note}")
         if not ok:
             problems[dist] = (installed, want, module.__file__)
     importlib.import_module("scipy.sparse")

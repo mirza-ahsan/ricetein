@@ -1,4 +1,4 @@
-"""Unified run recorder for experiments on the laptop and on Kaggle.
+"""Unified run recorder for experiments on the local machine and on Kaggle.
 
 Every run writes the same files into ``runs/<run_name>/`` (``/kaggle/working/runs/<run_name>/``
 on Kaggle):
@@ -54,7 +54,7 @@ def get_code_version() -> str:
     """Return the code version the run is using.
 
     On Kaggle: the commit ID written into the ``ricetein-code`` dataset by
-    ``scripts/kaggle_sync_code.sh``. On the laptop: the current git commit,
+    ``scripts/kaggle_sync_code.sh``. On the local machine: the current git commit,
     with ``-dirty`` appended when tracked code has uncommitted changes.
     """
     if on_kaggle():

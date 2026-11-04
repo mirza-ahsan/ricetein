@@ -5,7 +5,7 @@
 #
 # Usage: ./scripts/kaggle_upload_weights.sh                 # DINOv3 ViT-S/16 and ViT-B/16 (~410 MB)
 #        INCLUDE_LARGE=1 ./scripts/kaggle_upload_weights.sh  # also ViT-L/16 (+1.2 GB, encoder E5)
-# Needs: Hugging Face access to the DINOv3 models on this laptop (uv run hf auth whoami).
+# Needs: Hugging Face access to the DINOv3 models on this machine (uv run hf auth whoami).
 set -euo pipefail
 cd "$(dirname "$0")/.."
 

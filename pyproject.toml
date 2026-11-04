@@ -38,7 +38,7 @@ explicit = true
 torch = { index = "pytorch-cu128" }
 torchvision = { index = "pytorch-cu128" }
 
-# Installed on the laptop only (uv sync installs both groups by default).
+# Installed on the local machine only (uv sync installs both groups by default).
 # Kept out of the main dependencies so they are NOT exported to Kaggle:
 # reinstalling Jupyter packages inside a running Kaggle notebook can break it.
 [dependency-groups]
