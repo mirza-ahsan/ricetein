@@ -59,6 +59,25 @@ def pretrained_source(repo_id: str) -> str:
     return repo_id
 
 
+def pinned_pretrained(repo_id: str, revision: str) -> tuple[str, dict[str, str]]:
+    """``(source, from_pretrained kwargs)`` that load ``repo_id`` at exactly ``revision``.
+
+    On the local machine: the Hugging Face id plus ``revision=``. On Kaggle: the copy in
+    ``ricetein-weights``, after checking its REVISIONS.txt lists this exact commit (the upload
+    script copies whatever commit Hugging Face had at upload time, which may not be the pin).
+    """
+    source = pretrained_source(repo_id)
+    if source == repo_id:
+        return source, {"revision": revision}
+    folder = Path(source)
+    listing = next((p / "REVISIONS.txt" for p in (folder.parent, folder.parent.parent)
+                    if (p / "REVISIONS.txt").exists()), None)
+    pins = {line.strip() for line in listing.read_text().splitlines()} if listing else set()
+    if f"{repo_id} {revision}" not in pins:
+        raise RuntimeError(f"{WEIGHTS_DATASET_SLUG} does not hold {repo_id} at pinned revision {revision}")
+    return source, {}
+
+
 def code_dir() -> Path:
     found = find_kaggle_input(CODE_DATASET_SLUG)
     if found is None:

@@ -1,0 +1,24 @@
+# ===================================================================
+# configs/skeleton.yaml: Stage 0 walking skeleton (src/skeleton.py)
+# ===================================================================
+# Throwaway end-to-end run on 20 photos. Its numbers mean nothing; it must only
+# give the same labels and scores on the local machine and on Kaggle
+# (probabilities within compare_atol). Run names: stage0_skeleton_halo / _kaggle.
+# ===================================================================
+extends: base.yaml
+
+skeleton:
+  photos_per_class: 5         # seeded sample from the sorted file list of each class
+  train_per_class: 3          # the other 2 per class are scored; NOT the real split (that is Stage 3)
+  encoder: E1                 # DINOv3 ViT-B/16 at the pinned revision (base.yaml)
+  encode_batch: 64            # tiles per encoder forward pass
+  head:                       # gated-attention MIL head (Ilse et al. 2018)
+    projection_dim: 128
+    attention_dim: 64
+  training:                   # full batch: one AdamW step per epoch
+    steps: 50
+    lr: 1.0e-3
+    weight_decay: 1.0e-4
+    adam_eps: 1.0e-5          # default 1e-8 lets rounding noise in tiny gradients become full steps;
+                              # 1e-5 keeps local-vs-Kaggle differences ~40x below compare_atol
+  compare_atol: 1.0e-3        # Stage 0 "done when": probabilities agree within this

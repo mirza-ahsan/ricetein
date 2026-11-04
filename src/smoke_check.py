@@ -14,7 +14,7 @@ from importlib import metadata
 from pathlib import Path
 
 from src.config import dataset_dir, load_config, on_kaggle
-from src.kaggle_bootstrap import find_kaggle_input, pretrained_source
+from src.kaggle_bootstrap import find_kaggle_input, pinned_pretrained
 from src.records import RunRecorder
 
 CHECKED_PACKAGES = {  # import name -> distribution name in the lock file
@@ -86,12 +86,10 @@ def check_dinov3(config: dict) -> None:
     from transformers import AutoModel
 
     spec = config["encoders"]["E1"]
-    repo_id = spec["name"]
-    source = pretrained_source(repo_id)
+    source, pinned = pinned_pretrained(spec["name"], spec["revision"])
     if on_kaggle():
-        assert source != repo_id, "ricetein-weights dataset not attached (add it to dataset_sources)"
-    pinned = {"revision": spec["revision"]} if source == repo_id else {}  # the Kaggle copy is already pinned
-    print(f"  loading from: {source} {pinned or '(pinned copy)'}")
+        assert source != spec["name"], "ricetein-weights dataset not attached (add it to dataset_sources)"
+    print(f"  loading from: {source} {pinned or '(pinned copy, revision checked)'}")
     device = "cuda" if torch.cuda.is_available() else "cpu"
     model = AutoModel.from_pretrained(source, **pinned).eval().to(device)
     with torch.no_grad():
