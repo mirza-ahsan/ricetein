@@ -55,7 +55,8 @@ fi
 # 5. Wait until Kaggle has finished processing; notebooks pushed earlier would see the old version.
 echo "==> Waiting for Kaggle to process the upload ..."
 for _ in $(seq 1 60); do
-    STATUS=$(uv run kaggle datasets status "$DATASET_ID" 2>/dev/null || echo "unknown")
+    # Last line only: the CLI may print warnings (e.g. "outdated kaggle version") before the status.
+    STATUS=$( (uv run kaggle datasets status "$DATASET_ID" 2>/dev/null || echo "unknown") | tail -n 1)
     if [ "$STATUS" = "ready" ]; then
         echo "==> $DATASET_ID is ready (code $COMMIT)."
         exit 0
