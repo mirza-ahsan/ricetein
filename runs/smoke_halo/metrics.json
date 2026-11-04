@@ -1,0 +1,5 @@
+{
+  "smoke": "passed",
+  "partition": "none",
+  "dinov3_checked": true
+}

@@ -13,6 +13,7 @@ This document records the provenance, download metadata, file counts, and licens
 * **Downloaded By**: Ahsan Baig (`aztrek`) via Kaggle CLI
 * **Archive Size**: 12,874,852,891 bytes (~12.0 GB)
 * **Kaggle ETag / Validator**: `6007c8b467dd3134854a05e2dbd8083c`
+* **Archive SHA-256** (`rice-diseases-image-dataset.zip`, downloaded again with the Kaggle CLI on 2026-11-04; same size as on 2026-09-26): `bc8cf33c007cc99683407b3c4d4dfa6f7ac8b0fd177871e42930bb51d8263bb7`
 * **Version**: Kaggle listing last updated **2019-11-15** (the dataset has a single release; use this date as the version identifier)
 * **Local Path**: `data/raw/rice_diseases/`
 * **License Terms**: **MIT License** (as stated on Kaggle landing page and API metadata).
@@ -53,6 +54,7 @@ Class counts derived directly from `LabelledRice/Labelled/`:
 * **Download / Upload Date**: 2026-09-26 / 2026-09-27
 * **Owner / Manager**: Ahsan Baig (`aztrek`)
 * **Archive Size**: ~4.65 GB (16,225 images + metadata.csv)
+* **Private Kaggle copy archive** (`paddy-doctor-full.zip` from `kaggle datasets download aztrek/paddy-doctor-full`, 2026-11-04): 4,988,175,207 bytes, SHA-256 `61862b2650a79e2d45c210a34cdef879a2b97b0b0ab31a28f340a99feb2ebcf5`
 * **Local Path**: `data/raw/paddy_doctor/`
 * **License Terms**: **Creative Commons Attribution 4.0 International (CC BY 4.0)**.
 * **Native Resolution**: Verified (all 16,225 headers, 2026-10-02): 16,219 images are $1080 \times 1440$ (portrait) and **6 are $1440 \times 1080$ (landscape)**. No EXIF rotation tags. `metadata.csv` matches the files on disk exactly (no missing or extra files; per-class counts identical).
@@ -79,7 +81,7 @@ The dataset comprises 16,225 high-resolution smartphone images across 13 classes
 | **Total** | **16,225** | **8,164 shared-class images** | **Full 13-class uncompressed release** |
 
 * **Status**: Complete and verified (counts, metadata and image sizes).
-* **Still to add**: SHA-256 checksum of the downloaded IEEE DataPort archive, if the original zip is still available.
+* **IEEE DataPort archive checksum**: not available. The original zip was on the old laptop, which has been formatted (2026-11-04); it can only be recorded by downloading the release again from IEEE DataPort. The Kaggle copy's checksum above identifies the version we use.
 
 
 ---
