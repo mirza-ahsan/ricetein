@@ -1,0 +1,79 @@
+[2026-11-04 17:53:59] [INFO] ============================================================
+[2026-11-04 17:53:59] [INFO] Run: stage0_skeleton_kaggle
+[2026-11-04 17:53:59] [INFO] Folder: /kaggle/working/runs/stage0_skeleton_kaggle
+[2026-11-04 17:53:59] [INFO] Code version: 603dd4c
+[2026-11-04 17:53:59] [INFO] GPU: Tesla T4 (14.56 GB)
+[2026-11-04 17:53:59] [INFO] ============================================================
+[2026-11-04 17:54:01] [INFO] Healthy/IMG_20190419_175326.jpg: 3120 x 3120 px -> 196 tiles
+[2026-11-04 17:54:02] [INFO] Healthy/IMG_20190419_170448.jpg: 1387 x 1387 px -> 49 tiles
+[2026-11-04 17:54:02] [INFO] Healthy/IMG_20190419_141150.jpg: 1189 x 1189 px -> 36 tiles
+[2026-11-04 17:54:04] [INFO] Healthy/IMG_20190419_144708.jpg: 1915 x 1915 px -> 81 tiles
+[2026-11-04 17:54:06] [INFO] Healthy/IMG_20190424_131657.jpg: 3120 x 3120 px -> 196 tiles
+[2026-11-04 17:54:07] [INFO] LeafBlast/IMG_3012.jpg: 1881 x 1880 px -> 81 tiles
+[2026-11-04 17:54:08] [INFO] LeafBlast/IMG_20190419_162724.jpg: 1962 x 1962 px -> 81 tiles
+[2026-11-04 17:54:09] [INFO] LeafBlast/IMG_20190419_174020.jpg: 2095 x 2095 px -> 100 tiles
+[2026-11-04 17:54:09] [INFO] LeafBlast/IMG_4876.jpg: 1066 x 1066 px -> 25 tiles
+[2026-11-04 17:54:10] [INFO] LeafBlast/IMG_20190419_172710.jpg: 1879 x 1879 px -> 81 tiles
+[2026-11-04 17:54:13] [INFO] BrownSpot/IMG_20190420_195231_1.jpg: 3120 x 3120 px -> 196 tiles
+[2026-11-04 17:54:15] [INFO] BrownSpot/IMG_20190424_130014.jpg: 3120 x 3120 px -> 196 tiles
+[2026-11-04 17:54:18] [INFO] BrownSpot/IMG_20190420_190910.jpg: 3120 x 3120 px -> 196 tiles
+[2026-11-04 17:54:18] [INFO] BrownSpot/IMG_3177.jpg: 812 x 812 px -> 16 tiles
+[2026-11-04 17:54:19] [INFO] BrownSpot/IMG_20190420_194805.jpg: 1365 x 1365 px -> 49 tiles
+[2026-11-04 17:54:21] [INFO] Hispa/IMG_20190419_172808.jpg: 3120 x 3120 px -> 196 tiles
+[2026-11-04 17:54:22] [INFO] Hispa/IMG_20190419_173044.jpg: 1536 x 1536 px -> 49 tiles
+[2026-11-04 17:54:24] [INFO] Hispa/IMG_20190419_124719.jpg: 3120 x 3120 px -> 196 tiles
+[2026-11-04 17:54:26] [INFO] Hispa/IMG_20190420_194345.jpg: 2547 x 2547 px -> 144 tiles
+[2026-11-04 17:54:27] [INFO] Hispa/IMG_20190419_095917.jpg: 1478 x 1478 px -> 49 tiles
+[2026-11-04 17:54:27] [INFO] Epoch 001 -> train_loss: 1.3778
+[2026-11-04 17:54:27] [INFO] Epoch 002 -> train_loss: 1.3114
+[2026-11-04 17:54:27] [INFO] Epoch 003 -> train_loss: 1.2483
+[2026-11-04 17:54:27] [INFO] Epoch 004 -> train_loss: 1.1829
+[2026-11-04 17:54:27] [INFO] Epoch 005 -> train_loss: 1.1172
+[2026-11-04 17:54:27] [INFO] Epoch 006 -> train_loss: 1.0522
+[2026-11-04 17:54:27] [INFO] Epoch 007 -> train_loss: 0.9894
+[2026-11-04 17:54:27] [INFO] Epoch 008 -> train_loss: 0.9290
+[2026-11-04 17:54:27] [INFO] Epoch 009 -> train_loss: 0.8708
+[2026-11-04 17:54:27] [INFO] Epoch 010 -> train_loss: 0.8148
+[2026-11-04 17:54:27] [INFO] Epoch 011 -> train_loss: 0.7613
+[2026-11-04 17:54:27] [INFO] Epoch 012 -> train_loss: 0.7097
+[2026-11-04 17:54:27] [INFO] Epoch 013 -> train_loss: 0.6598
+[2026-11-04 17:54:27] [INFO] Epoch 014 -> train_loss: 0.6118
+[2026-11-04 17:54:27] [INFO] Epoch 015 -> train_loss: 0.5660
+[2026-11-04 17:54:27] [INFO] Epoch 016 -> train_loss: 0.5230
+[2026-11-04 17:54:27] [INFO] Epoch 017 -> train_loss: 0.4840
+[2026-11-04 17:54:27] [INFO] Epoch 018 -> train_loss: 0.4497
+[2026-11-04 17:54:27] [INFO] Epoch 019 -> train_loss: 0.4210
+[2026-11-04 17:54:27] [INFO] Epoch 020 -> train_loss: 0.3989
+[2026-11-04 17:54:27] [INFO] Epoch 021 -> train_loss: 0.3842
+[2026-11-04 17:54:27] [INFO] Epoch 022 -> train_loss: 0.3763
+[2026-11-04 17:54:27] [INFO] Epoch 023 -> train_loss: 0.3738
+[2026-11-04 17:54:27] [INFO] Epoch 024 -> train_loss: 0.3748
+[2026-11-04 17:54:27] [INFO] Epoch 025 -> train_loss: 0.3773
+[2026-11-04 17:54:27] [INFO] Epoch 026 -> train_loss: 0.3798
+[2026-11-04 17:54:27] [INFO] Epoch 027 -> train_loss: 0.3811
+[2026-11-04 17:54:27] [INFO] Epoch 028 -> train_loss: 0.3808
+[2026-11-04 17:54:27] [INFO] Epoch 029 -> train_loss: 0.3789
+[2026-11-04 17:54:27] [INFO] Epoch 030 -> train_loss: 0.3758
+[2026-11-04 17:54:27] [INFO] Epoch 031 -> train_loss: 0.3722
+[2026-11-04 17:54:27] [INFO] Epoch 032 -> train_loss: 0.3687
+[2026-11-04 17:54:27] [INFO] Epoch 033 -> train_loss: 0.3656
+[2026-11-04 17:54:27] [INFO] Epoch 034 -> train_loss: 0.3633
+[2026-11-04 17:54:27] [INFO] Epoch 035 -> train_loss: 0.3622
+[2026-11-04 17:54:27] [INFO] Epoch 036 -> train_loss: 0.3621
+[2026-11-04 17:54:27] [INFO] Epoch 037 -> train_loss: 0.3623
+[2026-11-04 17:54:27] [INFO] Epoch 038 -> train_loss: 0.3624
+[2026-11-04 17:54:27] [INFO] Epoch 039 -> train_loss: 0.3620
+[2026-11-04 17:54:27] [INFO] Epoch 040 -> train_loss: 0.3611
+[2026-11-04 17:54:27] [INFO] Epoch 041 -> train_loss: 0.3600
+[2026-11-04 17:54:27] [INFO] Epoch 042 -> train_loss: 0.3589
+[2026-11-04 17:54:27] [INFO] Epoch 043 -> train_loss: 0.3578
+[2026-11-04 17:54:27] [INFO] Epoch 044 -> train_loss: 0.3569
+[2026-11-04 17:54:27] [INFO] Epoch 045 -> train_loss: 0.3562
+[2026-11-04 17:54:27] [INFO] Epoch 046 -> train_loss: 0.3557
+[2026-11-04 17:54:27] [INFO] Epoch 047 -> train_loss: 0.3553
+[2026-11-04 17:54:27] [INFO] Epoch 048 -> train_loss: 0.3550
+[2026-11-04 17:54:27] [INFO] Epoch 049 -> train_loss: 0.3547
+[2026-11-04 17:54:27] [INFO] Epoch 050 -> train_loss: 0.3544
+[2026-11-04 17:54:27] [INFO] Saved predictions.csv
+[2026-11-04 17:54:27] [INFO] Saved metrics.json
+[2026-11-04 17:54:27] [INFO] Run finished in 28.58s (status: completed); saved record.json

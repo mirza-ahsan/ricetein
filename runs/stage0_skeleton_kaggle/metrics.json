@@ -1,0 +1,9 @@
+{
+  "partition": "test",
+  "note": "walking skeleton: throwaway 3+2 per class split, not a real result",
+  "n_photos": 8,
+  "macro_f1": 0.23809523809523808,
+  "balanced_accuracy": 0.25,
+  "accuracy": 0.25,
+  "n_tiles_total": 2213
+}
