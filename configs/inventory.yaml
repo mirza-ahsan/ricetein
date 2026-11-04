@@ -1,0 +1,19 @@
+# ===================================================================
+# configs/inventory.yaml: Stage 1 inventory and pixel-scale check
+# ===================================================================
+# Hash settings are shared with Stage 2 and live in base.yaml (hashing:).
+# The pixel-scale rule is fixed in the pre-declared methodology (Section III,
+# "Pixel scale"); do not change it after measuring.
+# ===================================================================
+extends: base.yaml
+
+inventory:
+  files:                       # one CSV per dataset (repo-relative, committed)
+    primary: data/inventory.csv
+    paddy: data/paddy_inventory.csv
+
+pixel_scale:
+  measurements_file: data/leaf_width_measurements.csv
+  n_photos: 30                 # drawn across the shorter-side range: one per equal-count size band
+  measurers: 2                 # independent measurements per photo; their mean is used
+  spearman_threshold: 0.5      # rho >= 0.5 -> rescale every photo to the median leaf width before tiling
