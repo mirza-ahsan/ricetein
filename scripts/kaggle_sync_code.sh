@@ -30,6 +30,7 @@ find "$STAGE" -mindepth 1 -not -name "dataset-metadata.json" -delete
 for d in src configs splits; do
     [ -d "$d" ] && cp -r "$d" "$STAGE/"
 done
+cp .python-version "$STAGE/"   # setup_env() builds the Kaggle environment with this exact Python
 find "$STAGE" -name "__pycache__" -type d -prune -exec rm -rf {} +
 find "$STAGE" -name "*.pyc" -delete
 

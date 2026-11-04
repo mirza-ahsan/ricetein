@@ -103,7 +103,11 @@ def venv_python(venv_dir: Path = DEFAULT_VENV) -> Path:
 
 
 def setup_env(requirements: Path | None = None, venv_dir: Path = DEFAULT_VENV) -> Path:
-    """Create the isolated environment (once per session) and return its Python."""
+    """Create the isolated environment (once per session) and return its Python.
+
+    The interpreter is the one pinned in the code dataset's ``.python-version`` (uv downloads
+    it), not Kaggle's own Python, which changes whenever Kaggle updates its image.
+    """
     python = venv_python(venv_dir)
     if python.exists():
         return python
@@ -113,7 +117,9 @@ def setup_env(requirements: Path | None = None, venv_dir: Path = DEFAULT_VENV) -
     else:
         _stream([sys.executable, "-m", "pip", "install", "--quiet", "uv"])
         uv = [sys.executable, "-m", "uv"]
-    _stream([*uv, "venv", str(venv_dir), "--python", sys.executable, "--quiet"])
+    pin = requirements.parent / ".python-version"
+    interpreter = pin.read_text().strip() if pin.exists() else sys.executable
+    _stream([*uv, "venv", str(venv_dir), "--python", interpreter, "--quiet"])
     # unsafe-best-match: every version is pinned, so take each package from whichever
     # index has that exact version (torch from the PyTorch index, the rest from PyPI).
     _stream(
