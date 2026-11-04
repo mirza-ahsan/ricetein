@@ -33,7 +33,7 @@ Course project at FAST School of Computing, FAST-NUCES Lahore, and the basis of 
 | Phase 4: Experiments and Results | In progress |
 | Final paper | Not started |
 | Environment (local machine + Kaggle GPUs) | Done and verified |
-| Experiments | Stage 0 of 14 (see `docs/HANDBOOK.md`) |
+| Experiments | Stage 0 done (2026-11-04); Stage 1 next (see `docs/HANDBOOK.md`) |
 
 ---
 

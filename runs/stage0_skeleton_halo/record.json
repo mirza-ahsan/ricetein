@@ -1,0 +1,229 @@
+{
+  "run_name": "stage0_skeleton_halo",
+  "status": "completed",
+  "start_time": "2026-11-04T17:55:43.127316+00:00",
+  "end_time": "2026-11-04T17:55:58.165697+00:00",
+  "duration_seconds": 15.04,
+  "code_version": "3ce878a",
+  "split_checksum": null,
+  "data_version": {
+    "primary": "2019-11-15"
+  },
+  "hardware": {
+    "environment": "local",
+    "os": "Linux-7.2.8-9-omarchy-x86_64-with-glibc2.44",
+    "python": "3.12.13",
+    "cpu_count": 16,
+    "ram_total_gb": 14.49,
+    "cuda_available": true,
+    "gpu_name": "NVIDIA GeForce RTX 4060",
+    "gpu_count": 1,
+    "gpu_total_memory_gb": 7.68,
+    "cuda_version": "12.8",
+    "peak_gpu_memory_mb": 859.31
+  },
+  "packages": {
+    "torch": "2.11.0+cu128",
+    "torchvision": "0.26.0+cu128",
+    "timm": "1.0.30",
+    "transformers": "5.17.0",
+    "numpy": "2.5.3",
+    "scikit-learn": "1.9.1",
+    "pandas": "3.0.6"
+  },
+  "config": {
+    "seed": 0,
+    "split_seed": 2026,
+    "determinism": "strict",
+    "classes": [
+      "healthy",
+      "leaf_blast",
+      "brown_spot",
+      "hispa"
+    ],
+    "datasets": {
+      "primary": {
+        "local_dir": "data/raw/rice_diseases",
+        "kaggle_slug": "rice-diseases-image-dataset",
+        "image_subdir": "LabelledRice/Labelled",
+        "ignored_subdirs": [
+          "RiceDiseaseDataset"
+        ],
+        "image_extension": ".jpg",
+        "version": "2019-11-15",
+        "licence": "MIT",
+        "expected_counts": {
+          "healthy": 1488,
+          "leaf_blast": 779,
+          "brown_spot": 523,
+          "hispa": 565
+        },
+        "class_folders": {
+          "healthy": "Healthy",
+          "leaf_blast": "LeafBlast",
+          "brown_spot": "BrownSpot",
+          "hispa": "Hispa"
+        }
+      },
+      "paddy": {
+        "local_dir": "data/raw/paddy_doctor",
+        "kaggle_slug": "paddy-doctor-full",
+        "image_subdir": "",
+        "metadata_file": "metadata.csv",
+        "image_extension": ".jpg",
+        "version": "IEEE DataPort full release (16,225 images, 13 classes)",
+        "licence": "CC BY 4.0",
+        "expected_counts": {
+          "healthy": 2405,
+          "leaf_blast": 2351,
+          "brown_spot": 1257,
+          "hispa": 2151
+        },
+        "class_folders": {
+          "healthy": "normal",
+          "leaf_blast": "blast",
+          "brown_spot": "brown_spot",
+          "hispa": "hispa"
+        },
+        "calibration_folders": [
+          "bacterial_leaf_blight",
+          "bacterial_leaf_streak",
+          "bacterial_panicle_blight",
+          "black_stem_borer",
+          "downy_mildew",
+          "leaf_roller",
+          "tungro",
+          "white_stem_borer",
+          "yellow_stem_borer"
+        ]
+      }
+    },
+    "paths": {
+      "configs": "configs",
+      "splits": "splits",
+      "runs": "runs",
+      "cache": "cache",
+      "results": "results",
+      "reports": "docs/reports"
+    },
+    "tiling": {
+      "tile_size": 224
+    },
+    "normalisation": {
+      "mean": [
+        0.485,
+        0.456,
+        0.406
+      ],
+      "std": [
+        0.229,
+        0.224,
+        0.225
+      ]
+    },
+    "main_encoder": "E1",
+    "encoders": {
+      "E1": {
+        "library": "transformers",
+        "name": "facebook/dinov3-vitb16-pretrain-lvd1689m",
+        "revision": "5931719e67bbdb9737e363e781fb0c67687896bc",
+        "params_m": 85.7,
+        "dim": 768,
+        "patch_size": 16,
+        "register_tokens": 4,
+        "on_kaggle_weights": true
+      },
+      "E2": {
+        "library": "timm",
+        "name": "convnext_tiny.fb_in1k",
+        "revision": "b43a6303c9fcf176d2d707478a128c2c91e93528",
+        "params_m": 27.8,
+        "dim": 768,
+        "on_kaggle_weights": false
+      },
+      "E3": {
+        "library": "transformers",
+        "name": "facebook/dinov2-base",
+        "revision": "f9e44c814b77203eaa57a6bdbbd535f21ede1415",
+        "params_m": 86.6,
+        "dim": 768,
+        "patch_size": 14,
+        "register_tokens": 0,
+        "on_kaggle_weights": false
+      },
+      "E4": {
+        "library": "transformers",
+        "name": "facebook/dinov3-vits16-pretrain-lvd1689m",
+        "revision": "114c1379950215c8b35dfcd4e90a5c251dde0d32",
+        "params_m": 21.6,
+        "dim": 384,
+        "patch_size": 16,
+        "register_tokens": 4,
+        "on_kaggle_weights": true
+      },
+      "E5": {
+        "library": "transformers",
+        "name": "facebook/dinov3-vitl16-pretrain-lvd1689m",
+        "revision": "ea8dc2863c51be0a264bab82070e3e8836b02d51",
+        "params_m": 303.1,
+        "dim": 1024,
+        "patch_size": 16,
+        "register_tokens": 4,
+        "on_kaggle_weights": false
+      }
+    },
+    "split": {
+      "n_folds": 5,
+      "val_fraction": 0.125,
+      "stratify_by": "class",
+      "group_by": "near_duplicate_group",
+      "exclude_label_conflicts": true,
+      "max_class_share_deviation": 0.02
+    },
+    "loss": {
+      "class_weighting": "inverse_frequency",
+      "label_smoothing": 0.1
+    },
+    "evaluation": {
+      "primary_metric": "macro_f1",
+      "secondary_metric": "balanced_accuracy",
+      "also_report": [
+        "accuracy",
+        "per_class_precision",
+        "per_class_recall",
+        "confusion_matrix",
+        "ece"
+      ],
+      "diagnostic_class": "hispa",
+      "bootstrap": {
+        "resamples": 2000,
+        "confidence": 0.95,
+        "stratified": true
+      },
+      "calibration_bins": 15,
+      "comparison": {
+        "ci_excludes_zero": true,
+        "min_round_wins": 4
+      },
+      "report_decimals": 1
+    },
+    "skeleton": {
+      "photos_per_class": 5,
+      "train_per_class": 3,
+      "encoder": "E1",
+      "encode_batch": 64,
+      "head": {
+        "projection_dim": 128,
+        "attention_dim": 64
+      },
+      "training": {
+        "steps": 50,
+        "lr": 0.001,
+        "weight_decay": 0.0001,
+        "adam_eps": 1e-05
+      },
+      "compare_atol": 0.001
+    },
+    "config_file": "configs/skeleton.yaml"
+  }
+}
