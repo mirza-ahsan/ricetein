@@ -255,8 +255,10 @@ def compare_runs(run_a: str | Path, run_b: str | Path, atol: float) -> bool:
         print(f"  [{'ok' if passed else 'FAIL'}] {name}")
     if (a / "features.pt").exists() and (b / "features.pt").exists():  # diagnostic only
         fa, fb = torch.load(a / "features.pt"), torch.load(b / "features.pt")
-        rel = max(float((fa[k] - fb[k]).abs().max() / fb[k].abs().max()) for k in fa if k in fb)
-        print(f"  [info] max relative encoder feature difference: {rel:.2e}")
+        rels = [float((fa[k] - fb[k]).abs().max() / fb[k].abs().max())
+                for k in fa if k in fb and fa[k].shape == fb[k].shape]
+        if rels:
+            print(f"  [info] max relative encoder feature difference: {max(rels):.2e}")
     return all(checks.values())
 
 

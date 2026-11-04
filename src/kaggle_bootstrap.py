@@ -72,7 +72,8 @@ def pinned_pretrained(repo_id: str, revision: str) -> tuple[str, dict[str, str]]
     folder = Path(source)
     listing = next((p / "REVISIONS.txt" for p in (folder.parent, folder.parent.parent)
                     if (p / "REVISIONS.txt").exists()), None)
-    if listing is None or f"{repo_id} {revision}" not in listing.read_text().split("\n"):
+    pins = {line.strip() for line in listing.read_text().splitlines()} if listing else set()
+    if f"{repo_id} {revision}" not in pins:
         raise RuntimeError(f"{WEIGHTS_DATASET_SLUG} does not hold {repo_id} at pinned revision {revision}")
     return source, {}
 
