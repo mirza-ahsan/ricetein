@@ -105,7 +105,7 @@ The dataset comprises 16,225 high-resolution smartphone images across 13 classes
 | E5 (optional) | `facebook/dinov3-vitl16-pretrain-lvd1689m` | `ea8dc2863c51be0a264bab82070e3e8836b02d51` |
 
 * **License Terms**: **DINOv3 License** (Meta, last updated 19 August 2025). Copies and redistribution are allowed only with the licence attached (§1.b.i); publications must acknowledge the use of DINOv3 (§1.b.ii). The Kaggle copy is private.
-* **Laptop note**: the laptop loads the same models from Hugging Face. To pin the laptop too, pass the commit above as `revision=` when loading.
+* **Local note**: the local machine loads the same models from Hugging Face. To pin the local machine too, pass the commit above as `revision=` when loading.
 
 ---
 

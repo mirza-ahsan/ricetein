@@ -48,7 +48,7 @@ def pretrained_source(repo_id: str) -> str:
 
     On Kaggle with the private ``ricetein-weights`` dataset attached: its local folder for
     ``repo_id`` (no token or download needed, and the exact pinned version is used).
-    Otherwise: the Hugging Face id itself (the laptop uses its logged-in cache).
+    Otherwise: the Hugging Face id itself (the local machine uses its logged-in cache).
     """
     root = find_kaggle_input(WEIGHTS_DATASET_SLUG)
     if root is not None:

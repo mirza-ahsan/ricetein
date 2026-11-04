@@ -32,7 +32,7 @@ Course project at FAST School of Computing, FAST-NUCES Lahore, and the basis of 
 | Phase 3: Methodology and Experimental Setup | Final (`deliverables/phase3/`) |
 | Phase 4: Experiments and Results | In progress |
 | Final paper | Not started |
-| Environment (laptop + Kaggle GPUs) | Done and verified |
+| Environment (local machine + Kaggle GPUs) | Done and verified |
 | Experiments | Stage 0 of 14 (see `docs/HANDBOOK.md`) |
 
 ---
@@ -55,7 +55,7 @@ docs/            project documents (start here)
   HANDBOOK.md       the full practical plan: stages 0–14, rules, decisions, file build order
   DELIVERABLES.md   coursework tracker: deliverables, marks, written commitments
   KAGGLE_WORKFLOW.md  one-time setup for running notebooks on Kaggle GPUs
-  WORKFLOW_GUIDE.md   day-to-day: running notebooks on the laptop and on Kaggle
+  WORKFLOW_GUIDE.md   day-to-day: running notebooks on the local machine and on Kaggle
   logbook.md        dated log of what was done, found and decided
 src/             project code (installed as a package, so `import src` works anywhere)
 scripts/         Kaggle helper scripts (sync code, push, pull, upload weights)
@@ -71,7 +71,7 @@ More folders (`configs/`, `splits/`, `notebooks/`, `tests/`, `results/`) are add
 
 ## Setup
 
-Requirements: Linux, an NVIDIA GPU with a CUDA 12.8-capable driver (development uses an RTX A1000, 4 GB), [uv](https://docs.astral.sh/uv/), git.
+Requirements: Linux, an NVIDIA GPU with a CUDA 12.8-capable driver (development uses an RTX 4060, 8 GB), [uv](https://docs.astral.sh/uv/), git.
 
 **1. Clone and install** (Python 3.12; PyTorch 2.11 with CUDA 12.8; every version pinned in `uv.lock`):
 ```bash
@@ -108,7 +108,7 @@ uv run python -m src.smoke_check --require-dinov3 --run-name smoke_mine
 
 ## Running experiments
 
-- **On the laptop:** open a notebook from `notebooks/` with the project's `.venv` kernel. Every run writes its record to `runs/<run_name>/`.
+- **On the local machine:** open a notebook from `notebooks/` with the project's `.venv` kernel. Every run writes its record to `runs/<run_name>/`.
 - **On Kaggle GPUs (heavy jobs), from the terminal:**
   ```bash
   ./scripts/kaggle_sync_code.sh          # upload the committed code to Kaggle
