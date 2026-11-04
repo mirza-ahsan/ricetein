@@ -11,7 +11,8 @@ Measuring protocol (declared before anyone measures):
 - If no leaf can be measured that way (blade runs off the frame across its width, leaf folded or
   seen edge-on, nothing in focus, two leaves equally central), press U to mark it unmeasurable.
 - A photo counts only if every measurer measured it; photos anyone marked unmeasurable are left out
-  of the correlation, and how many were left out is reported.
+  of the correlation, and how many were left out is reported. With fewer than 20 usable photos the
+  rule is not applied (the result is logged and decided with the team).
 - Each measurer works alone, in their own shuffled order, into their own file, and does not look at
   the others' numbers until both are done.
 
@@ -28,6 +29,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import os
 from collections.abc import Callable
 from datetime import datetime, timezone
 from pathlib import Path
@@ -76,6 +78,16 @@ def select_photos(inventory: pd.DataFrame, n: int, seed: int) -> pd.DataFrame:
     return chosen[["photo_id", "class", "width", "height", "short_side"]].reset_index(drop=True)
 
 
+def freeze_selection(config: dict[str, Any]) -> pd.DataFrame:
+    """Write the selection once (later calls read the frozen file, never redraw it)."""
+    target = REPO_ROOT / config["pixel_scale"]["selection_file"]
+    if not target.exists():
+        inventory = read_inventory(config["inventory"]["files"][DATASET])
+        chosen = select_photos(inventory, config["pixel_scale"]["n_photos"], config["seed"])
+        chosen.to_csv(target, index=False)
+    return selection(config)
+
+
 def selection(config: dict[str, Any]) -> pd.DataFrame:
     """The frozen selection (written once by ``select`` and committed)."""
     path = REPO_ROOT / config["pixel_scale"]["selection_file"]
@@ -100,10 +112,15 @@ def read_measurements(path: Path) -> pd.DataFrame:
 
 def click_leaf_edges(image: Any, title: str) -> tuple[str, list[tuple[float, float]]]:
     """Show ``image``; return ("accept", [p1, p2]), ("unmeasurable", []) or ("stop", [])."""
+    import matplotlib
     import matplotlib.pyplot as plt
 
-    keymaps = {k: [] for k in plt.rcParams if k.startswith("keymap.")}  # only our keys do anything
-    with plt.rc_context(keymaps):
+    if matplotlib.get_backend().lower() in {"agg", "pdf", "svg", "ps", "pgf", "cairo", "template"}:
+        raise RuntimeError("measuring needs a screen and an interactive matplotlib backend (e.g. TkAgg)")
+    width, height = image.size
+    settings = {k: [] for k in plt.rcParams if k.startswith("keymap.")}  # only our keys do anything
+    settings["toolbar"] = "toolbar2"  # the classic toolbar, whose .mode tells us when zoom/pan is active
+    with plt.rc_context(settings):
         fig, ax = plt.subplots(figsize=(10, 10))
         fig.subplots_adjust(0, 0, 1, 0.92)
         ax.imshow(image)
@@ -111,7 +128,7 @@ def click_leaf_edges(image: Any, title: str) -> tuple[str, list[tuple[float, flo
         ax.set_title(title, fontsize=9)
         points: list[tuple[float, float]] = []
         drawn: list[Any] = []
-        outcome = {"action": "stop"}
+        outcome: dict[str, str | None] = {"action": None}
 
         def redraw() -> None:
             for artist in drawn:
@@ -123,14 +140,14 @@ def click_leaf_edges(image: Any, title: str) -> tuple[str, list[tuple[float, flo
             fig.canvas.draw_idle()
 
         def finish(action: str) -> None:
-            outcome["action"] = action
+            if outcome["action"] is None:  # the first answer wins: closing the window afterwards
+                outcome["action"] = action  # (Tk fires close_event on plt.close) must not undo it
             fig.canvas.stop_event_loop()
 
         def on_click(event: Any) -> None:
             toolbar = getattr(fig.canvas, "toolbar", None)
-            if event.inaxes is not ax or event.button != 1 or (toolbar is not None and toolbar.mode):
-                return  # zooming, panning or clicking outside the plot is never a measurement
-            height, width = np.asarray(image).shape[:2]
+            if event.inaxes is not ax or event.button != 1 or event.dblclick or getattr(toolbar, "mode", ""):
+                return  # zooming, panning, double-clicks or clicks outside the plot are never measurements
             if not (-0.5 <= event.xdata <= width - 0.5 and -0.5 <= event.ydata <= height - 0.5):
                 return  # the blank margin around the photo is inside the plot but not on the photo
             if len(points) < 2:
@@ -141,8 +158,8 @@ def click_leaf_edges(image: Any, title: str) -> tuple[str, list[tuple[float, flo
             if event.key == "backspace" and points:
                 points.pop()
                 redraw()
-            elif event.key == "enter" and len(points) == 2:
-                finish("accept")
+            elif event.key == "enter" and len(points) == 2 and np.hypot(*np.subtract(*points)) >= 3:
+                finish("accept")  # two distinct points (a slip that puts both on one spot is refused)
             elif event.key in ("u", "U"):
                 finish("unmeasurable")
             elif event.key == "escape":
@@ -154,7 +171,8 @@ def click_leaf_edges(image: Any, title: str) -> tuple[str, list[tuple[float, flo
         plt.show(block=False)
         fig.canvas.start_event_loop(timeout=-1)
         plt.close(fig)
-    return outcome["action"], points if outcome["action"] == "accept" else []
+    action = outcome["action"] or "stop"
+    return action, points if action == "accept" else []
 
 
 Asker = Callable[[Any, str], tuple[str, list]]
@@ -190,7 +208,9 @@ def measure(config: dict[str, Any], measurer: str, ask: Asker = click_leaf_edges
             row.update(x1=round(x1, 1), y1=round(y1, 1), x2=round(x2, 1), y2=round(y2, 1),
                        width_px=round(float(np.hypot(x2 - x1, y2 - y1)), 1))
         rows = pd.concat([rows, pd.DataFrame([row], columns=COLUMNS)], ignore_index=True)
-        rows.to_csv(target, index=False)  # rewritten whole after every photo: nothing is lost on a crash
+        partial = target.with_suffix(".tmp")  # rewritten whole after every photo, then swapped in atomically
+        rows.to_csv(partial, index=False)
+        os.replace(partial, target)
     print("All photos measured.")
 
 
@@ -228,11 +248,15 @@ def decide(config: dict[str, Any]) -> dict[str, Any]:
     table["leaf_width_px"] = widths.mean(axis=1)
     table["used"] = usable.reindex(table.index)
     used = table[table["used"]]
+    if len(used) < settings["min_usable"]:
+        raise ValueError(f"only {len(used)} usable photos (minimum {settings['min_usable']}): the rule "
+                         "cannot be applied; log this and decide with the team")
     if used["leaf_width_px"].nunique() < 2 or used["short_side"].nunique() < 2:
         raise ValueError("leaf widths or photo sizes are constant: the correlation is undefined")
     rho, p_value = spearmanr(used["leaf_width_px"], used["short_side"])
     first, second = (used[m] for m in measurers)
     gap = (first - second).abs() / used["leaf_width_px"]
+    agreement = float(spearmanr(first, second)[0]) if first.nunique() > 1 and second.nunique() > 1 else None
     decision = {
         "rule": f"Spearman rho(leaf width, shorter side) >= {settings['spearman_threshold']} -> rescale",
         "spearman_rho": round(float(rho), 4), "p_value": float(p_value),
@@ -240,7 +264,7 @@ def decide(config: dict[str, Any]) -> dict[str, Any]:
         "rescale": bool(rho >= settings["spearman_threshold"]),
         "median_leaf_width_px": round(float(used["leaf_width_px"].median()), 1),
         "measurers": measurers,
-        "agreement_spearman": round(float(spearmanr(first, second)[0]), 4),
+        "agreement_spearman": None if agreement is None else round(agreement, 4),
         "median_relative_gap": round(float(gap.median()), 4), "max_relative_gap": round(float(gap.max()), 4),
         "decided_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
     }
@@ -259,13 +283,7 @@ def main() -> None:
     config = load_config(args.config)
     settings = config["pixel_scale"]
     if args.action == "select":
-        target = REPO_ROOT / settings["selection_file"]
-        if target.exists():
-            parser.error(f"{target} exists: the selection is frozen (delete it only as a logged decision)")
-        chosen = select_photos(read_inventory(config["inventory"]["files"][DATASET]), settings["n_photos"],
-                               config["seed"])
-        chosen.to_csv(target, index=False)
-        print(chosen.to_string(), f"\nwrote {target.relative_to(REPO_ROOT)}")
+        print(freeze_selection(config).to_string(), f"\nfrozen in {settings['selection_file']}")
     elif args.action == "measure":
         name = (args.measurer or "").strip().lower()
         if name not in settings["team"]:
@@ -277,11 +295,13 @@ def main() -> None:
             print(f"Not complete: answered so far {result['answered'] or 'nothing'} "
                   f"(need {settings['measurers']} measurers x {len(result['selected'])} photos).")
             return
+        agreement = result["agreement_spearman"]
         verdict = "RESCALE to the median leaf width" if result["rescale"] else "keep NATIVE resolution"
         print(f"Spearman rho = {result['spearman_rho']:.3f} (p = {result['p_value']:.3g}, "
               f"n = {result['n_used']}, {result['n_unmeasurable']} unmeasurable) -> {verdict}\n"
               f"median leaf width {result['median_leaf_width_px']:.0f} px; measurers agree with Spearman "
-              f"{result['agreement_spearman']:.2f}, median gap {result['median_relative_gap']:.1%}\n"
+              f"{'n/a' if agreement is None else f'{agreement:.2f}'}, "
+              f"median gap {result['median_relative_gap']:.1%}\n"
               f"wrote {settings['measurements_file']} and {settings['decision_file']}")
 
 

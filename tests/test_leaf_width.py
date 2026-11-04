@@ -110,6 +110,26 @@ def test_unknown_or_extra_measurers_are_refused(setup, names):
         lw.decide(config)
 
 
+def test_too_few_usable_photos_means_no_decision(setup):
+    config, selected, tmp_path = setup
+    write_measurements(tmp_path, selected, {"ahsan": selected["short_side"] * 0.2,
+                                            "harris": selected["short_side"] * 0.2})
+    harris = pd.read_csv(tmp_path / "lw" / "harris.csv")
+    harris.loc[:10, "status"] = "unmeasurable"  # 11 left out -> 19 usable, below the minimum of 20
+    harris.to_csv(tmp_path / "lw" / "harris.csv", index=False)
+    with pytest.raises(ValueError, match="usable"):
+        lw.decide(config)
+    assert not (tmp_path / "decision.json").exists()
+
+
+def test_agreement_is_null_not_nan_when_one_measurer_is_constant(setup):
+    config, selected, tmp_path = setup
+    write_measurements(tmp_path, selected, {"ahsan": selected["short_side"] * 0.2, "harris": [300.0] * 30})
+    result = lw.decide(config)
+    assert result["agreement_spearman"] is None
+    assert json.loads((tmp_path / "decision.json").read_text())["agreement_spearman"] is None
+
+
 def test_constant_widths_are_refused_not_silently_native(setup):
     config, selected, tmp_path = setup
     write_measurements(tmp_path, selected, {"ahsan": [100.0] * 30, "harris": [100.0] * 30})
@@ -148,46 +168,74 @@ def test_measure_saves_answers_resumes_and_shuffles_per_measurer(setup, monkeypa
     assert shown != ahsan_order  # each measurer gets their own order
 
 
-def drive_window(monkeypatch, script):
-    """Run click_leaf_edges headless, feeding it ``script``: ("click", x, y, button) or ("key", name)."""
+def drive_window(monkeypatch, script, close_like_tk=True):
+    """Run click_leaf_edges headless on ``script``: ("click", x, y, button[, dblclick]) or ("key", k).
+
+    With ``close_like_tk``, plt.close fires a close_event first, as the Tk backend does on a real desktop.
+    """
     import matplotlib
 
     matplotlib.use("Agg")
-    from matplotlib.backend_bases import FigureCanvasBase, KeyEvent, MouseEvent
+    import matplotlib.pyplot as plt
+    from matplotlib.backend_bases import CloseEvent, FigureCanvasBase, KeyEvent, MouseEvent
 
     def fake_loop(canvas, timeout=0):
         canvas.draw()  # as on screen: the photo's aspect ratio leaves blank margins around it
         ax = canvas.figure.axes[0]
         for step in script:
             if step[0] == "click":
-                _, x, y, button = step
-                # None means a click outside the photo
+                _, x, y, button, *dbl = step
+                # None means a click in the blank margin next to the photo
                 px, py = ax.transData.transform((x, y)) if x is not None else (1, 1)
-                MouseEvent("button_press_event", canvas, px, py, button=button)._process()
+                MouseEvent("button_press_event", canvas, px, py, button=button, dblclick=bool(dbl))._process()
             else:
                 KeyEvent("key_press_event", canvas, step[1])._process()
 
+    real_close = plt.close
+
+    def tk_close(fig):
+        CloseEvent("close_event", fig.canvas)._process()
+        real_close(fig)
+
     monkeypatch.setattr(FigureCanvasBase, "start_event_loop", fake_loop)
-    return lw.click_leaf_edges(np.zeros((100, 200, 3), dtype=np.uint8), "test")
+    monkeypatch.setattr(matplotlib, "get_backend", lambda: "tkagg")
+    if close_like_tk:
+        monkeypatch.setattr(plt, "close", tk_close)
+    return lw.click_leaf_edges(Image.fromarray(np.zeros((100, 200, 3), dtype=np.uint8)), "test")
 
 
-@pytest.mark.filterwarnings("ignore:FigureCanvasAgg is non-interactive")
+WINDOW = pytest.mark.filterwarnings("ignore:FigureCanvasAgg is non-interactive")
+
+
+@WINDOW
 def test_window_accepts_two_points_after_undo_and_ignores_stray_input(monkeypatch):
     action, points = drive_window(monkeypatch, [
         ("click", None, None, 1),     # blank margin next to the photo: ignored
         ("click", 250, 50, 1),        # beyond the photo's right edge: ignored
         ("click", 10, 20, 3),         # right button: ignored
         ("click", 10, 20, 1), ("key", "enter"),  # one point only: Enter does nothing yet
-        ("click", 50, 20, 1), ("key", "backspace"),  # second point undone
+        ("click", 10, 20, 1, True),   # the second half of a double-click: ignored
+        ("click", 11, 21, 1), ("key", "enter"),  # two points 1.4 px apart: refused as a slip
+        ("key", "backspace"),
+        ("click", 50, 20, 1), ("key", "backspace"),  # undone again
         ("click", 40, 60, 1), ("click", 90, 90, 1),  # a third click is ignored (two points max)
-        ("key", "s"),                 # other keys (matplotlib's own shortcuts are switched off) do nothing
+        ("key", "s"),                 # matplotlib's own shortcuts are switched off
         ("key", "enter"),
     ])
-    assert action == "accept"
+    assert action == "accept"  # and the close_event fired by plt.close afterwards does not undo it
     assert np.allclose(points, [(10, 20), (40, 60)], atol=0.6)
 
 
-@pytest.mark.filterwarnings("ignore:FigureCanvasAgg is non-interactive")
+@WINDOW
 def test_window_unmeasurable_and_stop(monkeypatch):
     assert drive_window(monkeypatch, [("click", 10, 20, 1), ("key", "u")]) == ("unmeasurable", [])
     assert drive_window(monkeypatch, [("click", 10, 20, 1), ("key", "escape")]) == ("stop", [])
+    assert drive_window(monkeypatch, [], close_like_tk=False) == ("stop", [])  # loop ended without an answer
+
+
+def test_window_refuses_to_run_without_a_screen(monkeypatch):
+    import matplotlib
+
+    monkeypatch.setattr(matplotlib, "get_backend", lambda: "agg")
+    with pytest.raises(RuntimeError, match="screen"):
+        lw.click_leaf_edges(Image.new("RGB", (10, 10)), "test")

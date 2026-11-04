@@ -21,3 +21,4 @@ pixel_scale:
   measurers: 2                 # exactly this many measure every photo independently; their mean is used
   team: [ahsan, harris, umer]  # allowed measurer names (catches typos and trial runs)
   spearman_threshold: 0.5      # rho >= 0.5 -> rescale every photo to the median leaf width before tiling
+  min_usable: 20               # fewer usable photos (after 'unmeasurable' marks): the rule is not applied
