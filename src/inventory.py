@@ -151,16 +151,23 @@ def dataset_inventory(config: dict[str, Any], name: str, workers: int | None = N
     return frame
 
 
+def write_inventories(config: dict[str, Any], workers: int | None = None) -> dict[str, pd.DataFrame]:
+    """Build and write the inventory of every dataset in ``inventory.files``."""
+    frames = {}
+    for name, relative in config["inventory"]["files"].items():
+        frames[name] = dataset_inventory(config, name, workers)
+        frames[name].to_csv(REPO_ROOT / relative, index=False)
+        print(f"{name}: {len(frames[name]):,} files, {int(frames[name]['opened_ok'].sum()):,} decode fully "
+              f"-> {relative}")
+    return frames
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Build the inventories of both datasets.")
     parser.add_argument("--config", default="configs/inventory.yaml")
     parser.add_argument("--workers", type=int, help="processes to use (default: all CPU cores)")
     args = parser.parse_args()
-    config = load_config(args.config)
-    for name, relative in config["inventory"]["files"].items():
-        frame = dataset_inventory(config, name, args.workers)
-        frame.to_csv(REPO_ROOT / relative, index=False)
-        print(f"{name}: {len(frame)} files -> {relative}")
+    write_inventories(load_config(args.config), args.workers)
 
 
 if __name__ == "__main__":

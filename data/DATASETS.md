@@ -34,7 +34,9 @@ Class counts derived directly from `LabelledRice/Labelled/`:
 | **LeafBlast** | 779 | 779 | Matches published count |
 | **Total** | **3,355** | **3,353** | 3,355 high-resolution photos |
 
-* **Exact duplicates inside `Labelled/`**: none (MD5 check, 2026-10-02). The 2 extra Hispa images are therefore not byte-identical copies; near-duplicate checks follow in Stage 2b.
+* **Per-photo inventory**: `data/inventory.csv` (2026-11-05): SHA-256, perceptual hash, size, camera, capture time and JPEG quality for every photo. Summary in `docs/reports/inventory_report.md`.
+* **Cameras and capture days differ by class** (2026-11-05): three phones (Redmi Note 4, iPhone X, iPhone 6s Plus); every Hispa photo is from the Redmi, 22 % of leaf blast photos from iPhones. Photos were taken on 17-24 April 2019, with each class concentrated on different days. JPEG quality is 100 for all but one photo (90). Possible shortcuts, measured in Stage 4b.
+* **Exact duplicates inside `Labelled/`**: none (MD5 check, 2026-10-02; SHA-256 check, 2026-11-05). The 2 extra Hispa images are therefore not byte-identical copies; near-duplicate checks follow in Stage 2b.
 * **File format**: all 3,355 files are `.jpg`; none carries an EXIF rotation tag.
 
 * **Native Resolution — verified, and NOT uniform** (2026-10-02, image headers of all 3,355 files). The "1881 × 1881" figure reported in the literature (Ali et al. 2026) does not hold:
@@ -81,6 +83,8 @@ The dataset comprises 16,225 high-resolution smartphone images across 13 classes
 | **Total** | **16,225** | **8,164 shared-class images** | **Full 13-class uncompressed release** |
 
 * **Status**: Complete and verified (counts, metadata and image sizes).
+* **Per-photo inventory**: `data/paddy_inventory.csv` (2026-11-05), all 13 classes, with variety and age. JPEG quality 75 throughout; no camera EXIF.
+* **Exact duplicates in the release** (found 2026-11-05): 144 groups of byte-identical files (301 files); every group has the same variety and age, so these are files stored twice. In the 4 shared classes: 152 files in 74 groups (78 extra copies). One image appears under two classes (`downy_mildew/PDD06425.jpg` = `tungro/PDD12798.jpg`). Stage 3 counts each image once in `splits/paddy4.csv` and drops label conflicts.
 * **IEEE DataPort archive checksum**: not available. The original zip was on the old laptop, which has been formatted (2026-11-04); it can only be recorded by downloading the release again from IEEE DataPort. The Kaggle copy's checksum above identifies the version we use.
 
 

@@ -215,11 +215,12 @@ def measure(config: dict[str, Any], measurer: str, ask: Asker = click_leaf_edges
 
 
 # ---------------------------------------------------------------- decision
-def decide(config: dict[str, Any]) -> dict[str, Any]:
-    """Apply the pre-declared rule once every measurer has answered every photo.
+def evaluate(config: dict[str, Any]) -> dict[str, Any]:
+    """Apply the pre-declared rule without writing anything (the report uses this).
 
-    Returns ``complete=False`` (with progress) until then. When complete it also writes the combined
-    measurements file and the decision record that Stage 6 reads.
+    ``complete`` is False (with progress) until every measurer has answered every photo. When complete,
+    ``applied`` says whether the rule could be applied; if not, ``reason`` says why (too few usable
+    photos, or constant values).
     """
     settings = config["pixel_scale"]
     selected = selection(config)
@@ -248,11 +249,15 @@ def decide(config: dict[str, Any]) -> dict[str, Any]:
     table["leaf_width_px"] = widths.mean(axis=1)
     table["used"] = usable.reindex(table.index)
     used = table[table["used"]]
+    result.update(table=table.reset_index(), n_used=int(len(used)),
+                  n_unmeasurable=int((~table["used"]).sum()))
     if len(used) < settings["min_usable"]:
-        raise ValueError(f"only {len(used)} usable photos (minimum {settings['min_usable']}): the rule "
-                         "cannot be applied; log this and decide with the team")
+        reason = (f"only {len(used)} usable photos (minimum {settings['min_usable']}): the rule cannot be "
+                  "applied; log this and decide with the team")
+        return {**result, "applied": False, "reason": reason}
     if used["leaf_width_px"].nunique() < 2 or used["short_side"].nunique() < 2:
-        raise ValueError("leaf widths or photo sizes are constant: the correlation is undefined")
+        reason = "leaf widths or photo sizes are constant: the correlation is undefined"
+        return {**result, "applied": False, "reason": reason}
     rho, p_value = spearmanr(used["leaf_width_px"], used["short_side"])
     first, second = (used[m] for m in measurers)
     gap = (first - second).abs() / used["leaf_width_px"]
@@ -260,17 +265,32 @@ def decide(config: dict[str, Any]) -> dict[str, Any]:
     decision = {
         "rule": f"Spearman rho(leaf width, shorter side) >= {settings['spearman_threshold']} -> rescale",
         "spearman_rho": round(float(rho), 4), "p_value": float(p_value),
-        "n_used": int(len(used)), "n_unmeasurable": int((~table["used"]).sum()),
+        "n_used": result["n_used"], "n_unmeasurable": result["n_unmeasurable"],
         "rescale": bool(rho >= settings["spearman_threshold"]),
         "median_leaf_width_px": round(float(used["leaf_width_px"].median()), 1),
         "measurers": measurers,
         "agreement_spearman": None if agreement is None else round(agreement, 4),
         "median_relative_gap": round(float(gap.median()), 4), "max_relative_gap": round(float(gap.max()), 4),
-        "decided_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
     }
-    data.sort_values(["photo_id", "measurer"]).to_csv(REPO_ROOT / settings["measurements_file"], index=False)
-    (REPO_ROOT / settings["decision_file"]).write_text(json.dumps(decision, indent=2) + "\n")
-    result.update(decision, table=table.reset_index())
+    return {**result, **decision, "applied": True, "data": data}
+
+
+def decide(config: dict[str, Any]) -> dict[str, Any]:
+    """Evaluate the rule and, once it can be applied, write the combined measurements and the decision
+    record that Stage 6 reads. Raises if every photo is answered but the rule cannot be applied."""
+    result = evaluate(config)
+    if not result["complete"]:
+        return result
+    if not result["applied"]:
+        raise ValueError(result["reason"])
+    settings = config["pixel_scale"]
+    keys = ["rule", "spearman_rho", "p_value", "n_used", "n_unmeasurable", "rescale", "median_leaf_width_px",
+            "measurers", "agreement_spearman", "median_relative_gap", "max_relative_gap"]
+    record = {k: result[k] for k in keys}
+    record["decided_at"] = datetime.now(timezone.utc).isoformat(timespec="seconds")
+    measurements = result["data"].sort_values(["photo_id", "measurer"])
+    measurements.to_csv(REPO_ROOT / settings["measurements_file"], index=False)
+    (REPO_ROOT / settings["decision_file"]).write_text(json.dumps(record, indent=2) + "\n")
     return result
 
 
