@@ -91,6 +91,10 @@ paths:
 tiling:
   tile_size: 224                    # px; tiles per side n(L) = ceil((L - 224) / 224) + 1, evenly spaced, edges touch borders
 
+hashing:                            # perceptual hashes (Stage 1 inventory, Stage 2 duplicate search): one setting for both
+  hash_size: 8                      # 64-bit pHash; Stage 2b flags pairs differing in at most 8 bits
+  draft_size: 256                   # JPEGs decoded at reduced scale before hashing (src/inventory.load_for_hash)
+
 normalisation:                      # ImageNet statistics (used by every encoder and fine-tuned model here)
   mean: [0.485, 0.456, 0.406]
   std: [0.229, 0.224, 0.225]

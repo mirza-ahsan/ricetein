@@ -1,18 +1,16 @@
 # ===================================================================
 # configs/inventory.yaml: Stage 1 inventory and pixel-scale check
 # ===================================================================
-# Values for the pixel-scale rule are fixed in the pre-declared methodology
-# (Section III, "Pixel scale"); do not change them after measuring.
+# Hash settings are shared with Stage 2 and live in base.yaml (hashing:).
+# The pixel-scale rule is fixed in the pre-declared methodology (Section III,
+# "Pixel scale"); do not change it after measuring.
 # ===================================================================
 extends: base.yaml
 
 inventory:
-  primary_file: data/inventory.csv
-  paddy_file: data/paddy_inventory.csv
-  report_file: docs/reports/inventory_report.md
-  hash_size: 8                 # 64-bit perceptual hash (Stage 2b compares at most 8 differing bits)
-  hash_draft_size: 256         # decode JPEGs at reduced scale before hashing (the hash itself works on 32 x 32)
-  workers: null                # null = all CPU cores
+  files:                       # one CSV per dataset (repo-relative, committed)
+    primary: data/inventory.csv
+    paddy: data/paddy_inventory.csv
 
 pixel_scale:
   measurements_file: data/leaf_width_measurements.csv
