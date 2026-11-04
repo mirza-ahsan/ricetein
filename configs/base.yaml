@@ -19,8 +19,7 @@
 # -------------------------------------------------------------------
 seed: 0               # training seed: model start, shuffling, version picks, dropout
 split_seed: 2026      # 5-fold split only (Stage 3); kept separate so changing `seed` never moves photos between folds
-determinism: strict   # strict: same numbers on the local RTX 4060 and a Kaggle T4 (no TF32, deterministic
-                      # kernels); fast: TF32 + cuDNN autotuning, for heavy fine-tuning only (src/seeding.py)
+determinism: strict   # strict | fast (see src/seeding.py); strict is needed for local-vs-Kaggle agreement
 
 # -------------------------------------------------------------------
 # Classes: this order defines class ids 0-3 and the column order of every
