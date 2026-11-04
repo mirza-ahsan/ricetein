@@ -22,3 +22,15 @@ pixel_scale:
   team: [ahsan, harris, umer]  # allowed measurer names (catches typos and trial runs)
   spearman_threshold: 0.5      # rho >= 0.5 -> rescale every photo to the median leaf width before tiling
   min_usable: 20               # fewer usable photos (after 'unmeasurable' marks): the rule is not applied
+
+report:                        # the only typed inputs of docs/reports/inventory_report.md
+  published_counts:            # Do (2019), the dataset's Kaggle page
+    healthy: 1488
+    leaf_blast: 779
+    brown_spot: 523
+    hispa: 563
+  inspected_phash_groups:      # cross-class identical-hash groups looked at by eye
+    date: "2026-11-04"
+    verdict: different leaves with the same layout (one leaf lying diagonally on a white background)
+    hashes: [aaeaca1ef207fc01, abd095b5a50ff803, e280c0e0f0f8fcfe, ea94c0e0f0f8bc5e, ff38954aa552a954,
+             ff88c06a351f4af0]
