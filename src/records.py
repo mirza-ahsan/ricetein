@@ -28,7 +28,7 @@ from typing import Any, Mapping
 
 import psutil
 
-from src.config import KAGGLE_WORKING, REPO_ROOT, on_kaggle
+from src.config import REPO_ROOT, on_kaggle, output_root
 from src.kaggle_bootstrap import CODE_DATASET_SLUG, find_kaggle_input
 
 # Package versions written into every record (missing ones are recorded as None).
@@ -37,7 +37,7 @@ TRACKED_PACKAGES = ("torch", "torchvision", "timm", "transformers", "numpy", "sc
 
 def get_default_runs_dir() -> Path:
     """``/kaggle/working/runs`` on Kaggle, otherwise ``<repo>/runs`` (whatever the working directory)."""
-    return KAGGLE_WORKING / "runs" if on_kaggle() else REPO_ROOT / "runs"
+    return output_root() / "runs"
 
 
 def _git(*args: str) -> str:

@@ -14,6 +14,19 @@ def write(path: Path, text: str) -> Path:
     return path
 
 
+@pytest.fixture
+def base_config():
+    return load_config("configs/base.yaml")
+
+
+@pytest.fixture
+def kaggle(monkeypatch, tmp_path):
+    """Pretend to be on Kaggle, with outputs under tmp_path/working."""
+    monkeypatch.setattr(cfgmod, "on_kaggle", lambda: True)
+    monkeypatch.setattr(cfgmod, "KAGGLE_WORKING", tmp_path / "working")
+    return tmp_path
+
+
 def test_deep_merge_merges_dicts_and_replaces_everything_else():
     base = {"a": 1, "nested": {"x": 1, "y": 2}, "items": [1, 2]}
     merged = deep_merge(base, {"nested": {"y": 3, "z": 4}, "items": [9]})
@@ -39,6 +52,11 @@ def test_circular_extends_is_rejected(tmp_path):
         load_config(tmp_path / "a.yaml")
 
 
+def test_settings_file_must_be_a_mapping(tmp_path):
+    with pytest.raises(ValueError, match="mapping"):
+        load_config(write(tmp_path / "list.yaml", "- 1\n- 2\n"))
+
+
 def test_base_config_loads_relative_to_repo_root(monkeypatch, tmp_path):
     monkeypatch.chdir(tmp_path)  # the working directory must not matter
     config = load_config("configs/base.yaml")
@@ -46,37 +64,44 @@ def test_base_config_loads_relative_to_repo_root(monkeypatch, tmp_path):
     assert config["config_file"] == "configs/base.yaml"
 
 
-def test_paths_on_local_machine(monkeypatch):
+def test_paths_on_local_machine(monkeypatch, base_config):
     monkeypatch.setattr(cfgmod, "on_kaggle", lambda: False)
-    config = load_config("configs/base.yaml")
-    assert path_for(config, "runs") == REPO_ROOT / "runs"
-    assert path_for(config, "splits") == REPO_ROOT / "splits"
+    assert path_for(base_config, "runs") == REPO_ROOT / "runs"
+    assert path_for(base_config, "splits") == REPO_ROOT / "splits"
 
 
-def test_paths_on_kaggle_write_to_working_and_read_code_from_dataset(monkeypatch, tmp_path):
-    monkeypatch.setattr(cfgmod, "on_kaggle", lambda: True)
-    monkeypatch.setattr(cfgmod, "KAGGLE_WORKING", tmp_path / "working")
-    config = load_config("configs/base.yaml")
-    assert path_for(config, "runs") == tmp_path / "working" / "runs"
-    assert path_for(config, "cache") == tmp_path / "working" / "cache"
-    assert path_for(config, "splits") == REPO_ROOT / "splits"  # shipped inside ricetein-code
+def test_paths_on_kaggle_write_to_working_and_read_code_from_dataset(kaggle, base_config):
+    assert path_for(base_config, "runs") == kaggle / "working" / "runs"
+    assert path_for(base_config, "cache") == kaggle / "working" / "cache"
+    assert path_for(base_config, "splits") == REPO_ROOT / "splits"  # shipped inside ricetein-code
 
 
-def test_dataset_dir_on_kaggle_finds_dataset_by_name(monkeypatch, tmp_path):
-    mounted = tmp_path / "input" / "datasets" / "minhhuy2810" / "rice-diseases-image-dataset"
-    (mounted / "LabelledRice" / "Labelled").mkdir(parents=True)
-    monkeypatch.setattr(cfgmod, "on_kaggle", lambda: True)
+def make_primary(root: Path) -> Path:
+    for folder in ("Healthy", "LeafBlast", "BrownSpot", "Hispa"):
+        (root / "LabelledRice" / "Labelled" / folder).mkdir(parents=True)
+    return root
+
+
+def test_dataset_dir_on_kaggle_finds_dataset_by_name(monkeypatch, kaggle, base_config):
+    mounted = make_primary(kaggle / "input" / "datasets" / "minhhuy2810" / "rice-diseases-image-dataset")
     slug = "rice-diseases-image-dataset"
     monkeypatch.setattr(cfgmod, "find_kaggle_input", lambda name: mounted if name == slug else None)
-    config = load_config("configs/base.yaml")
-    assert dataset_dir(config, "primary") == mounted / "LabelledRice" / "Labelled"
+    assert dataset_dir(base_config, "primary") == mounted / "LabelledRice" / "Labelled"
     with pytest.raises(FileNotFoundError, match="not attached"):
-        dataset_dir(config, "paddy")
+        dataset_dir(base_config, "paddy")
 
 
-def test_dataset_dir_missing_locally_raises(monkeypatch):
+def test_dataset_dir_rejects_folder_without_the_class_folders(monkeypatch, kaggle, base_config):
+    mounted = kaggle / "input" / "paddy-doctor-full"
+    for folder in ("normal", "blast", "brown_spot", "hispa"):  # nested one level too deep
+        (mounted / "paddy_doctor" / folder).mkdir(parents=True)
+    monkeypatch.setattr(cfgmod, "find_kaggle_input", lambda name: mounted)
+    with pytest.raises(FileNotFoundError, match="class folders"):
+        dataset_dir(base_config, "paddy")
+
+
+def test_dataset_dir_missing_locally_raises(monkeypatch, base_config):
     monkeypatch.setattr(cfgmod, "on_kaggle", lambda: False)
-    config = load_config("configs/base.yaml")
-    config["datasets"]["primary"]["local_dir"] = "data/raw/does_not_exist"
+    base_config["datasets"]["primary"]["local_dir"] = "data/raw/does_not_exist"
     with pytest.raises(FileNotFoundError):
-        dataset_dir(config, "primary")
+        dataset_dir(base_config, "primary")

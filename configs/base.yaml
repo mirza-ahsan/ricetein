@@ -80,10 +80,9 @@ paths:
   results: results                  # final tables and figures (Stage 14)
   reports: docs/reports             # stage reports
 
-kaggle:
-  working_dir: /kaggle/working
-  code_slug: ricetein-code          # src/, configs/, splits/, requirements-kaggle.txt, CODE_VERSION
-  weights_slug: ricetein-weights    # pinned DINOv3 copies + LICENSE.md + REVISIONS.txt
+# Kaggle names live in code, not here: src/kaggle_bootstrap.py must run before PyYAML is
+# installed. Code dataset `ricetein-code` (src/, configs/, splits/, requirements-kaggle.txt,
+# CODE_VERSION); weights dataset `ricetein-weights` (pinned DINOv3 + LICENSE.md + REVISIONS.txt).
 
 # -------------------------------------------------------------------
 # Images and tiles

@@ -15,7 +15,6 @@ Print a merged settings file:  uv run python -m src.config configs/skeleton.yaml
 from __future__ import annotations
 
 import argparse
-import copy
 from pathlib import Path
 from typing import Any
 
@@ -25,33 +24,41 @@ from src.kaggle_bootstrap import find_kaggle_input
 
 REPO_ROOT = Path(__file__).resolve().parents[1]  # on Kaggle: the ricetein-code dataset folder
 KAGGLE_WORKING = Path("/kaggle/working")
-READ_ONLY_PATHS = {"configs", "splits"}  # shipped with the code; everything else in `paths` is written to
+# Shipped inside ricetein-code (keep in step with scripts/kaggle_sync_code.sh); other `paths` are outputs.
+READ_ONLY_PATHS = {"configs", "splits"}
 
 
 def on_kaggle() -> bool:
     return KAGGLE_WORKING.exists()
 
 
+def output_root() -> Path:
+    """Where outputs go: ``/kaggle/working`` on Kaggle (the code there is read-only), else the repo."""
+    return KAGGLE_WORKING if on_kaggle() else REPO_ROOT
+
+
 def read_yaml(path: str | Path) -> dict[str, Any]:
     with open(path, encoding="utf-8") as f:
         data = yaml.safe_load(f)
-    return data or {}
+    if data is None:
+        return {}
+    if not isinstance(data, dict):
+        raise ValueError(f"{path}: a settings file must be a mapping of names to values")
+    return data
 
 
 def deep_merge(base: dict[str, Any], override: dict[str, Any]) -> dict[str, Any]:
-    """Return ``base`` updated by ``override``; nested dicts merge, everything else replaces."""
-    merged = copy.deepcopy(base)
+    """Return ``base`` updated by ``override``; nested dicts merge, everything else replaces.
+
+    ``base`` itself is not modified (values are shared, not copied: settings are read-only).
+    """
+    merged = dict(base)
     for key, value in override.items():
         if isinstance(value, dict) and isinstance(merged.get(key), dict):
             merged[key] = deep_merge(merged[key], value)
         else:
-            merged[key] = copy.deepcopy(value)
+            merged[key] = value
     return merged
-
-
-def _resolve(path: str | Path) -> Path:
-    path = Path(path)
-    return path if path.is_absolute() else REPO_ROOT / path
 
 
 def load_config(path: str | Path) -> dict[str, Any]:
@@ -59,21 +66,22 @@ def load_config(path: str | Path) -> dict[str, Any]:
 
     The result records which file it came from as ``config_file`` (repo-relative).
     """
-    path = _resolve(path).resolve()
+    path = Path(path)
+    path = (path if path.is_absolute() else REPO_ROOT / path).resolve()
     chain: list[Path] = []
+    layers: list[dict[str, Any]] = []
     while True:
         if path in chain:
             raise ValueError(f"Circular 'extends' in {[str(p) for p in chain + [path]]}")
         chain.append(path)
-        parent = read_yaml(path).get("extends")
+        layers.append(read_yaml(path))
+        parent = layers[-1].pop("extends", None)
         if parent is None:
             break
         path = (path.parent / parent).resolve()
 
     config: dict[str, Any] = {}
-    for file in reversed(chain):  # base first, the experiment file last
-        layer = read_yaml(file)
-        layer.pop("extends", None)
+    for layer in reversed(layers):  # base first, the experiment file last
         config = deep_merge(config, layer)
     try:
         config["config_file"] = str(chain[0].relative_to(REPO_ROOT))
@@ -84,10 +92,8 @@ def load_config(path: str | Path) -> dict[str, Any]:
 
 def path_for(config: dict[str, Any], key: str) -> Path:
     """Real folder for ``config['paths'][key]`` on this machine (e.g. ``runs``, ``splits``)."""
-    relative = config["paths"][key]
-    if on_kaggle() and key not in READ_ONLY_PATHS:
-        return KAGGLE_WORKING / relative
-    return REPO_ROOT / relative
+    root = REPO_ROOT if key in READ_ONLY_PATHS else output_root()
+    return root / config["paths"][key]
 
 
 def dataset_dir(config: dict[str, Any], name: str) -> Path:
@@ -100,8 +106,9 @@ def dataset_dir(config: dict[str, Any], name: str) -> Path:
     else:
         root = REPO_ROOT / spec["local_dir"]
     folder = root / spec["image_subdir"]
-    if not folder.is_dir():
-        raise FileNotFoundError(f"{name} dataset not found at {folder}")
+    missing = [f for f in spec["class_folders"].values() if not (folder / f).is_dir()]
+    if missing:
+        raise FileNotFoundError(f"{name} dataset: class folders {missing} not found in {folder}")
     return folder
 
 
