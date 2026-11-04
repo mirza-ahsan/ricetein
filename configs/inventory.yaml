@@ -13,7 +13,11 @@ inventory:
     paddy: data/paddy_inventory.csv
 
 pixel_scale:
-  measurements_file: data/leaf_width_measurements.csv
+  selection_file: data/leaf_width_selection.csv          # the 30 photos, frozen once by `select` (committed)
+  measurements_dir: data/leaf_width                      # one file per measurer: measured alone, no merge conflicts
+  measurements_file: data/leaf_width_measurements.csv    # combined by `decide`; Stage 10 adds its rows here
+  decision_file: data/pixel_scale_decision.json          # the outcome Stage 6 reads
   n_photos: 30                 # one per equal-width band of the shorter side (log scale), min to max
-  measurers: 2                 # independent measurements per photo; their mean is used
+  measurers: 2                 # exactly this many measure every photo independently; their mean is used
+  team: [ahsan, harris, umer]  # allowed measurer names (catches typos and trial runs)
   spearman_threshold: 0.5      # rho >= 0.5 -> rescale every photo to the median leaf width before tiling
