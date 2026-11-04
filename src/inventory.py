@@ -14,6 +14,7 @@ import argparse
 import hashlib
 import io
 import multiprocessing
+import re
 from concurrent.futures import ProcessPoolExecutor
 from functools import partial
 from pathlib import Path
@@ -45,7 +46,11 @@ _IJG_TABLES = {  # the luminance table the IJG library writes for each quality 1
 
 
 def jpeg_quality(image: Image.Image) -> tuple[int | None, bool | None]:
-    """(closest IJG quality 1-100, whether the table matches it exactly); (None, None) if not a JPEG."""
+    """(closest IJG quality 1-100, whether the table matches it exactly); (None, None) if not a JPEG.
+
+    Only the luminance table is compared, so "exact" means the table equals the IJG one for that
+    quality, not that the IJG library wrote the file.
+    """
     tables = getattr(image, "quantization", None)
     if not tables or 0 not in tables:
         return None, None
@@ -79,6 +84,8 @@ def describe_file(path: Path, root: Path, hash_size: int, draft_size: int) -> di
         with Image.open(io.BytesIO(data)) as image:
             exif = image.getexif()
             orientation = exif.get(Base.Orientation, 1)
+            if not isinstance(orientation, int):  # malformed tag: treat as upright
+                orientation = 1
             quality, exact = jpeg_quality(image)
             # Record the size as the pixels are used (rotation tag applied), like load_for_hash.
             upright = image.size[::-1] if orientation in (5, 6, 7, 8) else image.size
@@ -94,7 +101,8 @@ def describe_file(path: Path, root: Path, hash_size: int, draft_size: int) -> di
         row["phash"] = perceptual_hash(load_for_hash(io.BytesIO(data), draft_size), hash_size)
         row["opened_ok"] = True
     except Exception as exc:  # recorded in the inventory and reported, never silently skipped
-        row["error"] = f"{type(exc).__name__}: {exc}"
+        # Drop object addresses ("<... at 0x7f...>") so the recorded text is the same on every run.
+        row["error"] = re.sub(r" ?<[^<>]* at 0x[0-9a-f]+>", "", f"{type(exc).__name__}: {exc}")
     return row
 
 
@@ -112,9 +120,14 @@ def scan(root: Path, hash_size: int, draft_size: int, workers: int | None = None
         spawn = multiprocessing.get_context("spawn")
         with ProcessPoolExecutor(max_workers=workers, mp_context=spawn) as pool:
             rows = list(pool.map(describe, files, chunksize=16))
-    frame = pd.DataFrame(rows).reindex(columns=COLUMNS)  # fixed columns, whatever the first file was
-    frame["folder"] = frame["photo_id"].str.extract(r"^([^/]+)/", expand=False)
+    frame = pd.DataFrame(rows, columns=COLUMNS)  # fixed columns, whatever the first file was
+    frame["folder"] = frame["photo_id"].astype("string").str.extract(r"^([^/]+)/", expand=False)
     return frame.astype({c: "Int64" for c in INTEGER_COLUMNS})
+
+
+def read_inventory(path: str | Path) -> pd.DataFrame:
+    """Read an inventory CSV back with integer columns as integers (even where some are missing)."""
+    return pd.read_csv(REPO_ROOT / path, dtype={c: "Int64" for c in INTEGER_COLUMNS})
 
 
 def dataset_inventory(config: dict[str, Any], name: str, workers: int | None = None) -> pd.DataFrame:

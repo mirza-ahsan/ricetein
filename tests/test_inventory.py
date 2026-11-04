@@ -9,7 +9,15 @@ from PIL import Image
 
 from src import config as cfgmod
 from src.config import load_config
-from src.inventory import COLUMNS, dataset_inventory, jpeg_quality, load_for_hash, perceptual_hash, scan
+from src.inventory import (
+    COLUMNS,
+    dataset_inventory,
+    jpeg_quality,
+    load_for_hash,
+    perceptual_hash,
+    read_inventory,
+    scan,
+)
 
 
 def gradient(width=400, height=300):
@@ -44,6 +52,20 @@ def test_every_file_is_listed_in_id_order_with_fixed_columns(scanned):
     assert list(frame.reset_index().columns) == COLUMNS
     assert str(frame["width"].dtype) == "Int64"  # never floats, even with failed files present
     assert pd.isna(frame.loc[".DS_Store", "folder"]) and frame.loc["A/grad.jpg", "folder"] == "A"
+
+
+def test_parallel_scan_gives_the_same_result(scanned):
+    root, frame = scanned
+    parallel = scan(root, hash_size=8, draft_size=256, workers=2).set_index("photo_id")
+    pd.testing.assert_frame_equal(parallel, frame)
+
+
+def test_empty_folder_and_csv_round_trip(tmp_path, scanned):
+    assert scan(tmp_path, hash_size=8, draft_size=256, workers=1).empty
+    _, frame = scanned
+    frame.reset_index().to_csv(tmp_path / "inv.csv", index=False)
+    back = read_inventory(tmp_path / "inv.csv")  # broken files leave gaps; integers must stay integers
+    assert str(back["width"].dtype) == "Int64" and back["width"].isna().any()
 
 
 def test_known_values_for_a_good_file(scanned):
