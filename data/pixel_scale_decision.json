@@ -1,0 +1,29 @@
+{
+  "rule": "Spearman rho(leaf width, shorter side) >= 0.5 -> rescale",
+  "spearman_rho": 0.5394,
+  "p_value": 0.0025304348958076566,
+  "n_used": 29,
+  "n_unmeasurable": 1,
+  "rescale": true,
+  "median_leaf_width_px": 194.9,
+  "measurers": [
+    "ahsan",
+    "model_rater_a"
+  ],
+  "model_raters": [
+    "model_rater_a"
+  ],
+  "agreement_spearman": 0.9778,
+  "median_relative_gap": 0.0321,
+  "max_relative_gap": 0.3556,
+  "rho_per_measurer": {
+    "ahsan": 0.5419,
+    "model_rater_a": 0.5276
+  },
+  "leave_one_out_rho": [
+    0.4882,
+    0.613
+  ],
+  "leave_one_out_flips": 5,
+  "decided_at": "2026-11-07T14:56:07+00:00"
+}
