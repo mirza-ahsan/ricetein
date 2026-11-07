@@ -33,7 +33,7 @@ Course project at FAST School of Computing, FAST-NUCES Lahore, and the basis of 
 | Phase 4: Experiments and Results | In progress |
 | Final paper | Not started |
 | Environment (local machine + Kaggle GPUs) | Done and verified |
-| Experiments | Stages 0 and 1 done (2026-11-07: photos are rescaled to a common leaf scale before tiling); next, Stage 2 audits (see `docs/HANDBOOK.md`) |
+| Experiments | Stages 0 and 1 done (2026-11-07: photos are rescaled to a common leaf scale before tiling). Stage 2 (audits): automatic parts done, human labelling and review pending (`manuals/stage2.md`) |
 
 ---
 
