@@ -93,6 +93,8 @@ def test_pixel_scale_section_renders_pending_complete_and_not_applied(tmp_path):
         rows.to_csv(tmp_path / "lw" / f"{who}.csv", index=False)
     text = rep.pixel_scale_section(config)
     assert "rescale every photo" in text and "3 photos marked unmeasurable" in text and "| – |" in text
+    assert "rho from each measurer alone: ahsan 1.000, harris 1.000" in text and "Model rater" not in text
+    assert "0 of 27 single removals would flip" in text
     assert not (tmp_path / "decision.json").exists()  # the report only reads; `decide` writes
 
     harris = pd.read_csv(tmp_path / "lw" / "harris.csv")

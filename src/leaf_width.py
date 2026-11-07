@@ -215,6 +215,11 @@ def measure(config: dict[str, Any], measurer: str, ask: Asker = click_leaf_edges
 
 
 # ---------------------------------------------------------------- decision
+def spearman_or_none(a: pd.Series, b: pd.Series) -> float | None:
+    """Spearman rho rounded to 4 places, or None when either side is constant (rho is undefined)."""
+    return round(float(spearmanr(a, b)[0]), 4) if a.nunique() > 1 and b.nunique() > 1 else None
+
+
 def evaluate(config: dict[str, Any]) -> dict[str, Any]:
     """Apply the pre-declared rule without writing anything (the report uses this).
 
@@ -230,9 +235,9 @@ def evaluate(config: dict[str, Any]) -> dict[str, Any]:
         else pd.DataFrame(columns=COLUMNS)
     data = data[(data["dataset"] == DATASET) & data["photo_id"].isin(selected["photo_id"])]
     measurers = sorted(data["measurer"].unique())
-    strangers = [m for m in measurers if m not in settings["team"]]
-    if strangers or len(measurers) > settings["measurers"]:
-        raise ValueError(f"measurers {measurers}: expected {settings['measurers']} of {settings['team']}")
+    allowed = settings["team"] + settings["model_raters"]
+    if any(m not in allowed for m in measurers) or len(measurers) > settings["measurers"]:
+        raise ValueError(f"measurers {measurers}: expected {settings['measurers']} of {allowed}")
     if data.duplicated(["photo_id", "measurer"]).any():
         raise ValueError("a photo was answered twice by the same measurer; fix the measurer's file")
     answered = data.groupby("measurer")["photo_id"].nunique().to_dict()
@@ -261,16 +266,25 @@ def evaluate(config: dict[str, Any]) -> dict[str, Any]:
     rho, p_value = spearmanr(used["leaf_width_px"], used["short_side"])
     first, second = (used[m] for m in measurers)
     gap = (first - second).abs() / used["leaf_width_px"]
-    agreement = float(spearmanr(first, second)[0]) if first.nunique() > 1 and second.nunique() > 1 else None
+    agreement = spearman_or_none(first, second)
+    # How fragile the verdict is: rho with each photo left out in turn, and how many of those flip it.
+    threshold = settings["spearman_threshold"]
+    leave_one_out = [spearmanr(rest["leaf_width_px"], rest["short_side"])[0]
+                     for rest in (used.drop(i) for i in used.index)]
+    rescale = bool(rho >= threshold)
     decision = {
         "rule": f"Spearman rho(leaf width, shorter side) >= {settings['spearman_threshold']} -> rescale",
         "spearman_rho": round(float(rho), 4), "p_value": float(p_value),
         "n_used": result["n_used"], "n_unmeasurable": result["n_unmeasurable"],
-        "rescale": bool(rho >= settings["spearman_threshold"]),
+        "rescale": rescale,
         "median_leaf_width_px": round(float(used["leaf_width_px"].median()), 1),
         "measurers": measurers,
         "agreement_spearman": None if agreement is None else round(agreement, 4),
         "median_relative_gap": round(float(gap.median()), 4), "max_relative_gap": round(float(gap.max()), 4),
+        "rho_per_measurer": {m: spearman_or_none(used[m], used["short_side"]) for m in measurers},
+        "leave_one_out_rho": [round(float(min(leave_one_out)), 4), round(float(max(leave_one_out)), 4)],
+        "leave_one_out_flips": sum(bool(r >= threshold) != rescale for r in leave_one_out),
+        "model_raters": [m for m in measurers if m in settings["model_raters"]],
     }
     return {**result, **decision, "applied": True, "data": data}
 
@@ -285,7 +299,8 @@ def decide(config: dict[str, Any]) -> dict[str, Any]:
         raise ValueError(result["reason"])
     settings = config["pixel_scale"]
     keys = ["rule", "spearman_rho", "p_value", "n_used", "n_unmeasurable", "rescale", "median_leaf_width_px",
-            "measurers", "agreement_spearman", "median_relative_gap", "max_relative_gap"]
+            "measurers", "model_raters", "agreement_spearman", "median_relative_gap", "max_relative_gap",
+            "rho_per_measurer", "leave_one_out_rho", "leave_one_out_flips"]
     record = {k: result[k] for k in keys}
     record["decided_at"] = datetime.now(timezone.utc).isoformat(timespec="seconds")
     measurements = result["data"].sort_values(["photo_id", "measurer"])
@@ -306,8 +321,8 @@ def main() -> None:
         print(freeze_selection(config).to_string(), f"\nfrozen in {settings['selection_file']}")
     elif args.action == "measure":
         name = (args.measurer or "").strip().lower()
-        if name not in settings["team"]:
-            parser.error(f"--measurer must be one of {settings['team']}")
+        if name not in settings["team"] + settings["model_raters"]:
+            parser.error(f"--measurer must be one of {settings['team'] + settings['model_raters']}")
         measure(config, name)
     else:
         result = decide(config)
@@ -322,6 +337,9 @@ def main() -> None:
               f"median leaf width {result['median_leaf_width_px']:.0f} px; measurers agree with Spearman "
               f"{'n/a' if agreement is None else f'{agreement:.2f}'}, "
               f"median gap {result['median_relative_gap']:.1%}\n"
+              f"leaving out one photo at a time: rho {result['leave_one_out_rho'][0]:.3f}-"
+              f"{result['leave_one_out_rho'][1]:.3f}; {result['leave_one_out_flips']} of {result['n_used']} "
+              "single removals would flip the verdict\n"
               f"wrote {settings['measurements_file']} and {settings['decision_file']}")
 
 

@@ -126,8 +126,19 @@ def test_agreement_is_null_not_nan_when_one_measurer_is_constant(setup):
     config, selected, tmp_path = setup
     write_measurements(tmp_path, selected, {"ahsan": selected["short_side"] * 0.2, "harris": [300.0] * 30})
     result = lw.decide(config)
-    assert result["agreement_spearman"] is None
+    assert result["agreement_spearman"] is None and result["rho_per_measurer"]["harris"] is None
     assert json.loads((tmp_path / "decision.json").read_text())["agreement_spearman"] is None
+
+
+def test_model_rater_is_allowed_and_recorded_with_the_verdicts_fragility(setup):
+    config, selected, tmp_path = setup
+    widths = selected["short_side"] * 0.2
+    write_measurements(tmp_path, selected, {"ahsan": widths, "model_rater_a": widths * 0.98})
+    lw.decide(config)
+    decision = json.loads((tmp_path / "decision.json").read_text())
+    assert decision["model_raters"] == ["model_rater_a"] and decision["measurers"] == ["ahsan", "model_rater_a"]
+    assert decision["rho_per_measurer"] == {"ahsan": 1.0, "model_rater_a": 1.0}
+    assert decision["leave_one_out_rho"] == [1.0, 1.0] and decision["leave_one_out_flips"] == 0
 
 
 def test_constant_widths_are_refused_not_silently_native(setup):

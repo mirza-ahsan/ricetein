@@ -19,7 +19,8 @@ pixel_scale:
   decision_file: data/pixel_scale_decision.json          # the outcome Stage 6 reads
   n_photos: 30                 # one per equal-width band of the shorter side (log scale), min to max
   measurers: 2                 # exactly this many measure every photo independently; their mean is used
-  team: [ahsan, harris, umer]  # allowed measurer names (catches typos and trial runs)
+  team: [ahsan, harris, umer]  # people allowed to measure (names catch typos and trial runs)
+  model_raters: [model_rater_a]       # AI models also allowed to measure; named as such in the record and report (2026-11-07)
   spearman_threshold: 0.5      # rho >= 0.5 -> rescale every photo to the median leaf width before tiling
   min_usable: 20               # fewer usable photos (after 'unmeasurable' marks): the rule is not applied
 

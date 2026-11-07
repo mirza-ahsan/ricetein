@@ -282,7 +282,7 @@ def pixel_scale_section(config: dict[str, Any]) -> str:
             "rescale every photo to the median leaf width before tiling, otherwise keep native resolution. "
             "The photos are one random pick per equal-width band of photo size on a log scale (seed "
             f"{config['seed']}), covering {int(sides.min())}-{int(sides.max())} px, frozen in "
-            f"`{settings['selection_file']}`. {settings['measurers']} team members measure each photo "
+            f"`{settings['selection_file']}`. {settings['measurers']} measurers measure each photo "
             f"independently, in their own shuffled order; at least {settings['min_usable']} photos must be "
             "measurable (protocol in `src/leaf_width.py`). If rescaling is triggered, the median leaf width "
             f"comes from these {len(sides)} photos, some of which are later test photos; it is a label-free "
@@ -299,13 +299,22 @@ def pixel_scale_section(config: dict[str, Any]) -> str:
     verdict = ("**rescale every photo to the median leaf width before tiling**" if result["rescale"]
                else "**keep native resolution** (photos behave like crops at the camera's own scale)")
     agreement = result["agreement_spearman"]
+    per_measurer = ", ".join(f"{m} {'n/a' if r is None else f'{r:.3f}'}"
+                             for m, r in result["rho_per_measurer"].items())
+    low, high = result["leave_one_out_rho"]
+    models = result["model_raters"]
+    model_note = (f" Model rater(s), not people: `{'`, `'.join(models)}` (an AI model measuring from "
+                  "rendered images with a coordinate grid, through the same tool code)." if models else "")
     return text + (
         f"Spearman's rho = **{result['spearman_rho']:.3f}** (p = {result['p_value']:.3g}, "
         f"n = {result['n_used']}; {result['n_unmeasurable']} photos marked unmeasurable and left out), so: "
         f"{verdict}. Median leaf width {result['median_leaf_width_px']:.0f} px. The two measurers "
         f"({', '.join(result['measurers'])}) agree with Spearman "
         f"{'n/a' if agreement is None else f'{agreement:.2f}'}; their widths differ by "
-        f"{result['median_relative_gap']:.1%} at the median (largest {result['max_relative_gap']:.1%}). "
+        f"{result['median_relative_gap']:.1%} at the median (largest {result['max_relative_gap']:.1%}); "
+        f"rho from each measurer alone: {per_measurer}. Leaving out one photo at a time gives rho "
+        f"{low:.3f}-{high:.3f}; {result['leave_one_out_flips']} of {result['n_used']} single "
+        f"removals would flip the verdict.{model_note} "
         f"Decision record: `{settings['decision_file']}`.\n\n" + md_table(table))
 
 
