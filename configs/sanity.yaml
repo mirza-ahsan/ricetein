@@ -1,0 +1,8 @@
+# ===================================================================
+# configs/sanity.yaml: Stage 4b sanity and shortcut baselines (fixed settings, nothing tuned)
+# ===================================================================
+extends: split.yaml
+
+sanity:
+  histogram_cache: cache/sanity_histograms.npz   # colour + background HSV histograms per photo (git-ignored)
+  tile: 224                                       # tile size for the properties-only tile count
