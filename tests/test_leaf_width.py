@@ -78,6 +78,10 @@ def test_leaf_width_growing_with_photo_size_means_rescale(setup):
     assert result["median_relative_gap"] == pytest.approx(0.02 / 1.01, abs=1e-4)
     decision = json.loads((tmp_path / "decision.json").read_text())
     assert decision["rescale"] and decision["n_used"] == 30
+    assert decision["size_fit"]["slope"] == pytest.approx(1.0)  # pure resize: width proportional to size
+    width, side = widths.iloc[0] * 1.01, selected["short_side"].iloc[0]  # 1.01: mean of the two measurers
+    median = decision["median_leaf_width_px"]  # a pure resize is undone: every leaf becomes the median width
+    assert width * lw.rescale_factor(side, decision) == pytest.approx(median, rel=1e-3)
     assert len(pd.read_csv(tmp_path / "all.csv")) == 60
 
 
@@ -87,6 +91,7 @@ def test_constant_leaf_width_means_native_resolution(setup):
     write_measurements(tmp_path, selected, {"ahsan": widths, "umer": widths})
     result = lw.decide(config)
     assert result["complete"] and not result["rescale"]
+    assert result["size_fit"] is None and lw.rescale_factor(1000, result) == 1.0
     assert result["median_leaf_width_px"] == pytest.approx(np.median(widths), abs=0.1)
 
 
