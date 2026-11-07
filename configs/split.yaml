@@ -1,0 +1,12 @@
+# ===================================================================
+# configs/split.yaml: Stage 3, the locked 5-fold split and the Paddy Doctor test list
+# ===================================================================
+# Fold settings live in base.yaml (split:, split_seed). The audit file paths
+# (groups, label conflicts, cross-dataset overlap) come from audits.yaml.
+# splits/folds.csv is written once and never regenerated.
+# ===================================================================
+extends: audits.yaml
+
+split_files:
+  folds: splits/folds.csv          # photo_id, class, group_id, round_1..round_5 (train / val / test)
+  paddy4: splits/paddy4.csv        # Paddy Doctor photos of the 4 shared classes, mapped labels, each image once
