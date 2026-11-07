@@ -1,0 +1,50 @@
+# ===================================================================
+# configs/audits.yaml: Stage 2 data audits (backgrounds, near-duplicates,
+# cross-dataset overlap, label sanity)
+# ===================================================================
+# Flagging thresholds are fixed in the pre-declared methodology ("Data audits");
+# do not change them after looking at results. The automatic check and the
+# sampled review of rejected pairs are a logged deviation (handbook §24,
+# 2026-11-07): the pre-declared rules flag too many pairs to review by hand.
+# ===================================================================
+extends: inventory.yaml        # inventory file paths (and, through it, base.yaml)
+
+reviewers: [ahsan, harris, umer]   # people who label, review or check (each works alone, in their own order)
+
+duplicates:
+  descriptor_cache: cache/e1_whole224.npz   # whole-photo E1 class tokens, both datasets (git-ignored)
+  hash_cache: cache/phash_d4.npz            # 8 orientation hashes per photo, both datasets (git-ignored)
+  keypoint_cache: cache/sift                # keypoints of every photo in a flagged pair (git-ignored, rewritten each run)
+  whole_size: 224                  # whole photo resized to this square before describing
+  batch_size: 64
+  max_hash_bits: 8                 # flag: 64-bit pHash differs in <= 8 bits (any of 8 rotations/flips)
+  min_cosine: 0.95                 # flag: whole-photo E1 class-token cosine > 0.95
+  check:                           # automatic check: SIFT keypoints + RANSAC similarity transform (also vs the mirrored photo)
+    long_side: 1200                # photos decoded at this long side for keypoints
+    contrast_threshold: 0.01       # SIFT default 0.04 finds <= 14 keypoints on 10% of these plain photos
+    max_features: 2000
+    ratio: 0.75                    # Lowe's ratio test
+    ransac_px: 8.0                 # reprojection tolerance in pixels at long_side
+    min_scale: 0.25                # a transform shrinking or enlarging more than 4x is not a crop or resize
+    max_scale: 4.0
+    min_inliers: 15                # distinct inlier keypoints to pass (declared 2026-11-08, before any review):
+                                   # different leaves score 0-6, copies of one leaf ~180-1,150
+  rejected_sample: 200             # random rejected pairs (per comparison) that people also review, to measure misses
+  candidates_file: data/duplicate_candidates.csv     # every flagged pair, with hash bits, cosine and check result
+  review_file: data/duplicate_review_queue.csv       # pairs for people: all passed + the sample, shuffled
+  review_dir: data/duplicate_review                  # one file per reviewer
+  pairs_file: data/duplicate_pairs.csv               # every reviewed pair with both verdicts and the settled one
+  groups_file: data/groups.csv                       # photo_id -> group_id (singletons included)
+  conflicts_file: data/label_conflicts.csv           # both photos of any confirmed pair with different classes (excluded)
+  overlap_file: data/cross_dataset_overlap.csv       # confirmed primary <-> Paddy Doctor matches (even if empty)
+
+background:                      # Stage 2a (methodology: 240 photos, 60 per class, two team members)
+  per_class: 60
+  sample_file: data/background_audit_sample.csv      # frozen once (committed)
+  labels_dir: data/background_audit                  # one file per rater, plus settled.csv
+  audit_file: data/background_audit.csv              # both raters' labels, the settled ones and the final label
+
+label_check:                     # Stage 2d: each team member looks at their own random photos per class
+  per_class: 20
+  checks_dir: data/label_check                       # one file per person
+  suspects_file: data/suspect_labels.csv             # photos someone thinks look like another class
