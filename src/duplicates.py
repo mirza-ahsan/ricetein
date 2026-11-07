@@ -4,19 +4,23 @@
    64-bit perceptual hashes differ in at most ``max_hash_bits`` bits, comparing each photo with all
    8 rotations/flips of the other; or the whole-photo E1 class tokens have cosine > ``min_cosine``.
    Flagged pairs get an automatic check: SIFT keypoints matched with Lowe's ratio test, then a RANSAC
-   homography (also against the mirrored photo); a pair passes with at least ``min_inliers`` inliers.
+   similarity transform (also against the mirrored photo); a pair passes with at least ``min_inliers``
+   distinct inlier keypoints.
    The review queue holds every passed pair plus a random sample of rejected ones (to measure what the
    check misses), shuffled and blind: reviewers see two photos, not classes or check results.
    Deviation from "review every flagged pair": handbook §24, 2026-11-07.
-2. ``review --reviewer <name>``: two people each judge every queued pair alone (S same leaf / D different).
+2. ``review --reviewer <name>``: two people each judge every queued pair alone (Y same leaf / N different).
 3. ``settle``: both look together at the pairs they disagreed on.
-4. ``combine``: confirmed primary pairs form groups (connected components; singletons included); groups
-   mixing classes are label conflicts (excluded from all experiments); confirmed cross-dataset pairs are
-   the overlap list.
+4. ``extend``: the declared miss rule, applied once: if people confirmed any sampled rejected pair, every
+   pair with at least the lowest inlier count among those misses is queued as round 2 (then 2-3 again).
+5. ``combine``: confirmed primary pairs form groups (connected components; singletons included); the two
+   photos of any confirmed pair with different classes are label conflicts (excluded from all experiments);
+   confirmed cross-dataset pairs are the overlap list.
 
     uv run python -m src.duplicates flag                       # caches, flags, check, review queue
     uv run python -m src.duplicates review --reviewer <name>   # each reviewer, alone
     uv run python -m src.duplicates settle                     # both reviewers together
+    uv run python -m src.duplicates extend                     # once, after round 1 is settled
     uv run python -m src.duplicates combine                    # pairs, groups, conflicts, overlap
 """
 
@@ -44,6 +48,7 @@ from src.inventory import load_for_hash, perceptual_hash, read_inventory
 
 DATASETS = ("primary", "paddy")
 REVIEW_COLUMNS = ["pair_id", "photo_a", "photo_b", "reviewer", "verdict", "reviewed_at"]
+QUEUE_COLUMNS = ["pair_id", "comparison", "dataset_a", "photo_a", "dataset_b", "photo_b", "round"]
 INSTRUCTIONS = ("Y same leaf (a copy, crop, resize, rotation, mirror or re-shot of one leaf)   "
                 "N different leaf   Backspace = undo   Esc = stop")
 T = Image.Transpose
@@ -238,21 +243,32 @@ def stored(path: str, mirror: bool) -> tuple[np.ndarray, np.ndarray]:
 
 
 def inliers(a: tuple[np.ndarray, np.ndarray], b: tuple[np.ndarray, np.ndarray]) -> int:
-    """Keypoint matches (ratio test) that agree with one RANSAC homography from photo a to photo b."""
+    """Distinct keypoints that agree with one similarity transform (rotation, scale, shift) from photo a to
+    photo b: matches pass Lowe's ratio test, each point of b is used once, the transform's scale must be
+    plausible, and inliers are counted as distinct positions in both photos. These guards matter: without
+    them RANSAC accepted a near-zero scale that maps every point of a onto one spot of b (hundreds of
+    "inliers" between different leaves)."""
     import cv2
 
     (points_a, desc_a), (points_b, desc_b) = a, b
     if len(desc_a) < 2 or len(desc_b) < 2:
         return 0
     matches = cv2.BFMatcher(cv2.NORM_L2).knnMatch(np.float32(desc_a), np.float32(desc_b), k=2)
-    good = [m for m, n in matches if m.distance < _CHECK["ratio"] * n.distance]
-    if len(good) < 4:
+    best: dict[int, Any] = {}
+    passing = [m for m, n in matches if m.distance < _CHECK["ratio"] * n.distance]
+    for m in sorted(passing, key=lambda m: m.distance):  # each point of b keeps only its closest match
+        best.setdefault(m.trainIdx, m)
+    if len(best) < 4:
         return 0
+    pa = np.float32([points_a[m.queryIdx] for m in best.values()])
+    pb = np.float32([points_b[m.trainIdx] for m in best.values()])
     cv2.setRNGSeed(0)  # RANSAC is random: same answer for a pair whatever order pairs are checked in
-    _, mask = cv2.findHomography(np.float32([points_a[m.queryIdx] for m in good]),
-                                 np.float32([points_b[m.trainIdx] for m in good]), cv2.RANSAC,
-                                 _CHECK["ransac_px"])
-    return 0 if mask is None else int(mask.sum())
+    transform, mask = cv2.estimateAffinePartial2D(pa, pb, method=cv2.RANSAC,
+                                                  ransacReprojThreshold=_CHECK["ransac_px"])
+    if transform is None or not _CHECK["min_scale"] <= np.hypot(*transform[:, 0]) <= _CHECK["max_scale"]:
+        return 0
+    keep = mask.ravel().astype(bool)
+    return min(len(np.unique(pa[keep].round(), axis=0)), len(np.unique(pb[keep].round(), axis=0)))
 
 
 def check_pair(paths: tuple[str, str]) -> int:
@@ -297,8 +313,8 @@ def review_queue(candidates: pd.DataFrame, n_sample: int, seed: int) -> pd.DataF
     parts = [candidates[candidates["passed"]]]
     for _, group in candidates[~candidates["passed"]].groupby("comparison"):
         parts.append(group.iloc[np.sort(rng.choice(len(group), min(n_sample, len(group)), replace=False))])
-    queue = pd.concat(parts).sample(frac=1, random_state=seed).reset_index(drop=True)
-    return queue[["pair_id", "comparison", "dataset_a", "photo_a", "dataset_b", "photo_b"]]
+    queue = pd.concat(parts).sample(frac=1, random_state=seed).reset_index(drop=True).assign(round=1)
+    return queue[QUEUE_COLUMNS]
 
 
 def flag(config: dict[str, Any], workers: int | None = None) -> dict[str, Any]:
@@ -423,10 +439,46 @@ def outcome(config: dict[str, Any]) -> dict[str, Any]:
     groups = primary[["photo_id", "class"]].assign(
         group_id=groups_of(primary["photo_id"], confirmed[confirmed["comparison"] == "primary"]))
     groups["group_size"] = groups.groupby("group_id")["photo_id"].transform("size")
-    mixed = groups.groupby("group_id")["class"].transform("nunique") > 1
+    # Label conflicts (Ahsan, 2026-11-08): only the two photos of a confirmed pair with different classes
+    # are excluded; the rest of their group stays.
+    clash = confirmed[(confirmed["comparison"] == "primary") & (confirmed["class_a"] != confirmed["class_b"])]
+    conflicts = groups[groups["photo_id"].isin(set(clash["photo_a"]) | set(clash["photo_b"]))]
     overlap = confirmed[confirmed["comparison"] == "cross"]
-    return {"complete": True, "pairs": pairs, "groups": groups, "conflicts": groups[mixed],
-            "overlap": overlap, "kappa": kappa, "reviewers": [first, second]}
+    return {"complete": True, "pairs": pairs, "groups": groups, "conflicts": conflicts, "overlap": overlap,
+            "kappa": kappa, "reviewers": [first, second], "misses": misses(pairs)}
+
+
+def misses(pairs: pd.DataFrame) -> pd.DataFrame:
+    """Per comparison: round-1 sampled rejected pairs, how many people confirmed (what the check missed),
+    and the lowest inlier count among those confirmed."""
+    sampled = pairs[~pairs["passed"].astype(bool) & (pairs["round"].astype(int) == 1)]
+    same = sampled["final"] == "same"
+    return pd.DataFrame({"sampled": sampled.groupby("comparison").size(),
+                         "confirmed": same.groupby(sampled["comparison"]).sum(),
+                         "lowest_inliers": sampled[same].groupby("comparison")["inliers"].min()})
+
+
+def extend(config: dict[str, Any]) -> pd.DataFrame:
+    """The declared miss rule (Ahsan, 2026-11-08), applied once after round 1 is reviewed and settled: if
+    any sampled rejected pair was confirmed, every not-yet-queued pair with at least the lowest inlier count
+    among those misses joins the queue as round 2. Returns the added pairs (empty when nothing was missed)."""
+    settings = config["duplicates"]
+    queue_path = REPO_ROOT / settings["review_file"]
+    queue = pd.read_csv(queue_path, dtype=str)
+    if (queue["round"] == "2").any():
+        raise SystemExit("the miss rule was already applied (round 2 exists); it is applied once")
+    result = outcome(config)
+    if not result["complete"]:
+        raise SystemExit("round 1 must be reviewed and settled first")
+    missed = result["misses"].dropna(subset=["lowest_inliers"])
+    candidates = pd.read_csv(REPO_ROOT / settings["candidates_file"], dtype={"pair_id": str})
+    added = pd.concat([candidates[(candidates["comparison"] == comparison)
+                                  & (candidates["inliers"] >= row.lowest_inliers)
+                                  & ~candidates["pair_id"].isin(queue["pair_id"])]
+                       for comparison, row in missed.iterrows()] or [candidates.iloc[:0]])
+    added = added.sample(frac=1, random_state=config["seed"]).assign(round=2)[QUEUE_COLUMNS]
+    pd.concat([queue, added.astype(str)]).to_csv(queue_path, index=False)
+    return added
 
 
 def combine(config: dict[str, Any]) -> dict[str, Any]:
@@ -442,7 +494,7 @@ def combine(config: dict[str, Any]) -> dict[str, Any]:
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    parser.add_argument("action", choices=["flag", "review", "settle", "combine"])
+    parser.add_argument("action", choices=["flag", "review", "settle", "extend", "combine"])
     parser.add_argument("--reviewer", help="your first name in lower case (for 'review')")
     parser.add_argument("--config", default="configs/audits.yaml")
     parser.add_argument("--workers", type=int, help="processes to use (default: all CPU cores)")
@@ -461,6 +513,9 @@ def main() -> None:
         review(config, name)
     elif args.action == "settle":
         settle(config)
+    elif args.action == "extend":
+        added = extend(config)
+        print(f"{len(added)} pairs added as round 2" if len(added) else "No misses: nothing to add.")
     else:
         result = combine(config)
         if not result["complete"]:

@@ -19,20 +19,23 @@ duplicates:
   batch_size: 64
   max_hash_bits: 8                 # flag: 64-bit pHash differs in <= 8 bits (any of 8 rotations/flips)
   min_cosine: 0.95                 # flag: whole-photo E1 class-token cosine > 0.95
-  check:                           # automatic check: SIFT keypoints + RANSAC homography (also vs the mirrored photo)
+  check:                           # automatic check: SIFT keypoints + RANSAC similarity transform (also vs the mirrored photo)
     long_side: 1200                # photos decoded at this long side for keypoints
     contrast_threshold: 0.01       # SIFT default 0.04 finds <= 14 keypoints on 10% of these plain photos
     max_features: 2000
     ratio: 0.75                    # Lowe's ratio test
     ransac_px: 8.0                 # reprojection tolerance in pixels at long_side
-    min_inliers: 30                # a pair passes with at least this many geometric inliers (declared before running)
+    min_scale: 0.25                # a transform shrinking or enlarging more than 4x is not a crop or resize
+    max_scale: 4.0
+    min_inliers: 15                # distinct inlier keypoints to pass (declared 2026-11-08, before any review):
+                                   # different leaves score 0-6, copies of one leaf ~180-1,150
   rejected_sample: 200             # random rejected pairs (per comparison) that people also review, to measure misses
   candidates_file: data/duplicate_candidates.csv     # every flagged pair, with hash bits, cosine and check result
   review_file: data/duplicate_review_queue.csv       # pairs for people: all passed + the sample, shuffled
   review_dir: data/duplicate_review                  # one file per reviewer
   pairs_file: data/duplicate_pairs.csv               # every reviewed pair with both verdicts and the settled one
   groups_file: data/groups.csv                       # photo_id -> group_id (singletons included)
-  conflicts_file: data/label_conflicts.csv           # photos in groups that mix classes (excluded from all experiments)
+  conflicts_file: data/label_conflicts.csv           # both photos of any confirmed pair with different classes (excluded)
   overlap_file: data/cross_dataset_overlap.csv       # confirmed primary <-> Paddy Doctor matches (even if empty)
 
 background:                      # Stage 2a (methodology: 240 photos, 60 per class, two team members)

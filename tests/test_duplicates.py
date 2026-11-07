@@ -11,7 +11,8 @@ from src import review_tool
 from src.inventory import load_for_hash, perceptual_hash
 
 CHECK = {"long_side": 512, "contrast_threshold": 0.01, "max_features": 2000, "ratio": 0.75, "ransac_px": 8.0,
-         "min_inliers": 30}
+         "min_scale": 0.25, "max_scale": 4.0,
+         "min_inliers": 15}
 
 
 def textured(seed, size=600):
@@ -78,6 +79,19 @@ def test_check_passes_rotated_and_mirrored_crops_but_not_a_different_photo(photo
     assert (again == counts).all()  # the same answer however many workers
 
 
+def test_check_rejects_every_point_collapsing_onto_one_spot():
+    """The first full run passed different leaves with hundreds of "inliers": every keypoint of photo a
+    matched to one spot of photo b, which RANSAC fitted with a near-zero scale."""
+    dup._init_check(CHECK)
+    rng = np.random.default_rng(0)
+    descriptors = rng.integers(0, 255, (50, 128)).astype(np.uint8)
+    points = rng.uniform(0, 500, (50, 2)).astype(np.float32)
+    one_spot = np.float32([[250, 250]]) + rng.uniform(0, 0.4, (50, 2)).astype(np.float32)
+    assert dup.inliers((points, descriptors), (one_spot, descriptors)) == 0
+    shifted = points * 1.5 + 20  # a genuine resize and shift keeps every point
+    assert dup.inliers((points, descriptors), (shifted, descriptors)) == 50
+
+
 def candidates(n_passed, n_rejected):
     rows = [{"pair_id": f"p{i:06d}", "comparison": "primary", "dataset_a": "primary", "photo_a": f"A{i}",
              "dataset_b": "primary", "photo_b": f"B{i}", "passed": i < n_passed}
@@ -107,10 +121,18 @@ def review_setup(tmp_path, monkeypatch):
              ("p000002", "primary", "primary", "S/3.jpg", "primary", "S/4.jpg"),
              ("x000000", "cross", "primary", "H/1.jpg", "paddy", "P/9.jpg")]
     columns = ["pair_id", "comparison", "dataset_a", "photo_a", "dataset_b", "photo_b"]
-    queue = pd.DataFrame(pairs, columns=columns)
+    queue = pd.DataFrame(pairs, columns=columns).assign(round=1)
     queue.to_csv(tmp_path / "queue.csv", index=False)
-    cand = queue.assign(class_a="x", class_b="y", hash_bits=3, cosine=0.9, by_hash=True, by_cosine=False,
-                        inliers=50, passed=True)
+    # p000002 was rejected by the check (sampled for review); p000003/4 were rejected and not sampled.
+    extra = pd.DataFrame([("p000003", "primary", "primary", "H/1.jpg", "primary", "S/4.jpg"),
+                          ("p000004", "primary", "primary", "H/2.jpg", "primary", "S/4.jpg")],
+                         columns=columns)
+    classes = {**dict(zip(ids, lists["primary"]["class"])), "P/9.jpg": "normal"}
+    cand = pd.concat([queue.drop(columns="round"), extra], ignore_index=True)
+    cand = cand.assign(class_a=cand["photo_a"].map(classes), class_b=cand["photo_b"].map(classes),
+                       hash_bits=3, cosine=0.9, by_hash=True, by_cosine=False,
+                       inliers=[50, 50, 25, 50, 20, 28],
+                       passed=[True, True, False, True, False, False])
     cand.to_csv(tmp_path / "candidates.csv", index=False)
     config = {"seed": 0, "reviewers": ["ahsan", "harris", "umer"],
               "duplicates": {"review_file": "queue.csv", "review_dir": "reviews",
@@ -154,9 +176,19 @@ def test_review_saves_resumes_and_combine_builds_groups_conflicts_and_overlap(re
     result = dup.combine(config)
     groups = result["groups"].set_index("photo_id")["group_id"]
     assert groups.nunique() == 1  # 1-2, 2-3 and 3-4 chain all four photos into one group
-    assert len(result["conflicts"]) == 4  # that group mixes healthy and hispa: every photo is excluded
+    # Only photos in a confirmed pair with different classes are excluded: 2-3 and 3-4 (hispa vs healthy).
+    assert sorted(result["conflicts"]["photo_id"]) == ["H/2.jpg", "S/3.jpg", "S/4.jpg"]
     assert result["overlap"]["photo_b"].tolist() == ["P/9.jpg"]
     assert (tmp / "groups.csv").exists() and (tmp / "overlap.csv").exists()
+
+    # Miss rule: the sampled rejected pair p000002 (25 inliers) was confirmed, so pairs with >= 25 inliers
+    # that were never queued join as round 2: p000004 (28), not p000003 (20). Applied once.
+    misses = result["misses"].loc["primary"]
+    assert (misses["sampled"], misses["confirmed"], misses["lowest_inliers"]) == (1, 1, 25)
+    assert dup.extend(config)["pair_id"].tolist() == ["p000004"]
+    assert dup.outcome(config)["complete"] is False  # round 2 still needs both reviewers
+    with pytest.raises(SystemExit, match="once"):
+        dup.extend(config)
 
 
 def test_a_third_reviewer_is_stopped_before_starting_and_verdicts_must_match_the_queue(review_setup):
