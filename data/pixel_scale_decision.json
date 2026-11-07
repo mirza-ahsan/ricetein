@@ -25,5 +25,9 @@
     0.613
   ],
   "leave_one_out_flips": 5,
-  "decided_at": "2026-11-07T14:56:07+00:00"
+  "size_fit": {
+    "slope": 0.776456,
+    "intercept": -0.557512
+  },
+  "decided_at": "2026-11-07T15:33:43+00:00"
 }
