@@ -10,6 +10,8 @@
 extends: inventory.yaml        # inventory file paths (and, through it, base.yaml)
 
 reviewers: [ahsan, harris, umer]   # people who label, review or check (each works alone, in their own order)
+model_reviewers: [model_rater_a, model_rater_b] # AI model raters (Ahsan, 2026-11-08): two independent instances of one AI model; always
+                                    # named as model raters, and their agreement overstates what two people would show
 
 duplicates:
   descriptor_cache: cache/e1_whole224.npz   # whole-photo E1 class tokens, both datasets (git-ignored)
@@ -44,7 +46,8 @@ background:                      # Stage 2a (methodology: 240 photos, 60 per cla
   labels_dir: data/background_audit                  # one file per rater, plus settled.csv
   audit_file: data/background_audit.csv              # both raters' labels, the settled ones and the final label
 
-label_check:                     # Stage 2d: each team member looks at their own random photos per class
+label_check:                     # Stage 2d: each checker looks at their own random photos per class
+  checkers: [model_rater_a]               # who must finish before the suspects list is final (2026-11-08)
   per_class: 20
   checks_dir: data/label_check                       # one file per person
   suspects_file: data/suspect_labels.csv             # photos someone thinks look like another class

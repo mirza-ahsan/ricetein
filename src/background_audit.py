@@ -81,7 +81,8 @@ def label(config: dict[str, Any], rater: str, ask: Any = review_tool.ask) -> Non
 def labels(config: dict[str, Any]) -> tuple[pd.DataFrame, pd.DataFrame]:
     """(every rater's rows, one row per sampled photo with each rater's background)."""
     folder = REPO_ROOT / config["background"]["labels_dir"]
-    data = review_tool.people_rows(folder, COLUMNS, "rater", config["reviewers"], "photo_id")
+    data = review_tool.people_rows(folder, COLUMNS, "rater", review_tool.allowed_people(config),
+                                   "photo_id")
     wide = data.pivot(index="photo_id", columns="rater", values="background")
     wide = wide.reindex(sample(config)["photo_id"])
     return data, wide
@@ -143,7 +144,8 @@ def main() -> None:
         print(f"{len(chosen)} photos ({chosen['class'].value_counts().to_dict()}) "
               f"-> {config['background']['sample_file']}")
     elif args.action == "label":
-        label(config, review_tool.person_name(parser, args.rater, config["reviewers"], "--rater"))
+        allowed = review_tool.allowed_people(config)
+        label(config, review_tool.person_name(parser, args.rater, allowed, "--rater"))
     elif args.action == "settle":
         settle(config)
     else:

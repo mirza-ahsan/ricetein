@@ -188,6 +188,20 @@ def settled_answers(folder: Path, columns: list[str], key: str, value: str) -> p
     return read_rows(folder / f"{SETTLED}.csv", columns).set_index(key)[value]
 
 
+def allowed_people(config: dict[str, Any]) -> list[str]:
+    """Everyone who may label, review or check: the team, then any model raters (named as such)."""
+    return config["reviewers"] + config.get("model_reviewers", [])
+
+
+def model_note(config: dict[str, Any], names: list[str]) -> str:
+    """A sentence naming the model raters among ``names`` (empty when all are people)."""
+    models = [n for n in names if n in config.get("model_reviewers", [])]
+    if not models:
+        return ""
+    return (f" Model raters, not people: `{'`, `'.join(models)}` (independent instances of one AI model that did not "
+            "see each other's answers; same-model agreement overstates what two people would show).")
+
+
 def person_name(parser: Any, value: str | None, allowed: list[str], flag: str) -> str:
     """The lower-case name given on the command line; stops with a usage error if it is not allowed."""
     name = (value or "").strip().lower()
