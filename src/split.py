@@ -84,6 +84,12 @@ def sha256(path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
+def read_folds(config: dict[str, Any]) -> tuple[pd.DataFrame, str]:
+    """The locked split table and its SHA-256 (every run record stores the checksum)."""
+    path = REPO_ROOT / config["split_files"]["folds"]
+    return pd.read_csv(path, dtype=str), sha256(path)
+
+
 def build(config: dict[str, Any]) -> dict[str, Any]:
     """Write the split files (refusing to replace an existing folds file) and return what the report needs."""
     files, settings = config["split_files"], config["split"]
