@@ -2,7 +2,7 @@
 
 Rice leaf photos are usually shrunk to a small thumbnail (128 or 224 pixels) before a model sees them, which throws away most of the fine detail that tells one disease from another. This project keeps that detail:
 
-1. Each high-resolution photo is cut into small **full-detail tiles** (224 × 224 pixels, 16–196 per photo).
+1. Each high-resolution photo is cut into small **high-detail tiles** (224 × 224 pixels; each photo is first brought to a common leaf scale, giving 49–100 tiles).
 2. Every tile is described once by a **frozen, self-supervised image model** (Meta's DINOv3).
 3. A small **attention model** (about 0.26 M trainable parameters), trained only from whole-photo labels, learns which tiles show the disease.
 
@@ -33,7 +33,7 @@ Course project at FAST School of Computing, FAST-NUCES Lahore, and the basis of 
 | Phase 4: Experiments and Results | In progress |
 | Final paper | Not started |
 | Environment (local machine + Kaggle GPUs) | Done and verified |
-| Experiments | Stage 0 done; Stage 1 inventory done (2026-11-05), pixel scale decided: rescale (2026-11-07); a teammate's read of the report is pending (see `docs/HANDBOOK.md`) |
+| Experiments | Stages 0 and 1 done (2026-11-07: photos are rescaled to a common leaf scale before tiling); next, Stage 2 audits (see `docs/HANDBOOK.md`) |
 
 ---
 

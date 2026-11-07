@@ -272,12 +272,16 @@ def evaluate(config: dict[str, Any]) -> dict[str, Any]:
     leave_one_out = [spearmanr(rest["leaf_width_px"], rest["short_side"])[0]
                      for rest in (used.drop(i) for i in used.index)]
     rescale = bool(rho >= threshold)
+    # How a rescale is applied (decided 2026-11-07, option A): each photo's leaf width is estimated from its
+    # shorter side with a log-log fit, and the photo is scaled so that estimate becomes the median leaf width.
+    slope, intercept = np.polyfit(np.log(used["short_side"]), np.log(used["leaf_width_px"]), 1)
+    median_width = float(used["leaf_width_px"].median())
     decision = {
         "rule": f"Spearman rho(leaf width, shorter side) >= {settings['spearman_threshold']} -> rescale",
         "spearman_rho": round(float(rho), 4), "p_value": float(p_value),
         "n_used": result["n_used"], "n_unmeasurable": result["n_unmeasurable"],
         "rescale": rescale,
-        "median_leaf_width_px": round(float(used["leaf_width_px"].median()), 1),
+        "median_leaf_width_px": round(median_width, 1),
         "measurers": measurers,
         "agreement_spearman": None if agreement is None else round(agreement, 4),
         "median_relative_gap": round(float(gap.median()), 4), "max_relative_gap": round(float(gap.max()), 4),
@@ -285,8 +289,19 @@ def evaluate(config: dict[str, Any]) -> dict[str, Any]:
         "leave_one_out_rho": [round(float(min(leave_one_out)), 4), round(float(max(leave_one_out)), 4)],
         "leave_one_out_flips": sum(bool(r >= threshold) != rescale for r in leave_one_out),
         "model_raters": [m for m in measurers if m in settings["model_raters"]],
+        # log(width) = intercept + slope * log(shorter side); only recorded when it is used
+        "size_fit": ({"slope": round(float(slope), 6), "intercept": round(float(intercept), 6)}
+                     if rescale else None),
     }
     return {**result, **decision, "applied": True, "data": data}
+
+
+def rescale_factor(short_side: float, decision: dict[str, Any]) -> float:
+    """Stage 6 scale factor for a photo: its fitted leaf width becomes the median leaf width (1 if native)."""
+    if not decision["rescale"]:
+        return 1.0
+    fit = decision["size_fit"]
+    return decision["median_leaf_width_px"] / np.exp(fit["intercept"] + fit["slope"] * np.log(short_side))
 
 
 def decide(config: dict[str, Any]) -> dict[str, Any]:
@@ -300,7 +315,7 @@ def decide(config: dict[str, Any]) -> dict[str, Any]:
     settings = config["pixel_scale"]
     keys = ["rule", "spearman_rho", "p_value", "n_used", "n_unmeasurable", "rescale", "median_leaf_width_px",
             "measurers", "model_raters", "agreement_spearman", "median_relative_gap", "max_relative_gap",
-            "rho_per_measurer", "leave_one_out_rho", "leave_one_out_flips"]
+            "rho_per_measurer", "leave_one_out_rho", "leave_one_out_flips", "size_fit"]
     record = {k: result[k] for k in keys}
     record["decided_at"] = datetime.now(timezone.utc).isoformat(timespec="seconds")
     measurements = result["data"].sort_values(["photo_id", "measurer"])
@@ -341,6 +356,10 @@ def main() -> None:
               f"{result['leave_one_out_rho'][1]:.3f}; {result['leave_one_out_flips']} of {result['n_used']} "
               "single removals would flip the verdict\n"
               f"wrote {settings['measurements_file']} and {settings['decision_file']}")
+        if result["size_fit"]:
+            low, high = result["selected"]["short_side"].agg(["min", "max"])
+            print(f"each photo is scaled by {rescale_factor(low, result):.2f} ({low} px) to "
+                  f"{rescale_factor(high, result):.2f} ({high} px); see rescale_factor()")
 
 
 if __name__ == "__main__":

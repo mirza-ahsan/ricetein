@@ -18,7 +18,7 @@ import pandas as pd
 
 from src.config import dataset_dir, load_config, path_for
 from src.inventory import read_inventory
-from src.leaf_width import evaluate
+from src.leaf_width import evaluate, rescale_factor
 
 
 # ---------------------------------------------------------------- formatting
@@ -303,6 +303,13 @@ def pixel_scale_section(config: dict[str, Any]) -> str:
                              for m, r in result["rho_per_measurer"].items())
     low, high = result["leave_one_out_rho"]
     models = result["model_raters"]
+    fit = result["size_fit"]
+    fit_note = (f" How the rescale is applied: a log-log fit of leaf width on shorter side (slope "
+                f"{fit['slope']:.2f}) estimates each photo's leaf width, and the photo is scaled so that "
+                f"estimate becomes the median: factor {rescale_factor(sides.min(), result):.2f} at "
+                f"{int(sides.min())} px to {rescale_factor(sides.max(), result):.2f} at "
+                f"{int(sides.max())} px "
+                "(`rescale_factor` in `src/leaf_width.py`)." if fit else "")
     model_note = (f" Model rater(s), not people: `{'`, `'.join(models)}` (an AI model measuring from "
                   "rendered images with a coordinate grid, through the same tool code)." if models else "")
     return text + (
@@ -314,7 +321,7 @@ def pixel_scale_section(config: dict[str, Any]) -> str:
         f"{result['median_relative_gap']:.1%} at the median (largest {result['max_relative_gap']:.1%}); "
         f"rho from each measurer alone: {per_measurer}. Leaving out one photo at a time gives rho "
         f"{low:.3f}-{high:.3f}; {result['leave_one_out_flips']} of {result['n_used']} single "
-        f"removals would flip the verdict.{model_note} "
+        f"removals would flip the verdict.{model_note}{fit_note} "
         f"Decision record: `{settings['decision_file']}`.\n\n" + md_table(table))
 
 
