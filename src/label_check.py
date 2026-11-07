@@ -64,9 +64,9 @@ def check(config: dict[str, Any], checker: str, ask: Any = review_tool.ask) -> N
 def results(config: dict[str, Any]) -> dict[str, Any]:
     """Answers per checker and the suspects list, once every team member has finished (reads only)."""
     settings = config["label_check"]
-    people = config["reviewers"]
-    data = review_tool.people_rows(REPO_ROOT / settings["checks_dir"], COLUMNS, "checker", people, "photo_id",
-                                   limit=len(people))
+    people = settings["checkers"]
+    data = review_tool.people_rows(REPO_ROOT / settings["checks_dir"], COLUMNS, "checker",
+                                   review_tool.allowed_people(config), "photo_id", limit=len(people))
     expected = settings["per_class"] * len(config["classes"])
     done = data.groupby("checker")["photo_id"].nunique().to_dict()
     if sorted(done) != sorted(people) or any(n != expected for n in done.values()):
@@ -86,7 +86,8 @@ def main() -> None:
     args = parser.parse_args()
     config = load_config(args.config)
     if args.action == "check":
-        check(config, review_tool.person_name(parser, args.checker, config["reviewers"], "--checker"))
+        allowed = review_tool.allowed_people(config)
+        check(config, review_tool.person_name(parser, args.checker, allowed, "--checker"))
     else:
         result = results(config)
         if not result["complete"]:

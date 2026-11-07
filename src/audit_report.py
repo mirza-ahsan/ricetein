@@ -13,7 +13,7 @@ from typing import Any
 
 import pandas as pd
 
-from src import background_audit, duplicates, label_check
+from src import background_audit, duplicates, label_check, review_tool
 from src.config import REPO_ROOT, load_config, path_for
 from src.inventory_report import md_table
 
@@ -51,7 +51,8 @@ def background_section(config: dict[str, Any]) -> str:
         f"**Plain background: {pct(plain['share'])}** of {plain['n']} photos (95% CI "
         f"{pct(plain['low'])}-{pct(plain['high'])}). Raters {first} and {second} agree on "
         f"{pct(result['agreement'])} of photos (Cohen's kappa {kappa}); {result['n_settled']} "
-        f"disagreements were settled together. File: `{settings['audit_file']}`.\n\n" + md_table(rows)
+        f"disagreements were settled together.{review_tool.model_note(config, [first, second])} "
+        f"File: `{settings['audit_file']}`.\n\n" + md_table(rows)
         + "\n\nFlags (share of photos, per rater):\n\n" + md_table(flags) + "\n")
 
 
@@ -98,7 +99,8 @@ def duplicates_section(config: dict[str, Any]) -> str:
     kappa = "n/a" if result["kappa"] is None else f"{result['kappa']:.2f}"
     return text + (
         f"Reviewers {first} and {second}: Cohen's kappa {kappa}; "
-        f"{int(pairs['settled'].sum())} disagreements settled together.\n\n"
+        f"{int(pairs['settled'].sum())} disagreements settled together."
+        f"{review_tool.model_note(config, [first, second])}\n\n"
         + md_table(outcome.reset_index())
         + "\n\nWhat the automatic check misses: " + "; ".join(misses) + ".\n\n"
         f"**Groups:** {groups['group_id'].nunique()} groups for {len(groups)} photos; group sizes "
@@ -120,7 +122,9 @@ def label_section(config: dict[str, Any]) -> str:
         return text + pending(result, "done", f"{result['expected']} each")
     suspects = result["suspects"]
     counts = suspects.groupby(["class", "looks_like"]).size().rename("answers").reset_index()
-    return text + (f"{result['checked']} answers on {result['unique_photos']} photos; {len(suspects)} "
+    note = review_tool.model_note(config, sorted(settings["checkers"]))
+    return text + (f"Checkers: {', '.join(settings['checkers'])}.{note} "
+                   f"{result['checked']} answers on {result['unique_photos']} photos; {len(suspects)} "
                    f"answers on {suspects['photo_id'].nunique()} photos look like another class "
                    f"(`{settings['suspects_file']}`).\n\n" + md_table(counts) + "\n")
 

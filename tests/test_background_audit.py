@@ -37,7 +37,8 @@ def setup(tmp_path, monkeypatch):
               "inventory": {"files": {"primary": "unused"}},
               "background": {"per_class": 3, "sample_file": "sample.csv", "labels_dir": "bg",
                              "audit_file": "audit.csv"},
-              "label_check": {"per_class": 2, "checks_dir": "checks", "suspects_file": "suspects.csv"}}
+              "label_check": {"checkers": ["ahsan", "harris", "umer"], "per_class": 2, "checks_dir": "checks",
+                              "suspects_file": "suspects.csv"}}
     assert bg.results(config)["complete"] is False  # no sample yet: pending, and nothing is drawn
     assert not (tmp_path / "sample.csv").exists()
     bg.draw_sample(config)
@@ -102,3 +103,14 @@ def test_label_check_lists_only_answers_naming_another_class(setup):
     assert result["complete"] and result["checked"] == 24
     assert len(result["suspects"]) == 6  # "looks like hispa" on hispa photos is not a suspect
     assert set(result["suspects"]["looks_like"]) == {"hispa"} and not (tmp / "suspects.csv").exists()
+
+
+def test_model_raters_are_allowed_and_named(setup):
+    config, tmp = setup
+    config["model_reviewers"] = ["model_rater_a", "model_rater_b"]
+    assert review_tool.allowed_people(config) == ["ahsan", "harris", "umer", "model_rater_a", "model_rater_b"]
+    for who in ("model_rater_a", "model_rater_b"):
+        bg.label(config, who, ask=fake(iter([("plain", set())] * 12))[0])
+    assert bg.results(config)["raters"] == ["model_rater_a", "model_rater_b"]
+    assert "`model_rater_a`, `model_rater_b`" in review_tool.model_note(config, ["model_rater_a", "model_rater_b"])
+    assert review_tool.model_note(config, ["ahsan", "umer"]) == ""

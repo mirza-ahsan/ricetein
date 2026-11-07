@@ -388,7 +388,8 @@ def verdicts(config: dict[str, Any]) -> tuple[pd.DataFrame, pd.DataFrame]:
     settings = config["duplicates"]
     queue = pd.read_csv(REPO_ROOT / settings["review_file"], dtype=str)
     folder = REPO_ROOT / settings["review_dir"]
-    data = review_tool.people_rows(folder, REVIEW_COLUMNS, "reviewer", config["reviewers"], "pair_id")
+    data = review_tool.people_rows(folder, REVIEW_COLUMNS, "reviewer", review_tool.allowed_people(config),
+                                   "pair_id")
     settled = review_tool.read_rows(folder / f"{review_tool.SETTLED}.csv", REVIEW_COLUMNS)
     expected = queue.set_index("pair_id")[["photo_a", "photo_b"]]
     for rows in (data, settled):
@@ -506,7 +507,8 @@ def main() -> None:
                   f"{int(group['by_cosine'].sum())} by cosine), {int(group['passed'].sum())} pass the check")
         print(f"review queue: {len(result['queue'])} pairs -> {config['duplicates']['review_file']}")
     elif args.action == "review":
-        review(config, review_tool.person_name(parser, args.reviewer, config["reviewers"], "--reviewer"))
+        allowed = review_tool.allowed_people(config)
+        review(config, review_tool.person_name(parser, args.reviewer, allowed, "--reviewer"))
     elif args.action == "settle":
         settle(config)
     elif args.action == "extend":
