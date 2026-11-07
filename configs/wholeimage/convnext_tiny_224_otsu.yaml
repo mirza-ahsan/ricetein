@@ -1,0 +1,6 @@
+extends: recipe.yaml
+
+wholeimage:
+  model: convnext_tiny
+  size: 224
+  otsu: true

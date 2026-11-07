@@ -1,0 +1,6 @@
+extends: recipe.yaml
+
+wholeimage:
+  model: efficientnetv2s
+  size: 224
+  otsu: false

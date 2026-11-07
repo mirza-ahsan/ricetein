@@ -1,0 +1,36 @@
+# ===================================================================
+# configs/wholeimage/recipe.yaml: the shared fine-tuning recipe (handbook Stage 5a; methodology Table II)
+# ===================================================================
+# Every model x setting file extends this one and sets only model, size and otsu.
+# The same recipe, learning rates and budget for every model (handbook §5, rule 9).
+# ===================================================================
+extends: ../split.yaml
+
+wholeimage:
+  cache_dir: cache/wholeimage        # padded, resized photos per size and Otsu setting (git-ignored)
+  lrs: [3.0e-5, 1.0e-4, 3.0e-4]      # searched at 224 px; the best (mean validation macro-F1) is reused elsewhere
+  weight_decay: 0.05
+  warmup_epochs: 2                   # then cosine to 0 at max_epochs
+  max_epochs: 40
+  patience: 8                        # early stopping on validation macro-F1; the best checkpoint is kept
+  batch_size: {128: 32, 224: 32, 448: 16, 512: 16}
+  workers: 8
+  determinism: fast                  # cuDNN autotuning and TF32 allowed for fine-tuning (handbook Stage 0)
+  models:                            # timm ImageNet-1k weights, pinned Hugging Face commits (data/DATASETS.md)
+    inceptionv3:
+      repo: timm/inception_v3.tv_in1k
+      revision: 393d84cc85c467d8fbc0dc81a65c04e87a32572c
+    efficientnetv2s:
+      repo: timm/tf_efficientnetv2_s.in1k
+      revision: 3af791b42d7e895c9da9b5aa4ed4e6b648e4ac0b
+    convnext_tiny:
+      repo: timm/convnext_tiny.fb_in1k
+      revision: b43a6303c9fcf176d2d707478a128c2c91e93528
+    swin_tiny:
+      repo: timm/swin_tiny_patch4_window7_224.ms_in1k
+      revision: 4cc3a7275b50b53a7bec45f32c236ebe64227cff
+      size_kwargs:                   # Swin needs the input size; window 4 at 128 px (feature maps divide evenly)
+        128: {img_size: 128, window_size: 4}
+        224: {img_size: 224}
+        448: {img_size: 448}
+        512: {img_size: 512}

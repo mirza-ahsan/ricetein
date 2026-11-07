@@ -1,0 +1,6 @@
+extends: recipe.yaml
+
+wholeimage:
+  model: swin_tiny
+  size: 224
+  otsu: true
