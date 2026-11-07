@@ -84,9 +84,42 @@ Most common capture day per class: healthy: 64% on 2019-04-19; leaf blast: 69% o
 
 ## 8. Pixel scale: crops or resized photos?
 
-Rule (pre-declared methodology): measure leaf width on 30 photos drawn across the size range; if Spearman's rho with the shorter side is >= 0.5, rescale every photo to the median leaf width before tiling, otherwise keep native resolution. The photos are one random pick per equal-width band of photo size on a log scale (seed 0), covering 734-3120 px, frozen in `data/leaf_width_selection.csv`. 2 team members measure each photo independently, in their own shuffled order; at least 20 photos must be measurable (protocol in `src/leaf_width.py`). If rescaling is triggered, the median leaf width comes from these 30 photos, some of which are later test photos; it is a label-free geometry calibration declared in advance.
+Rule (pre-declared methodology): measure leaf width on 30 photos drawn across the size range; if Spearman's rho with the shorter side is >= 0.5, rescale every photo to the median leaf width before tiling, otherwise keep native resolution. The photos are one random pick per equal-width band of photo size on a log scale (seed 0), covering 734-3120 px, frozen in `data/leaf_width_selection.csv`. 2 measurers measure each photo independently, in their own shuffled order; at least 20 photos must be measurable (protocol in `src/leaf_width.py`). If rescaling is triggered, the median leaf width comes from these 30 photos, some of which are later test photos; it is a label-free geometry calibration declared in advance.
 
-**Pending.** Answered so far: nobody yet. Each measurer runs `uv run python -m src.leaf_width measure --measurer <name>`; then `uv run python -m src.leaf_width decide`.
+Spearman's rho = **0.539** (p = 0.00253, n = 29; 1 photos marked unmeasurable and left out), so: **rescale every photo to the median leaf width before tiling**. Median leaf width 195 px. The two measurers (ahsan, model_rater_a) agree with Spearman 0.98; their widths differ by 3.2% at the median (largest 35.6%); rho from each measurer alone: ahsan 0.542, model_rater_a 0.528. Leaving out one photo at a time gives rho 0.488-0.613; 5 of 29 single removals would flip the verdict. Model rater(s), not people: `model_rater_a` (an AI model measuring from rendered images with a coordinate grid, through the same tool code). Decision record: `data/pixel_scale_decision.json`.
+
+| photo_id | short_side | ahsan | model_rater_a | leaf_width_px | used |
+|---|---|---|---|---|---|
+| LeafBlast/IMG_3169.jpg | 734 | 44.6 | 46.0 | 45.3 | True |
+| BrownSpot/IMG_3177.jpg | 812 | – | 131.6 | 131.6 | False |
+| LeafBlast/IMG_4953.jpg | 846 | 68.8 | 68.0 | 68.4 | True |
+| Hispa/IMG_20190419_095315.jpg | 877 | 84.1 | 73.0 | 78.6 | True |
+| Healthy/IMG_3203.jpg | 912 | 104.3 | 106.8 | 105.6 | True |
+| LeafBlast/IMG_20190419_095029.jpg | 940 | 132.5 | 132.4 | 132.4 | True |
+| LeafBlast/IMG_20190419_114718.jpg | 1000 | 270.6 | 268.0 | 269.3 | True |
+| Hispa/IMG_20190424_131101.jpg | 1040 | 191.0 | 198.9 | 195.0 | True |
+| Healthy/IMG_20190424_130136.jpg | 1085 | 328.5 | 336.4 | 332.4 | True |
+| Hispa/IMG_20190419_171917.jpg | 1136 | 113.6 | 131.5 | 122.6 | True |
+| BrownSpot/IMG_20190424_131042.jpg | 1197 | 245.4 | 264.1 | 254.8 | True |
+| LeafBlast/IMG_20190424_133722.jpg | 1297 | 268.1 | 263.8 | 266.0 | True |
+| Hispa/IMG_20190419_152515.jpg | 1348 | 205.8 | 199.3 | 202.6 | True |
+| LeafBlast/IMG_20190419_112203.jpg | 1436 | 68.9 | 48.1 | 58.5 | True |
+| Hispa/IMG_20190419_095917.jpg | 1478 | 150.1 | 141.5 | 145.8 | True |
+| Hispa/IMG_20190419_165718.jpg | 1566 | 145.8 | 139.4 | 142.6 | True |
+| Healthy/IMG_20190419_095521.jpg | 1664 | 194.7 | 193.0 | 193.8 | True |
+| Healthy/IMG_20190419_100104.jpg | 1726 | 123.7 | 102.9 | 113.3 | True |
+| Hispa/IMG_20190419_173037.jpg | 1799 | 132.3 | 149.0 | 140.6 | True |
+| LeafBlast/IMG_3014.jpg | 1881 | 137.5 | 134.3 | 135.9 | True |
+| Hispa/IMG_20190419_163245.jpg | 1976 | 210.6 | 217.2 | 213.9 | True |
+| Hispa/IMG_20190419_161346.jpg | 2111 | 238.4 | 179.5 | 209.0 | True |
+| Healthy/IMG_20190419_161852.jpg | 2155 | 153.8 | 142.0 | 147.9 | True |
+| Healthy/IMG_20190420_194921.jpg | 2313 | 323.1 | 308.2 | 315.6 | True |
+| Hispa/IMG_20190419_163101.jpg | 2404 | 261.3 | 264.6 | 263.0 | True |
+| BrownSpot/IMG_20190420_191021.jpg | 2454 | 505.2 | 467.8 | 486.5 | True |
+| Hispa/IMG_20190419_110519.jpg | 2616 | 224.6 | 219.9 | 222.2 | True |
+| BrownSpot/IMG_20190420_195258.jpg | 2817 | 405.3 | 385.7 | 395.5 | True |
+| Hispa/IMG_20190419_140037.jpg | 2895 | 221.7 | 221.6 | 221.6 | True |
+| BrownSpot/IMG_20190419_135038.jpg | 3120 | 243.5 | 249.3 | 246.4 | True |
 
 ## 9. What this means for the next stages
 

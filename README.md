@@ -33,7 +33,7 @@ Course project at FAST School of Computing, FAST-NUCES Lahore, and the basis of 
 | Phase 4: Experiments and Results | In progress |
 | Final paper | Not started |
 | Environment (local machine + Kaggle GPUs) | Done and verified |
-| Experiments | Stage 0 done; Stage 1 inventory done (2026-11-05), pixel-scale measurement pending (see `docs/HANDBOOK.md`) |
+| Experiments | Stage 0 done; Stage 1 inventory done (2026-11-05), pixel scale decided: rescale (2026-11-07); a teammate's read of the report is pending (see `docs/HANDBOOK.md`) |
 
 ---
 
