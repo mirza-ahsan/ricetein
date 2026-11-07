@@ -5,7 +5,8 @@
   file after every answer (resume by running again; Backspace undoes the last answer).
 - ``people_rows`` reads everyone's answer files and refuses unknown people or a third person;
   ``refuse_newcomer`` does that check before a session starts.
-- ``agreement`` turns two people's answers plus the settled ones into final answers and Cohen's kappa.
+- ``two_person`` turns two people's answers plus the settled ones into final answers and Cohen's kappa.
+- ``load_photo``, ``stratified_sample`` and ``person_name`` are the small helpers every tool needs.
 """
 
 from __future__ import annotations
@@ -19,6 +20,7 @@ from typing import Any
 
 import numpy as np
 import pandas as pd
+from PIL import Image, ImageOps
 from sklearn.metrics import cohen_kappa_score
 
 STOP, UNDO, SETTLED = "stop", "undo", "settled"
@@ -117,7 +119,8 @@ def collect(items: list[dict[str, Any]], key: str, target: Path, columns: list[s
     target.parent.mkdir(parents=True, exist_ok=True)
     rows = read_rows(target, columns)
     while True:
-        todo = [item for item in items if item[key] not in set(rows[key])]
+        done = set(rows[key])
+        todo = [item for item in items if item[key] not in done]
         if not todo:
             return True
         item = todo[0]
@@ -155,12 +158,57 @@ def refuse_newcomer(folder: Path, name: str, limit: int = 2) -> None:
         raise SystemExit(f"{sorted(others)} are already doing this task; it needs exactly {limit} people")
 
 
-def agreement(wide: pd.DataFrame, settled: pd.Series) -> tuple[pd.Series, pd.Series, float | None]:
-    """(final answer, whether both agreed, Cohen's kappa) for a two-column table of answers; the final
-    answer is the agreed one, or the settled one where they disagreed (missing until settled). Kappa is
-    None when it is undefined (both people gave one same answer to everything)."""
+def both_done(wide: pd.DataFrame) -> bool:
+    """Exactly two people have answered every item (one column each, no gaps)."""
+    return wide.shape[1] == 2 and not wide.isna().any().any()
+
+
+def disagreements(wide: pd.DataFrame) -> list[str]:
+    return wide.index[wide.iloc[:, 0] != wide.iloc[:, 1]].tolist()
+
+
+def two_person(wide: pd.DataFrame, settled: pd.Series, answered: dict[str, int]) -> dict[str, Any]:
+    """Final answers for a two-column table of answers (items x people): the agreed answer, or the settled
+    one where they disagreed. Returns {"complete": False, ...progress} until both have finished and every
+    disagreement is settled; then final, agree and Cohen's kappa (None when undefined: both people gave
+    one same answer to everything)."""
+    if not both_done(wide):
+        return {"complete": False, "answered": answered}
     first, second = wide.columns
     agree = wide[first] == wide[second]
     final = wide[first].where(agree, settled.reindex(wide.index))
-    kappa = cohen_kappa_score(wide[first], wide[second])
-    return final, agree, None if np.isnan(kappa) else float(kappa)
+    if final.isna().any():
+        return {"complete": False, "answered": answered, "unsettled": int(final.isna().sum())}
+    kappa = float(cohen_kappa_score(wide[first], wide[second]))
+    return {"complete": True, "final": final, "agree": agree, "kappa": None if np.isnan(kappa) else kappa,
+            "people": [first, second]}
+
+
+def settled_answers(folder: Path, columns: list[str], key: str, value: str) -> pd.Series:
+    return read_rows(folder / f"{SETTLED}.csv", columns).set_index(key)[value]
+
+
+def person_name(parser: Any, value: str | None, allowed: list[str], flag: str) -> str:
+    """The lower-case name given on the command line; stops with a usage error if it is not allowed."""
+    name = (value or "").strip().lower()
+    if name not in allowed:
+        parser.error(f"{flag} must be one of {allowed}")
+    return name
+
+
+def load_photo(path: str | Path, side: int, mode: str = "RGB") -> Image.Image:
+    """A photo decoded at reduced scale (JPEG draft), upright, in mode, shrunk to fit a side x side box."""
+    with Image.open(path) as image:
+        image.draft(mode, (side, side))
+        image = ImageOps.exif_transpose(image).convert(mode)
+    image.thumbnail((side, side), Image.Resampling.BICUBIC)
+    return image
+
+
+def stratified_sample(inventory: pd.DataFrame, per_class: int, seed: Any) -> pd.DataFrame:
+    """``per_class`` random photos from each class (seeded, independent of row order), sorted by photo_id."""
+    rng = np.random.default_rng(seed)
+    opened = inventory[inventory["opened_ok"]].sort_values("photo_id", ignore_index=True)
+    picks = [group.iloc[np.sort(rng.choice(len(group), per_class, replace=False))]
+             for _, group in opened.groupby("class", sort=True)]
+    return pd.concat(picks)[["photo_id", "class"]].sort_values("photo_id", ignore_index=True)

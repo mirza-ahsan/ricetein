@@ -81,7 +81,7 @@ def cached(target: Path, lists: dict[str, pd.DataFrame], made_with: dict[str, An
     if target.exists():
         with np.load(target, allow_pickle=False) as saved:
             same_photos = all(saved[f"{n}_ids"].tolist() == f["photo_id"].tolist() for n, f in lists.items())
-            if same_photos and "made_with" in saved and str(saved["made_with"]) == key:
+            if same_photos and str(saved["made_with"]) == key:
                 return {n: saved[n] for n in lists}
     arrays = {name: build(name, frame) for name, frame in lists.items()}
     target.parent.mkdir(parents=True, exist_ok=True)
@@ -213,8 +213,9 @@ def _init_check(check: dict[str, Any], features: dict[str, Any] | None = None) -
     cv2.setNumThreads(1)
     _CHECK.update(check)
     if features:
-        _CHECK["points"] = np.load(features["points"], mmap_mode="r")
-        _CHECK["descriptors"] = np.load(features["descriptors"], mmap_mode="r")
+        rows = features["rows"]
+        _CHECK["points"] = np.memmap(features["points"], np.float32, "r", shape=(rows, 2))
+        _CHECK["descriptors"] = np.memmap(features["descriptors"], np.uint8, "r", shape=(rows, 128))
         _CHECK["index"] = features["index"]
 
 
@@ -223,11 +224,7 @@ def keypoints(path: str) -> list[tuple[np.ndarray, np.ndarray]]:
     to ``long_side``: [as is, mirrored]."""
     import cv2
 
-    side = _CHECK["long_side"]
-    with Image.open(path) as image:
-        image.draft("L", (side, side))
-        image = ImageOps.exif_transpose(image).convert("L")
-        image.thumbnail((side, side), Image.Resampling.BICUBIC)
+    image = review_tool.load_photo(path, _CHECK["long_side"], "L")
     sift = cv2.SIFT_create(nfeatures=_CHECK["max_features"], contrastThreshold=_CHECK["contrast_threshold"])
     out = []
     for gray in (np.asarray(image), np.ascontiguousarray(np.asarray(image)[:, ::-1])):
@@ -277,31 +274,51 @@ def check_pair(paths: tuple[str, str]) -> int:
     return max(inliers(a, stored(paths[1], False)), inliers(a, stored(paths[1], True)))
 
 
+def keypoint_files(needed: list[str], check: dict[str, Any], folder: Path,
+                   workers: int | None) -> dict[str, Any]:
+    """Keypoints of every photo in ``needed`` (as is and mirrored), written to raw files in ``folder`` as they
+    arrive (one photo in memory at a time) and reused while the photos and settings are unchanged. Returns
+    what the matching workers need: file paths, row count and the (path, mirrored) -> rows index."""
+    from tqdm import tqdm
+
+    meta_path = folder / "meta.json"
+    made_with = {"check": check, "photos": needed}
+    if meta_path.exists():
+        meta = json.loads(meta_path.read_text())
+        if meta["made_with"] == made_with:
+            return {**meta["files"], "index": {(p, m == "1"): tuple(v) for (p, m), v in meta["index"]}}
+    folder.mkdir(parents=True, exist_ok=True)
+    meta_path.unlink(missing_ok=True)  # a half-written cache must never look complete
+    files = {"points": str(folder / "points.f32"), "descriptors": str(folder / "descriptors.u8")}
+    index, rows = {}, 0
+    with (open(files["points"], "wb") as points, open(files["descriptors"], "wb") as descriptors,
+          get_context("spawn").Pool(workers, initializer=_init_check, initargs=(check,)) as pool):
+        found = pool.imap(keypoints, needed, chunksize=8)
+        for p, both in tqdm(zip(needed, found), total=len(needed), desc="keypoints"):
+            for mirror, (pts, desc) in zip((False, True), both):
+                index[(p, mirror)] = (rows, rows + len(desc))
+                rows += len(desc)
+                points.write(pts.tobytes())
+                descriptors.write(desc.tobytes())
+    files["rows"] = rows
+    meta = {"made_with": made_with, "files": files,
+            "index": [[(p, "1" if m else "0"), list(v)] for (p, m), v in index.items()]}
+    meta_path.write_text(json.dumps(meta))
+    return {**files, "index": index}
+
+
 def run_check(pairs: pd.DataFrame, lists: dict[str, pd.DataFrame], check: dict[str, Any], folder: Path,
               workers: int | None = None) -> np.ndarray:
-    """Inlier count for every pair. Keypoints are found once per photo and saved in ``folder``; the
-    matching workers read them memory-mapped (shared, not copied)."""
+    """Inlier count for every pair. Keypoints are found once per photo (``keypoint_files``); the matching
+    workers read them memory-mapped (shared, not copied). Spawned, not forked: the parent may already run
+    GPU and loader threads."""
     from tqdm import tqdm
 
     path = path_lookup(lists)
     jobs = [(path[(da, a)], path[(db, b)])
             for da, a, db, b in pairs[["dataset_a", "photo_a", "dataset_b", "photo_b"]].itertuples(False)]
-    needed = sorted({p for job in jobs for p in job})
-    spawn = get_context("spawn")  # no fork: the parent may already run GPU and loader threads
-    with spawn.Pool(workers, initializer=_init_check, initargs=(check,)) as pool:
-        found = list(tqdm(pool.imap(keypoints, needed, chunksize=8), total=len(needed), desc="keypoints"))
-    index, offset, points, descriptors = {}, 0, [], []
-    for p, both in zip(needed, found):
-        for mirror, (pts, desc) in zip((False, True), both):
-            index[(p, mirror)] = (offset, offset + len(desc))
-            offset += len(desc)
-            points.append(pts)
-            descriptors.append(desc)
-    folder.mkdir(parents=True, exist_ok=True)
-    files = {"points": folder / "points.npy", "descriptors": folder / "descriptors.npy"}
-    np.save(files["points"], np.concatenate(points))
-    np.save(files["descriptors"], np.concatenate(descriptors))
-    with spawn.Pool(workers, initializer=_init_check, initargs=(check, {**files, "index": index})) as pool:
+    features = keypoint_files(sorted({p for job in jobs for p in job}), check, folder, workers)
+    with get_context("spawn").Pool(workers, initializer=_init_check, initargs=(check, features)) as pool:
         counts = list(tqdm(pool.imap(check_pair, jobs, chunksize=256), total=len(jobs), desc="pairs"))
     return np.array(counts, dtype=int)
 
@@ -336,14 +353,6 @@ def flag(config: dict[str, Any], workers: int | None = None) -> dict[str, Any]:
 
 
 # ---------------------------------------------------------------- reviewing
-def show(path: str) -> Image.Image:
-    with Image.open(path) as image:
-        image.draft("RGB", (1200, 1200))
-        image = ImageOps.exif_transpose(image).convert("RGB")
-        image.thumbnail((1200, 1200))
-        return image
-
-
 def ask_pairs(pairs: pd.DataFrame, config: dict[str, Any], who: str, ask: Any) -> bool:
     """Collect ``who``'s verdict on every pair (saved with both photo ids, so a verdict can never attach to a
     different pair); True when all are answered."""
@@ -357,8 +366,8 @@ def ask_pairs(pairs: pd.DataFrame, config: dict[str, Any], who: str, ask: Any) -
 
     return review_tool.collect(
         pairs.to_dict("records"), "pair_id", target, REVIEW_COLUMNS,
-        show=lambda pair: [show(path[(pair["dataset_a"], pair["photo_a"])]),
-                           show(path[(pair["dataset_b"], pair["photo_b"])])],
+        show=lambda pair: [review_tool.load_photo(path[(pair["dataset_a"], pair["photo_a"])], 1200),
+                           review_tool.load_photo(path[(pair["dataset_b"], pair["photo_b"])], 1200)],
         title=lambda pair, n, total: f"{who}: pair {n}/{total}\n{INSTRUCTIONS}",
         choices={"y": "same", "n": "different"}, make_row=make_row, ask=ask)
 
@@ -392,9 +401,9 @@ def verdicts(config: dict[str, Any]) -> tuple[pd.DataFrame, pd.DataFrame]:
 def settle(config: dict[str, Any], ask: Any = review_tool.ask) -> None:
     """Both reviewers together decide every pair they disagreed on."""
     queue, table = verdicts(config)
-    if table.shape[1] != 2 or table.isna().any().any():
+    if not review_tool.both_done(table):
         raise SystemExit("both reviewers must finish every pair before settling")
-    split = queue[queue["pair_id"].isin(table.index[table.iloc[:, 0] != table.iloc[:, 1]])]
+    split = queue[queue["pair_id"].isin(review_tool.disagreements(table))]
     if ask_pairs(split, config, review_tool.SETTLED, ask):
         print(f"All {len(split)} disagreements settled.")
 
@@ -416,24 +425,17 @@ def outcome(config: dict[str, Any]) -> dict[str, Any]:
     """Final verdicts, groups, label conflicts and cross-dataset overlap (reads only)."""
     settings = config["duplicates"]
     queue, table = verdicts(config)
-    answered = table.notna().sum().to_dict()
-    if table.shape[1] != 2 or table.isna().any().any():
-        return {"complete": False, "answered": answered, "queued": len(queue)}
-    first, second = table.columns
-    settled = review_tool.read_rows(REPO_ROOT / settings["review_dir"] / f"{review_tool.SETTLED}.csv",
-                                    REVIEW_COLUMNS).set_index("pair_id")["verdict"]
-    final, agree, kappa = review_tool.agreement(table, settled)
-    if final.isna().any():
-        return {"complete": False, "answered": answered, "queued": len(queue),
-                "unsettled": int(final.isna().sum())}
+    folder = REPO_ROOT / settings["review_dir"]
+    settled = review_tool.settled_answers(folder, REVIEW_COLUMNS, "pair_id", "verdict")
+    status = review_tool.two_person(table, settled, table.notna().sum().to_dict())
+    if not status["complete"]:
+        return {**status, "queued": len(queue)}
 
     candidates = pd.read_csv(REPO_ROOT / settings["candidates_file"], dtype={"pair_id": str})
-    pairs = queue.merge(candidates[["pair_id", "class_a", "class_b", "hash_bits", "cosine", "by_hash",
-                                    "by_cosine", "inliers", "passed"]], on="pair_id")
-    added = {first: table[first], second: table[second], "settled": ~agree, "final": final}
-    for column, values in added.items():
-        pairs[column] = pairs["pair_id"].map(values)
-    pairs = pairs.sort_values("pair_id", ignore_index=True)
+    pairs = (queue.merge(candidates[["pair_id", "class_a", "class_b", "hash_bits", "cosine", "by_hash",
+                                     "by_cosine", "inliers", "passed"]], on="pair_id")
+             .join(table.assign(settled=~status["agree"], final=status["final"]), on="pair_id")
+             .sort_values("pair_id", ignore_index=True))
     confirmed = pairs[pairs["final"] == "same"]
     primary = photos(config, "primary")
     groups = primary[["photo_id", "class"]].assign(
@@ -445,13 +447,13 @@ def outcome(config: dict[str, Any]) -> dict[str, Any]:
     conflicts = groups[groups["photo_id"].isin(set(clash["photo_a"]) | set(clash["photo_b"]))]
     overlap = confirmed[confirmed["comparison"] == "cross"]
     return {"complete": True, "pairs": pairs, "groups": groups, "conflicts": conflicts, "overlap": overlap,
-            "kappa": kappa, "reviewers": [first, second], "misses": misses(pairs)}
+            "kappa": status["kappa"], "reviewers": status["people"], "misses": misses(pairs)}
 
 
 def misses(pairs: pd.DataFrame) -> pd.DataFrame:
     """Per comparison: round-1 sampled rejected pairs, how many people confirmed (what the check missed),
     and the lowest inlier count among those confirmed."""
-    sampled = pairs[~pairs["passed"].astype(bool) & (pairs["round"].astype(int) == 1)]
+    sampled = pairs[~pairs["passed"] & (pairs["round"].astype(int) == 1)]
     same = sampled["final"] == "same"
     return pd.DataFrame({"sampled": sampled.groupby("comparison").size(),
                          "confirmed": same.groupby(sampled["comparison"]).sum(),
@@ -470,12 +472,9 @@ def extend(config: dict[str, Any]) -> pd.DataFrame:
     result = outcome(config)
     if not result["complete"]:
         raise SystemExit("round 1 must be reviewed and settled first")
-    missed = result["misses"].dropna(subset=["lowest_inliers"])
     candidates = pd.read_csv(REPO_ROOT / settings["candidates_file"], dtype={"pair_id": str})
-    added = pd.concat([candidates[(candidates["comparison"] == comparison)
-                                  & (candidates["inliers"] >= row.lowest_inliers)
-                                  & ~candidates["pair_id"].isin(queue["pair_id"])]
-                       for comparison, row in missed.iterrows()] or [candidates.iloc[:0]])
+    lowest = candidates["comparison"].map(result["misses"]["lowest_inliers"])  # NaN (no miss): never passes
+    added = candidates[(candidates["inliers"] >= lowest) & ~candidates["pair_id"].isin(queue["pair_id"])]
     added = added.sample(frac=1, random_state=config["seed"]).assign(round=2)[QUEUE_COLUMNS]
     pd.concat([queue, added.astype(str)]).to_csv(queue_path, index=False)
     return added
@@ -507,10 +506,7 @@ def main() -> None:
                   f"{int(group['by_cosine'].sum())} by cosine), {int(group['passed'].sum())} pass the check")
         print(f"review queue: {len(result['queue'])} pairs -> {config['duplicates']['review_file']}")
     elif args.action == "review":
-        name = (args.reviewer or "").strip().lower()
-        if name not in config["reviewers"]:
-            parser.error(f"--reviewer must be one of {config['reviewers']}")
-        review(config, name)
+        review(config, review_tool.person_name(parser, args.reviewer, config["reviewers"], "--reviewer"))
     elif args.action == "settle":
         settle(config)
     elif args.action == "extend":

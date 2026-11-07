@@ -19,16 +19,15 @@ import numpy as np
 import pandas as pd
 
 from src import review_tool
-from src.background_audit import draw_sample, show_photo
-from src.config import REPO_ROOT, load_config
+from src.config import REPO_ROOT, dataset_dir, load_config
 from src.inventory import read_inventory
 
 COLUMNS = ["photo_id", "class", "checker", "answer", "checked_at"]
 
 
 def choices(classes: list[str]) -> dict[str, str]:
-    others = {str(i): f"looks_{c}" for i, c in enumerate(classes, start=1)}
-    return {"k": "looks_right", "u": "unclear", **others}
+    """K: the label looks right; U: unclear; 1-4: the photo looks like that class."""
+    return {"k": "right", "u": "unclear", **{str(i): c for i, c in enumerate(classes, start=1)}}
 
 
 def instructions(classes: list[str]) -> str:
@@ -40,7 +39,7 @@ def my_photos(config: dict[str, Any], checker: str) -> pd.DataFrame:
     """This checker's own random photos (``per_class`` per class), in their own shuffled order."""
     seed = review_tool.person_seed(config["seed"], checker)
     inventory = read_inventory(config["inventory"]["files"]["primary"])
-    chosen = draw_sample(inventory, config["label_check"]["per_class"], seed)
+    chosen = review_tool.stratified_sample(inventory, config["label_check"]["per_class"], seed)
     return chosen.sample(frac=1, random_state=np.random.default_rng(seed)).reset_index(drop=True)
 
 
@@ -50,10 +49,11 @@ def check(config: dict[str, Any], checker: str, ask: Any = review_tool.ask) -> N
         return {"photo_id": photo["photo_id"], "class": photo["class"], "checker": checker, "answer": answer,
                 "checked_at": datetime.now(timezone.utc).isoformat(timespec="seconds")}
 
+    root = dataset_dir(config, "primary")
     done = review_tool.collect(
         my_photos(config, checker).to_dict("records"), "photo_id",
         REPO_ROOT / config["label_check"]["checks_dir"] / f"{checker}.csv", COLUMNS,
-        show=lambda photo: [show_photo(config, photo["photo_id"])],
+        show=lambda photo: [review_tool.load_photo(root / photo["photo_id"], 1400)],
         title=lambda photo, n, total: (f"{checker}: photo {n}/{total}   label: {photo['class'].upper()}\n"
                                        f"{instructions(config['classes'])}"),
         choices=choices(config["classes"]), make_row=make_row, ask=ask)
@@ -69,11 +69,10 @@ def results(config: dict[str, Any]) -> dict[str, Any]:
                                    limit=len(people))
     expected = settings["per_class"] * len(config["classes"])
     done = data.groupby("checker")["photo_id"].nunique().to_dict()
-    if sorted(done) != sorted(config["reviewers"]) or any(n != expected for n in done.values()):
+    if sorted(done) != sorted(people) or any(n != expected for n in done.values()):
         return {"complete": False, "done": done, "expected": expected}
-    looks_like = data["answer"].str.removeprefix("looks_")
-    other = data["answer"].str.startswith("looks_") & (looks_like != "right") & (looks_like != data["class"])
-    suspects = data[other].assign(looks_like=looks_like[other])
+    other = data["answer"].isin(config["classes"]) & (data["answer"] != data["class"])
+    suspects = data[other].rename(columns={"answer": "looks_like"})
     suspects = suspects[["photo_id", "class", "checker", "looks_like"]]
     return {"complete": True, "checked": len(data), "unique_photos": data["photo_id"].nunique(),
             "suspects": suspects.sort_values(["photo_id", "checker"], ignore_index=True)}
@@ -87,10 +86,7 @@ def main() -> None:
     args = parser.parse_args()
     config = load_config(args.config)
     if args.action == "check":
-        name = (args.checker or "").strip().lower()
-        if name not in config["reviewers"]:
-            parser.error(f"--checker must be one of {config['reviewers']}")
-        check(config, name)
+        check(config, review_tool.person_name(parser, args.checker, config["reviewers"], "--checker"))
     else:
         result = results(config)
         if not result["complete"]:

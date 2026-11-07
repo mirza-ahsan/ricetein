@@ -19,8 +19,8 @@ def inventory(per_class=30):
 
 
 def test_sample_is_stratified_reproducible_and_ignores_row_order():
-    first = bg.draw_sample(inventory(), 5, seed=0)
-    again = bg.draw_sample(inventory().sample(frac=1, random_state=1), 5, seed=0)
+    first = review_tool.stratified_sample(inventory(), 5, seed=0)
+    again = review_tool.stratified_sample(inventory().sample(frac=1, random_state=1), 5, seed=0)
     assert first.equals(again) and len(first) == 20 and first["photo_id"].is_unique
     assert first["class"].value_counts().to_dict() == {c: 5 for c in CLASSES}
 
@@ -30,16 +30,19 @@ def setup(tmp_path, monkeypatch):
     for module in (bg, lc):
         monkeypatch.setattr(module, "REPO_ROOT", tmp_path)
         monkeypatch.setattr(module, "read_inventory", lambda path: inventory())
-    monkeypatch.setattr(bg, "dataset_dir", lambda config, name: tmp_path / "photos")
-    (tmp_path / "photos").mkdir()
-    for photo_id in inventory()["photo_id"]:
-        (tmp_path / "photos" / photo_id).parent.mkdir(exist_ok=True)
-        Image.new("RGB", (8, 8)).save(tmp_path / "photos" / photo_id)
+    for module in (bg, lc):
+        monkeypatch.setattr(module, "dataset_dir", lambda config, name: tmp_path / "photos")
+    monkeypatch.setattr(review_tool, "load_photo", lambda path, side, mode="RGB": Image.new("RGB", (8, 8)))
     config = {"seed": 0, "classes": CLASSES, "reviewers": ["ahsan", "harris", "umer"],
               "inventory": {"files": {"primary": "unused"}},
               "background": {"per_class": 3, "sample_file": "sample.csv", "labels_dir": "bg",
                              "audit_file": "audit.csv"},
               "label_check": {"per_class": 2, "checks_dir": "checks", "suspects_file": "suspects.csv"}}
+    assert bg.results(config)["complete"] is False  # no sample yet: pending, and nothing is drawn
+    assert not (tmp_path / "sample.csv").exists()
+    bg.draw_sample(config)
+    with pytest.raises(SystemExit, match="frozen"):
+        bg.draw_sample(config)
     return config, tmp_path
 
 
@@ -90,11 +93,11 @@ def test_a_third_rater_is_stopped_before_starting(setup):
 def test_label_check_lists_only_answers_naming_another_class(setup):
     config, tmp = setup
     keys = lc.choices(CLASSES)
-    assert keys["1"] == "looks_healthy" and keys["k"] == "looks_right"
+    assert keys["1"] == "healthy" and keys["k"] == "right"
     for who in ("ahsan", "harris"):
-        lc.check(config, who, ask=fake(iter([("looks_right", set())] * 8))[0])
+        lc.check(config, who, ask=fake(iter([("right", set())] * 8))[0])
     assert lc.results(config)["complete"] is False  # umer has not checked yet
-    lc.check(config, "umer", ask=fake(iter([("looks_hispa", set())] * 8))[0])
+    lc.check(config, "umer", ask=fake(iter([("hispa", set())] * 8))[0])
     result = lc.results(config)
     assert result["complete"] and result["checked"] == 24
     assert len(result["suspects"]) == 6  # "looks like hispa" on hispa photos is not a suspect

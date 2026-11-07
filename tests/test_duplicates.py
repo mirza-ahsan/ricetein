@@ -115,7 +115,7 @@ def review_setup(tmp_path, monkeypatch):
     lists = {"primary": frame(ids, ["healthy", "healthy", "hispa", "healthy"]),
              "paddy": frame(["P/9.jpg"], ["normal"])}
     monkeypatch.setattr(dup, "photos", lambda config, name: lists[name])
-    monkeypatch.setattr(dup, "show", lambda path: Image.new("RGB", (4, 4)))
+    monkeypatch.setattr(review_tool, "load_photo", lambda path, side, mode="RGB": Image.new("RGB", (4, 4)))
     pairs = [("p000000", "primary", "primary", "H/1.jpg", "primary", "H/2.jpg"),
              ("p000001", "primary", "primary", "H/2.jpg", "primary", "S/3.jpg"),
              ("p000002", "primary", "primary", "S/3.jpg", "primary", "S/4.jpg"),

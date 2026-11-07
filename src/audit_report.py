@@ -36,8 +36,6 @@ def background_section(config: dict[str, Any]) -> str:
             f"`{settings['sample_file']}`. Two team members label every photo alone, in their own shuffled "
             "order, without seeing its class: plain or cluttered, plus several leaves, hand, strong shadow. "
             "Disagreements on the background are settled together; both original labels are kept.\n\n")
-    if not (REPO_ROOT / settings["sample_file"]).exists():
-        return text + "**Pending.** Run `uv run python -m src.background_audit sample` once.\n"
     result = background_audit.results(config)
     if not result["complete"]:
         return text + pending(result, "answered", result["sampled"])
@@ -48,10 +46,11 @@ def background_section(config: dict[str, Any]) -> str:
     flags = pd.DataFrame([{"flag": f, **{r: pct(v) for r, v in rates.items()}}
                           for f, rates in result["flag_rates"].items()])
     first, second = result["raters"]
+    kappa = "n/a" if result["kappa"] is None else f"{result['kappa']:.2f}"
     return text + (
         f"**Plain background: {pct(plain['share'])}** of {plain['n']} photos (95% CI "
         f"{pct(plain['low'])}-{pct(plain['high'])}). Raters {first} and {second} agree on "
-        f"{pct(result['agreement'])} of photos (Cohen's kappa {result['kappa']:.2f}); {result['n_settled']} "
+        f"{pct(result['agreement'])} of photos (Cohen's kappa {kappa}); {result['n_settled']} "
         f"disagreements were settled together. File: `{settings['audit_file']}`.\n\n" + md_table(rows)
         + "\n\nFlags (share of photos, per rater):\n\n" + md_table(flags) + "\n")
 
@@ -85,20 +84,25 @@ def duplicates_section(config: dict[str, Any]) -> str:
     if not result["complete"]:
         return text + pending(result, "answered", result["queued"])
     pairs, groups = result["pairs"], result["groups"]
-    reviewed = pairs.groupby(["comparison", "passed"])
+    reviewed = pairs.groupby(["comparison", "round", "passed"])
     same = reviewed["final"].apply(lambda v: int((v == "same").sum()))
     outcome = pd.DataFrame({"reviewed": reviewed.size(), "confirmed same leaf": same})
+    misses = [f"{COMPARISONS[c]}: {int(m['confirmed'])} of {int(m['sampled'])} sampled rejected pairs "
+              f"confirmed (miss rate {pct(s['share'])}, 95% CI {pct(s['low'])}-{pct(s['high'])})"
+              for c, m in result["misses"].iterrows()
+              for s in [background_audit.share(int(m["confirmed"]), int(m["sampled"]))]]
     sizes = groups.drop_duplicates("group_id")["group_size"].value_counts().sort_index()
     first, second = result["reviewers"]
+    kappa = "n/a" if result["kappa"] is None else f"{result['kappa']:.2f}"
     return text + (
-        f"Reviewers {first} and {second}: Cohen's kappa {result['kappa']:.2f}; "
+        f"Reviewers {first} and {second}: Cohen's kappa {kappa}; "
         f"{int(pairs['settled'].sum())} disagreements settled together.\n\n"
         + md_table(outcome.reset_index())
-        + "\n\nConfirmed pairs among the sampled rejected pairs (passed = False) estimate what the "
-        "automatic check misses.\n\n"
+        + "\n\nWhat the automatic check misses: " + "; ".join(misses) + ".\n\n"
         f"**Groups:** {groups['group_id'].nunique()} groups for {len(groups)} photos; group sizes "
         + ", ".join(f"{size}: {n}" for size, n in sizes.items())
-        + f". **Label conflicts:** {len(result['conflicts'])} photos in groups that mix classes "
+        + f". **Label conflicts:** {len(result['conflicts'])} photos in confirmed pairs with different "
+        "classes "
         f"(excluded from all experiments; `{settings['conflicts_file']}`). **Overlap with Paddy Doctor:** "
         f"{len(result['overlap'])} confirmed matches (`{settings['overlap_file']}`).\n")
 
