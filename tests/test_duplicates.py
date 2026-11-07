@@ -10,7 +10,8 @@ from src import duplicates as dup
 from src import review_tool
 from src.inventory import load_for_hash, perceptual_hash
 
-CHECK = {"long_side": 512, "max_features": 2000, "ratio": 0.75, "ransac_px": 8.0, "min_inliers": 30}
+CHECK = {"long_side": 512, "contrast_threshold": 0.01, "max_features": 2000, "ratio": 0.75, "ransac_px": 8.0,
+         "min_inliers": 30}
 
 
 def textured(seed, size=600):
@@ -66,12 +67,15 @@ def test_flag_pairs_uses_either_rule_once_per_pair_and_never_self():
     assert set(pairs["pair_id"]) == {"p000000", "x000000"}
 
 
-def test_check_passes_rotated_and_mirrored_crops_but_not_a_different_photo(photos_on_disk):
-    dup._init_check(CHECK)
-    p = photos_on_disk
-    assert dup.check_pair((p["a.jpg"], p["a_rotated.jpg"])) >= CHECK["min_inliers"]
-    assert dup.check_pair((p["a.jpg"], p["a_mirrored_crop.jpg"])) >= CHECK["min_inliers"]
-    assert dup.check_pair((p["a.jpg"], p["other.jpg"])) < CHECK["min_inliers"]
+def test_check_passes_rotated_and_mirrored_crops_but_not_a_different_photo(photos_on_disk, tmp_path):
+    names = list(photos_on_disk)
+    lists = {"primary": pd.DataFrame({"photo_id": names, "path": [photos_on_disk[n] for n in names]})}
+    pairs = pd.DataFrame({"dataset_a": "primary", "photo_a": "a.jpg", "dataset_b": "primary",
+                          "photo_b": ["a_rotated.jpg", "a_mirrored_crop.jpg", "other.jpg"]})
+    counts = dup.run_check(pairs, lists, CHECK, tmp_path / "sift", workers=2)
+    assert (counts[:2] >= CHECK["min_inliers"]).all() and counts[2] < CHECK["min_inliers"]
+    again = dup.run_check(pairs, lists, CHECK, tmp_path / "sift", workers=1)
+    assert (again == counts).all()  # the same answer however many workers
 
 
 def candidates(n_passed, n_rejected):
@@ -128,16 +132,18 @@ def answering(answers):
 
 def test_review_saves_resumes_and_combine_builds_groups_conflicts_and_overlap(review_setup):
     config, tmp = review_setup
-    ask, _ = answering(iter(["same", review_tool.STOP]))
+    ask, shown = answering(iter(["different", review_tool.UNDO, "same", review_tool.STOP]))
     dup.review(config, "ahsan", ask=ask)
-    assert len(pd.read_csv(tmp / "reviews" / "ahsan.csv")) == 1  # stopped after one; progress kept
+    saved = pd.read_csv(tmp / "reviews" / "ahsan.csv")
+    assert saved["verdict"].tolist() == ["same"] and shown[0] == shown[2]  # undo re-asks the same pair
+    assert {"photo_a", "photo_b"} <= set(saved.columns)  # verdicts carry their photos
     assert dup.combine(config)["complete"] is False
 
     # Both say "same" for every pair except p000002, where they disagree; settling makes it "same".
     queue = pd.read_csv(tmp / "queue.csv")
     for who, p2 in (("ahsan", "same"), ("harris", "different")):
-        rows = pd.DataFrame({"pair_id": queue["pair_id"], "reviewer": who, "reviewed_at": "t",
-                             "verdict": [p2 if pid == "p000002" else "same" for pid in queue["pair_id"]]})
+        rows = queue.assign(reviewer=who, reviewed_at="t",
+                            verdict=[p2 if pid == "p000002" else "same" for pid in queue["pair_id"]])
         rows[dup.REVIEW_COLUMNS].to_csv(tmp / "reviews" / f"{who}.csv", index=False)
     assert dup.combine(config) == {"complete": False, "answered": {"ahsan": 4, "harris": 4}, "queued": 4,
                                    "unsettled": 1}
@@ -153,11 +159,23 @@ def test_review_saves_resumes_and_combine_builds_groups_conflicts_and_overlap(re
     assert (tmp / "groups.csv").exists() and (tmp / "overlap.csv").exists()
 
 
+def test_a_third_reviewer_is_stopped_before_starting_and_verdicts_must_match_the_queue(review_setup):
+    config, tmp = review_setup
+    for who in ("ahsan", "harris"):
+        dup.review(config, who, ask=answering(iter(["same", review_tool.STOP]))[0])
+    with pytest.raises(SystemExit, match="already"):
+        dup.review(config, "umer", ask=answering(iter([]))[0])
+    queue = pd.read_csv(tmp / "queue.csv")
+    queue.assign(photo_b=queue["photo_a"]).to_csv(tmp / "queue.csv", index=False)  # queue rebuilt differently
+    with pytest.raises(ValueError, match="do not match"):
+        dup.outcome(config)
+
+
 def test_unknown_reviewer_is_refused(review_setup):
     config, tmp = review_setup
     (tmp / "reviews").mkdir()
-    pd.DataFrame([{"pair_id": "p000000", "reviewer": "bob", "verdict": "same", "reviewed_at": "t"}]).to_csv(
-        tmp / "reviews" / "bob.csv", index=False)
+    pd.DataFrame([{"pair_id": "p000000", "photo_a": "H/1.jpg", "photo_b": "H/2.jpg", "reviewer": "bob",
+                   "verdict": "same", "reviewed_at": "t"}]).to_csv(tmp / "reviews" / "bob.csv", index=False)
     with pytest.raises(ValueError, match="reviewers"):
         dup.combine(config)
 

@@ -23,12 +23,12 @@
 from __future__ import annotations
 
 import argparse
-import hashlib
+import json
 import os
 from collections.abc import Callable
 from datetime import datetime, timezone
-from functools import lru_cache, partial
-from multiprocessing import Pool
+from functools import partial
+from multiprocessing import Pool, get_context
 from pathlib import Path
 from typing import Any
 
@@ -37,17 +37,15 @@ import pandas as pd
 from PIL import Image, ImageOps
 from scipy.sparse import coo_matrix
 from scipy.sparse.csgraph import connected_components
-from sklearn.metrics import cohen_kappa_score
 
 from src import review_tool
 from src.config import REPO_ROOT, dataset_dir, load_config
 from src.inventory import load_for_hash, perceptual_hash, read_inventory
 
 DATASETS = ("primary", "paddy")
-SETTLED = "settled"
-REVIEW_COLUMNS = ["pair_id", "reviewer", "verdict", "reviewed_at"]
-INSTRUCTIONS = ("Same leaf (S): a copy, crop, resize, rotation or re-shot of one leaf.   "
-                "Different leaf (D).   Esc = stop")
+REVIEW_COLUMNS = ["pair_id", "photo_a", "photo_b", "reviewer", "verdict", "reviewed_at"]
+INSTRUCTIONS = ("Y same leaf (a copy, crop, resize, rotation, mirror or re-shot of one leaf)   "
+                "N different leaf   Backspace = undo   Esc = stop")
 T = Image.Transpose
 D4 = [(), (T.ROTATE_90,), (T.ROTATE_180,), (T.ROTATE_270,),  # 4 rotations, each with and without a mirror
       (T.FLIP_LEFT_RIGHT,), (T.FLIP_LEFT_RIGHT, T.ROTATE_90), (T.FLIP_LEFT_RIGHT, T.ROTATE_180),
@@ -70,16 +68,20 @@ def path_lookup(lists: dict[str, pd.DataFrame]) -> dict[tuple[str, str], str]:
             for pid, path in zip(frame["photo_id"], frame["path"])}
 
 
-def cached(target: Path, lists: dict[str, pd.DataFrame],
+def cached(target: Path, lists: dict[str, pd.DataFrame], made_with: dict[str, Any],
            build: Callable[[str, pd.DataFrame], np.ndarray]) -> dict[str, np.ndarray]:
-    """{dataset: array} from a git-ignored cache, rebuilt when the photo lists no longer match it."""
+    """{dataset: array} from a git-ignored cache; rebuilt when the photo lists or the settings it was made
+    with (``made_with``) no longer match it."""
+    key = json.dumps(made_with, sort_keys=True)
     if target.exists():
         with np.load(target, allow_pickle=False) as saved:
-            if all(saved[f"{n}_ids"].tolist() == frame["photo_id"].tolist() for n, frame in lists.items()):
+            same_photos = all(saved[f"{n}_ids"].tolist() == f["photo_id"].tolist() for n, f in lists.items())
+            if same_photos and "made_with" in saved and str(saved["made_with"]) == key:
                 return {n: saved[n] for n in lists}
     arrays = {name: build(name, frame) for name, frame in lists.items()}
     target.parent.mkdir(parents=True, exist_ok=True)
-    np.savez(target, **arrays, **{f"{n}_ids": f["photo_id"].to_numpy(str) for n, f in lists.items()})
+    np.savez(target, made_with=np.array(key), **arrays,
+             **{f"{n}_ids": f["photo_id"].to_numpy(str) for n, f in lists.items()})
     return arrays
 
 
@@ -103,13 +105,13 @@ def hash_cache(config: dict[str, Any], lists: dict[str, pd.DataFrame],
 
     def build(name: str, frame: pd.DataFrame) -> np.ndarray:
         with Pool(workers) as pool:
-            hashes = np.array(pool.map(work, frame["path"], chunksize=32), dtype=np.uint64)
-        stage1 = np.array([int(h, 16) for h in frame["phash"]], dtype=np.uint64)
-        if not np.array_equal(hashes[:, 0], stage1):  # a different decode moves hashes by up to 4 bits
-            raise RuntimeError(f"{name}: upright hashes differ from the Stage 1 inventory")
-        return hashes
+            return np.array(pool.map(work, frame["path"], chunksize=32), dtype=np.uint64)
 
-    return cached(REPO_ROOT / config["duplicates"]["hash_cache"], lists, build)
+    hashes = cached(REPO_ROOT / config["duplicates"]["hash_cache"], lists, config["hashing"], build)
+    for name, frame in lists.items():  # a different decode moves hashes by up to 4 of the 8 allowed bits
+        if not np.array_equal(hashes[name][:, 0], np.array([int(h, 16) for h in frame["phash"]], np.uint64)):
+            raise RuntimeError(f"{name}: upright hashes differ from the Stage 1 inventory")
+    return hashes
 
 
 class WholePhotos:
@@ -152,7 +154,9 @@ def descriptor_cache(config: dict[str, Any], lists: dict[str, pd.DataFrame],
         vectors = torch.cat(tokens).numpy().astype(np.float32)
         return vectors / np.linalg.norm(vectors, axis=1, keepdims=True)
 
-    return cached(REPO_ROOT / settings["descriptor_cache"], lists, build)
+    made_with = {"encoder": config["encoders"][code], "size": settings["whole_size"],
+                 "normalisation": config["normalisation"]}
+    return cached(REPO_ROOT / settings["descriptor_cache"], lists, made_with, build)
 
 
 # ---------------------------------------------------------------- flagging
@@ -195,19 +199,23 @@ def flag_pairs(lists: dict[str, pd.DataFrame], hashes: dict[str, np.ndarray], ve
 
 
 # ---------------------------------------------------------------- automatic check
-_CHECK: dict[str, Any] = {}
+_CHECK: dict[str, Any] = {}  # settings, plus (in matching workers) memory-mapped keypoints and their index
 
 
-def _init_check(check: dict[str, Any]) -> None:
+def _init_check(check: dict[str, Any], features: dict[str, Any] | None = None) -> None:
     import cv2
 
     cv2.setNumThreads(1)
     _CHECK.update(check)
+    if features:
+        _CHECK["points"] = np.load(features["points"], mmap_mode="r")
+        _CHECK["descriptors"] = np.load(features["descriptors"], mmap_mode="r")
+        _CHECK["index"] = features["index"]
 
 
-@lru_cache(maxsize=256)
-def keypoints(path: str, mirror: bool) -> tuple[np.ndarray, np.ndarray | None]:
-    """SIFT keypoint positions and descriptors of a photo shrunk to ``long_side`` (optionally mirrored)."""
+def keypoints(path: str) -> list[tuple[np.ndarray, np.ndarray]]:
+    """SIFT keypoint positions and descriptors (uint8: SIFT values are whole numbers 0-255) of a photo shrunk
+    to ``long_side``: [as is, mirrored]."""
     import cv2
 
     side = _CHECK["long_side"]
@@ -215,22 +223,29 @@ def keypoints(path: str, mirror: bool) -> tuple[np.ndarray, np.ndarray | None]:
         image.draft("L", (side, side))
         image = ImageOps.exif_transpose(image).convert("L")
         image.thumbnail((side, side), Image.Resampling.BICUBIC)
-    gray = np.asarray(image)
-    if mirror:
-        gray = np.ascontiguousarray(gray[:, ::-1])
-    found, descriptors = cv2.SIFT_create(nfeatures=_CHECK["max_features"]).detectAndCompute(gray, None)
-    return np.float32([k.pt for k in found]).reshape(-1, 2), descriptors
+    sift = cv2.SIFT_create(nfeatures=_CHECK["max_features"], contrastThreshold=_CHECK["contrast_threshold"])
+    out = []
+    for gray in (np.asarray(image), np.ascontiguousarray(np.asarray(image)[:, ::-1])):
+        found, descriptors = sift.detectAndCompute(gray, None)
+        descriptors = np.zeros((0, 128), np.uint8) if descriptors is None else descriptors.astype(np.uint8)
+        out.append((np.float32([k.pt for k in found]).reshape(-1, 2), descriptors))
+    return out
 
 
-def inliers(a: tuple[np.ndarray, np.ndarray | None], b: tuple[np.ndarray, np.ndarray | None]) -> int:
+def stored(path: str, mirror: bool) -> tuple[np.ndarray, np.ndarray]:
+    start, stop = _CHECK["index"][(path, mirror)]
+    return _CHECK["points"][start:stop], _CHECK["descriptors"][start:stop]
+
+
+def inliers(a: tuple[np.ndarray, np.ndarray], b: tuple[np.ndarray, np.ndarray]) -> int:
     """Keypoint matches (ratio test) that agree with one RANSAC homography from photo a to photo b."""
     import cv2
 
     (points_a, desc_a), (points_b, desc_b) = a, b
-    if desc_a is None or desc_b is None or len(desc_a) < 2 or len(desc_b) < 2:
+    if len(desc_a) < 2 or len(desc_b) < 2:
         return 0
-    good = [m for m, n in cv2.BFMatcher(cv2.NORM_L2).knnMatch(desc_a, desc_b, k=2)
-            if m.distance < _CHECK["ratio"] * n.distance]
+    matches = cv2.BFMatcher(cv2.NORM_L2).knnMatch(np.float32(desc_a), np.float32(desc_b), k=2)
+    good = [m for m, n in matches if m.distance < _CHECK["ratio"] * n.distance]
     if len(good) < 4:
         return 0
     cv2.setRNGSeed(0)  # RANSAC is random: same answer for a pair whatever order pairs are checked in
@@ -242,18 +257,37 @@ def inliers(a: tuple[np.ndarray, np.ndarray | None], b: tuple[np.ndarray, np.nda
 
 def check_pair(paths: tuple[str, str]) -> int:
     """Most inliers between photo a and photo b, or photo a and the mirrored photo b."""
-    a = keypoints(paths[0], False)
-    return max(inliers(a, keypoints(paths[1], False)), inliers(a, keypoints(paths[1], True)))
+    a = stored(paths[0], False)
+    return max(inliers(a, stored(paths[1], False)), inliers(a, stored(paths[1], True)))
 
 
-def run_check(pairs: pd.DataFrame, lists: dict[str, pd.DataFrame], check: dict[str, Any],
+def run_check(pairs: pd.DataFrame, lists: dict[str, pd.DataFrame], check: dict[str, Any], folder: Path,
               workers: int | None = None) -> np.ndarray:
-    """Inlier count for every pair (pairs are sorted by photo a, so each worker reuses its keypoints)."""
+    """Inlier count for every pair. Keypoints are found once per photo and saved in ``folder``; the
+    matching workers read them memory-mapped (shared, not copied)."""
+    from tqdm import tqdm
+
     path = path_lookup(lists)
     jobs = [(path[(da, a)], path[(db, b)])
             for da, a, db, b in pairs[["dataset_a", "photo_a", "dataset_b", "photo_b"]].itertuples(False)]
-    with Pool(workers, initializer=_init_check, initargs=(check,)) as pool:
-        return np.array(pool.map(check_pair, jobs, chunksize=64), dtype=int)
+    needed = sorted({p for job in jobs for p in job})
+    spawn = get_context("spawn")  # no fork: the parent may already run GPU and loader threads
+    with spawn.Pool(workers, initializer=_init_check, initargs=(check,)) as pool:
+        found = list(tqdm(pool.imap(keypoints, needed, chunksize=8), total=len(needed), desc="keypoints"))
+    index, offset, points, descriptors = {}, 0, [], []
+    for p, both in zip(needed, found):
+        for mirror, (pts, desc) in zip((False, True), both):
+            index[(p, mirror)] = (offset, offset + len(desc))
+            offset += len(desc)
+            points.append(pts)
+            descriptors.append(desc)
+    folder.mkdir(parents=True, exist_ok=True)
+    files = {"points": folder / "points.npy", "descriptors": folder / "descriptors.npy"}
+    np.save(files["points"], np.concatenate(points))
+    np.save(files["descriptors"], np.concatenate(descriptors))
+    with spawn.Pool(workers, initializer=_init_check, initargs=(check, {**files, "index": index})) as pool:
+        counts = list(tqdm(pool.imap(check_pair, jobs, chunksize=256), total=len(jobs), desc="pairs"))
+    return np.array(counts, dtype=int)
 
 
 # ---------------------------------------------------------------- review queue
@@ -271,12 +305,13 @@ def flag(config: dict[str, Any], workers: int | None = None) -> dict[str, Any]:
     """Flag, check and queue. Refuses to replace a queue that anyone has started reviewing."""
     settings = config["duplicates"]
     queue_path = REPO_ROOT / settings["review_file"]
-    if queue_path.exists() and any((REPO_ROOT / settings["review_dir"]).glob("*.csv")):
-        raise RuntimeError(f"{queue_path} is frozen: reviews exist in {settings['review_dir']}")
+    if any((REPO_ROOT / settings["review_dir"]).glob("*.csv")):  # verdicts are tied to this exact queue
+        raise RuntimeError(f"reviews exist in {settings['review_dir']}: the queue is frozen")
     lists = {name: photos(config, name) for name in DATASETS}
     hashes, vectors = hash_cache(config, lists, workers), descriptor_cache(config, lists, workers)
     candidates = flag_pairs(lists, hashes, vectors, settings["max_hash_bits"], settings["min_cosine"])
-    candidates["inliers"] = run_check(candidates, lists, settings["check"], workers)
+    candidates["inliers"] = run_check(candidates, lists, settings["check"],
+                                      REPO_ROOT / settings["keypoint_cache"], workers)
     candidates["passed"] = candidates["inliers"] >= settings["check"]["min_inliers"]
     queue = review_queue(candidates, settings["rejected_sample"], config["seed"])
     candidates.to_csv(REPO_ROOT / settings["candidates_file"], index=False)
@@ -285,12 +320,6 @@ def flag(config: dict[str, Any], workers: int | None = None) -> dict[str, Any]:
 
 
 # ---------------------------------------------------------------- reviewing
-def read_reviews(path: Path) -> pd.DataFrame:
-    if not path.exists() or path.stat().st_size == 0:
-        return pd.DataFrame(columns=REVIEW_COLUMNS)
-    return pd.read_csv(path, dtype=str)
-
-
 def show(path: str) -> Image.Image:
     with Image.open(path) as image:
         image.draft("RGB", (1200, 1200))
@@ -299,50 +328,48 @@ def show(path: str) -> Image.Image:
         return image
 
 
-def ask_pairs(pairs: pd.DataFrame, config: dict[str, Any], who: str, target: Path, ask: Any) -> bool:
-    """Show each pair not yet answered in ``target`` and save every answer at once; True when all are done."""
+def ask_pairs(pairs: pd.DataFrame, config: dict[str, Any], who: str, ask: Any) -> bool:
+    """Collect ``who``'s verdict on every pair (saved with both photo ids, so a verdict can never attach to a
+    different pair); True when all are answered."""
     path = path_lookup({name: photos(config, name) for name in DATASETS})
-    rows = read_reviews(target)
-    todo = pairs[~pairs["pair_id"].isin(rows["pair_id"])]
-    for number, pair in enumerate(todo.itertuples(index=False), start=len(pairs) - len(todo) + 1):
-        images = [show(path[(pair.dataset_a, pair.photo_a)]), show(path[(pair.dataset_b, pair.photo_b)])]
-        answer, _ = ask(images, f"{who}: pair {number}/{len(pairs)}\n{INSTRUCTIONS}",
-                        {"s": "same", "d": "different"})
-        if answer == review_tool.STOP:
-            print("Stopped; progress saved.")
-            return False
-        row = {"pair_id": pair.pair_id, "reviewer": who, "verdict": answer,
-               "reviewed_at": datetime.now(timezone.utc).isoformat(timespec="seconds")}
-        rows = pd.concat([rows, pd.DataFrame([row], columns=REVIEW_COLUMNS)], ignore_index=True)
-        rows.to_csv(target.with_suffix(".tmp"), index=False)  # rewritten whole, then swapped in atomically
-        os.replace(target.with_suffix(".tmp"), target)
-    return True
+    target = REPO_ROOT / config["duplicates"]["review_dir"] / f"{who}.csv"
+
+    def make_row(pair: dict[str, Any], answer: str, flags: set[str]) -> dict[str, Any]:
+        return {"pair_id": pair["pair_id"], "photo_a": pair["photo_a"], "photo_b": pair["photo_b"],
+                "reviewer": who, "verdict": answer,
+                "reviewed_at": datetime.now(timezone.utc).isoformat(timespec="seconds")}
+
+    return review_tool.collect(
+        pairs.to_dict("records"), "pair_id", target, REVIEW_COLUMNS,
+        show=lambda pair: [show(path[(pair["dataset_a"], pair["photo_a"])]),
+                           show(path[(pair["dataset_b"], pair["photo_b"])])],
+        title=lambda pair, n, total: f"{who}: pair {n}/{total}\n{INSTRUCTIONS}",
+        choices={"y": "same", "n": "different"}, make_row=make_row, ask=ask)
 
 
 def review(config: dict[str, Any], reviewer: str, ask: Any = review_tool.ask) -> None:
     """One reviewer judges every queued pair alone, in their own shuffled order."""
     settings = config["duplicates"]
+    review_tool.refuse_newcomer(REPO_ROOT / settings["review_dir"], reviewer)
     queue = pd.read_csv(REPO_ROOT / settings["review_file"], dtype=str)
-    name_seed = int.from_bytes(hashlib.sha256(reviewer.encode()).digest()[:4], "big")
-    order = np.random.default_rng([config["seed"], name_seed]).permutation(len(queue))
-    target = REPO_ROOT / settings["review_dir"] / f"{reviewer}.csv"
-    target.parent.mkdir(parents=True, exist_ok=True)
-    if ask_pairs(queue.iloc[order], config, reviewer, target, ask):
+    if ask_pairs(queue.iloc[review_tool.person_order(config["seed"], reviewer, len(queue))], config,
+                 reviewer, ask):
         print("All pairs reviewed.")
 
 
 def verdicts(config: dict[str, Any]) -> tuple[pd.DataFrame, pd.DataFrame]:
-    """(queue, one row per queued pair with each reviewer's verdict); raises on unexpected reviewers."""
+    """(queue, one row per queued pair with each reviewer's verdict). Raises on unknown or extra reviewers,
+    and on any saved verdict whose photos do not match the queue."""
     settings = config["duplicates"]
     queue = pd.read_csv(REPO_ROOT / settings["review_file"], dtype=str)
-    files = sorted((REPO_ROOT / settings["review_dir"]).glob("*.csv"))
-    reviews = [read_reviews(f) for f in files if f.stem != SETTLED]
-    data = pd.concat(reviews, ignore_index=True) if reviews else pd.DataFrame(columns=REVIEW_COLUMNS)
-    names = sorted(data["reviewer"].unique())
-    if any(n not in config["reviewers"] for n in names) or len(names) > 2:
-        raise ValueError(f"reviewers {names}: expected two of {config['reviewers']}")
-    if data.duplicated(["pair_id", "reviewer"]).any():
-        raise ValueError("a pair was answered twice by the same reviewer")
+    folder = REPO_ROOT / settings["review_dir"]
+    data = review_tool.people_rows(folder, REVIEW_COLUMNS, "reviewer", config["reviewers"], "pair_id")
+    settled = review_tool.read_rows(folder / f"{review_tool.SETTLED}.csv", REVIEW_COLUMNS)
+    expected = queue.set_index("pair_id")[["photo_a", "photo_b"]]
+    for rows in (data, settled):
+        saved = rows.set_index("pair_id")[["photo_a", "photo_b"]]
+        if not (saved.to_numpy() == expected.reindex(saved.index).to_numpy()).all():
+            raise ValueError("saved verdicts do not match the review queue's photos")
     return queue, data.pivot(index="pair_id", columns="reviewer", values="verdict").reindex(queue["pair_id"])
 
 
@@ -350,10 +377,9 @@ def settle(config: dict[str, Any], ask: Any = review_tool.ask) -> None:
     """Both reviewers together decide every pair they disagreed on."""
     queue, table = verdicts(config)
     if table.shape[1] != 2 or table.isna().any().any():
-        raise RuntimeError("both reviewers must finish every pair before settling")
+        raise SystemExit("both reviewers must finish every pair before settling")
     split = queue[queue["pair_id"].isin(table.index[table.iloc[:, 0] != table.iloc[:, 1]])]
-    target = REPO_ROOT / config["duplicates"]["review_dir"] / f"{SETTLED}.csv"
-    if ask_pairs(split, config, SETTLED, target, ask):
+    if ask_pairs(split, config, review_tool.SETTLED, ask):
         print(f"All {len(split)} disagreements settled.")
 
 
@@ -365,23 +391,22 @@ def groups_of(photo_ids: pd.Series, confirmed: pd.DataFrame) -> pd.Series:
     a, b = confirmed["photo_a"].map(index).to_numpy(int), confirmed["photo_b"].map(index).to_numpy(int)
     _, labels = connected_components(coo_matrix((np.ones(len(a)), (a, b)), shape=(len(index),) * 2),
                                      directed=False)
-    first = pd.Series(photo_ids.to_numpy()).groupby(labels).transform("min")
+    first = pd.Series(photo_ids.to_numpy(), index=photo_ids.index).groupby(labels).transform("min")
     numbers = {pid: n for n, pid in enumerate(sorted(first.unique()), start=1)}
     return first.map(lambda pid: f"g{numbers[pid]:04d}")
 
 
-def combine(config: dict[str, Any]) -> dict[str, Any]:
-    """Final verdicts, groups, label conflicts and cross-dataset overlap; writes nothing until complete."""
+def outcome(config: dict[str, Any]) -> dict[str, Any]:
+    """Final verdicts, groups, label conflicts and cross-dataset overlap (reads only)."""
     settings = config["duplicates"]
     queue, table = verdicts(config)
     answered = table.notna().sum().to_dict()
     if table.shape[1] != 2 or table.isna().any().any():
         return {"complete": False, "answered": answered, "queued": len(queue)}
     first, second = table.columns
-    settled = read_reviews(REPO_ROOT / settings["review_dir"] / f"{SETTLED}.csv")
-    settled = settled.set_index("pair_id")["verdict"]
-    agree = table[first] == table[second]
-    final = table[first].where(agree, settled.reindex(table.index))
+    settled = review_tool.read_rows(REPO_ROOT / settings["review_dir"] / f"{review_tool.SETTLED}.csv",
+                                    REVIEW_COLUMNS).set_index("pair_id")["verdict"]
+    final, agree, kappa = review_tool.agreement(table, settled)
     if final.isna().any():
         return {"complete": False, "answered": answered, "queued": len(queue),
                 "unsettled": int(final.isna().sum())}
@@ -400,13 +425,19 @@ def combine(config: dict[str, Any]) -> dict[str, Any]:
     groups["group_size"] = groups.groupby("group_id")["photo_id"].transform("size")
     mixed = groups.groupby("group_id")["class"].transform("nunique") > 1
     overlap = confirmed[confirmed["comparison"] == "cross"]
-    pairs.to_csv(REPO_ROOT / settings["pairs_file"], index=False)
-    groups.to_csv(REPO_ROOT / settings["groups_file"], index=False)
-    groups[mixed].to_csv(REPO_ROOT / settings["conflicts_file"], index=False)
-    overlap.to_csv(REPO_ROOT / settings["overlap_file"], index=False)
-    kappa = float(cohen_kappa_score(table[first], table[second]))
     return {"complete": True, "pairs": pairs, "groups": groups, "conflicts": groups[mixed],
             "overlap": overlap, "kappa": kappa, "reviewers": [first, second]}
+
+
+def combine(config: dict[str, Any]) -> dict[str, Any]:
+    """``outcome`` plus, once complete, the pairs, groups, conflicts and overlap files."""
+    result = outcome(config)
+    if result["complete"]:
+        settings = config["duplicates"]
+        for key, name in (("pairs", "pairs_file"), ("groups", "groups_file"), ("conflicts", "conflicts_file"),
+                          ("overlap", "overlap_file")):
+            result[key].to_csv(REPO_ROOT / settings[name], index=False)
+    return result
 
 
 def main() -> None:
