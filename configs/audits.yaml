@@ -1,0 +1,34 @@
+# ===================================================================
+# configs/audits.yaml: Stage 2 data audits (backgrounds, near-duplicates,
+# cross-dataset overlap, label sanity)
+# ===================================================================
+# Flagging thresholds are fixed in the pre-declared methodology ("Data audits");
+# do not change them after looking at results. The automatic check and the
+# sampled review of rejected pairs are a logged deviation (handbook §24,
+# 2026-11-07): the pre-declared rules flag too many pairs to review by hand.
+# ===================================================================
+extends: inventory.yaml        # inventory file paths (and, through it, base.yaml)
+
+reviewers: [ahsan, harris, umer]   # people who label, review or check (each works alone, in their own order)
+
+duplicates:
+  descriptor_cache: cache/e1_whole224.npz   # whole-photo E1 class tokens, both datasets (git-ignored)
+  hash_cache: cache/phash_d4.npz            # 8 orientation hashes per photo, both datasets (git-ignored)
+  whole_size: 224                  # whole photo resized to this square before describing
+  batch_size: 64
+  max_hash_bits: 8                 # flag: 64-bit pHash differs in <= 8 bits (any of 8 rotations/flips)
+  min_cosine: 0.95                 # flag: whole-photo E1 class-token cosine > 0.95
+  check:                           # automatic check: SIFT keypoints + RANSAC homography (also vs the mirrored photo)
+    long_side: 768                 # photos decoded at this long side for keypoints
+    max_features: 2000
+    ratio: 0.75                    # Lowe's ratio test
+    ransac_px: 8.0                 # reprojection tolerance at long_side resolution
+    min_inliers: 30                # a pair passes with at least this many geometric inliers (declared before running)
+  rejected_sample: 200             # random rejected pairs (per comparison) that people also review, to measure misses
+  candidates_file: data/duplicate_candidates.csv     # every flagged pair, with hash bits, cosine and check result
+  review_file: data/duplicate_review_queue.csv       # pairs for people: all passed + the sample, shuffled
+  review_dir: data/duplicate_review                  # one file per reviewer
+  pairs_file: data/duplicate_pairs.csv               # every reviewed pair with both verdicts and the settled one
+  groups_file: data/groups.csv                       # photo_id -> group_id (singletons included)
+  conflicts_file: data/label_conflicts.csv           # photos in groups that mix classes (excluded from all experiments)
+  overlap_file: data/cross_dataset_overlap.csv       # confirmed primary <-> Paddy Doctor matches (even if empty)
