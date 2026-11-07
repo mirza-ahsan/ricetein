@@ -62,8 +62,10 @@ def duplicates_section(config: dict[str, Any]) -> str:
             f"Flag rules (pre-declared methodology): perceptual hashes within {settings['max_hash_bits']} bits "
             f"(any of 8 rotations/flips), or whole-photo E1 class-token cosine > {settings['min_cosine']}. "
             f"Automatic check: SIFT keypoints (photos at {check['long_side']} px), ratio test "
-            f"{check['ratio']}, RANSAC homography (tolerance {check['ransac_px']} px, also against the "
-            f"mirrored photo); a pair passes with >= {check['min_inliers']} inliers. People review every "
+            f"{check['ratio']}, each keypoint used once, RANSAC similarity transform (tolerance "
+            f"{check['ransac_px']} px, scale {check['min_scale']}-{check['max_scale']}x, also against the "
+            f"mirrored photo); a pair passes with >= {check['min_inliers']} distinct inliers. People review "
+            "every "
             f"passed pair plus {settings['rejected_sample']} random rejected pairs per comparison, blind to "
             "class and check result (deviation from \"review every flagged pair\": handbook §24, "
             "2026-11-07).\n\n")
