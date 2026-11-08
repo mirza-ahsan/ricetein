@@ -33,7 +33,7 @@ Course project at FAST School of Computing, FAST-NUCES Lahore, and the basis of 
 | Phase 4: Experiments and Results | In progress |
 | Final paper | Not started |
 | Environment (local machine + Kaggle GPUs) | Done and verified |
-| Experiments | Stages 0–4 complete (audits disclose model raters; 3,334 primary photos in the locked split). Full Stage 5–7 pipeline running locally; Stage 6 feature extraction in progress. Stage 8 not started. See `manuals/stages3-7.md` |
+| Experiments | Stages 0–4 complete (3,334 eligible primary photos). E1 tile and whole-photo caches extracted. Deadline priority: full-budget core MIL/probe comparisons locally and complete 224 px architecture comparisons on Kaggle. Other settings, ablations, partition-order and Paddy evaluation are deferred. See `manuals/stages3-7.md` and `docs/logbook.md`. |
 
 ---
 
