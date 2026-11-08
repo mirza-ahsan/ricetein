@@ -1,0 +1,6 @@
+extends: tiling.yaml
+
+embed:
+  name: e1_tile448
+  encoder: E1
+  tile: 448            # 448-px tiles shrunk to 224 (ablation)

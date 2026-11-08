@@ -27,12 +27,22 @@ def cache_size(size: int) -> int:
     return 8 * size // 7
 
 
-def prepare(path: str, side: int, use_otsu: bool) -> np.ndarray:
-    """One photo: decoded at reduced scale, padded to square, optionally Otsu-cleaned, area-resized."""
-    rgb = np.asarray(load_photo(path, max(1024, side)))
+def pad_square(rgb: np.ndarray) -> np.ndarray:
+    """The image centred on a black square (non-square photos keep their shape)."""
     h, w = rgb.shape[:2]
     square = np.zeros((max(h, w), max(h, w), 3), np.uint8)
     square[(max(h, w) - h) // 2:(max(h, w) - h) // 2 + h, (max(h, w) - w) // 2:(max(h, w) - w) // 2 + w] = rgb
+    return square
+
+
+def prepare_square(rgb: np.ndarray, side: int) -> np.ndarray:
+    """Padded to square and area-resized to ``side`` (whole-photo descriptions, Stage 6)."""
+    return cv2.resize(pad_square(rgb), (side, side), interpolation=cv2.INTER_AREA)
+
+
+def prepare(path: str, side: int, use_otsu: bool) -> np.ndarray:
+    """One photo: decoded at reduced scale, padded to square, optionally Otsu-cleaned, area-resized."""
+    square = pad_square(np.asarray(load_photo(path, max(1024, side))))
     if use_otsu:
         square = otsu.clean(square)
     return cv2.resize(square, (side, side), interpolation=cv2.INTER_AREA)

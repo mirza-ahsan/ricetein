@@ -1,0 +1,5 @@
+extends: tiling.yaml
+
+embed:
+  name: e4_dinov3_vits16
+  encoder: E4

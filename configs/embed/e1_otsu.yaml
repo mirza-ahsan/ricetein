@@ -1,0 +1,6 @@
+extends: tiling.yaml
+
+embed:
+  name: e1_otsu
+  encoder: E1
+  otsu: true           # Otsu-cleaned photo, then tiled (ablation)

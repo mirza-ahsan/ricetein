@@ -1,0 +1,5 @@
+extends: tiling.yaml
+
+embed:
+  name: e3_dinov2_vitb14
+  encoder: E3
