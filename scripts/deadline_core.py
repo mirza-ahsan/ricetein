@@ -7,6 +7,7 @@ whole-image runs are imported only if their records and all artifacts are comple
 
 import argparse
 import concurrent.futures
+import hashlib
 import json
 import os
 import signal
@@ -159,6 +160,9 @@ def report():
                 },
                 "ece": result["ece"],
                 "hispa_recall": result["pooled_test"]["per_class"]["hispa"]["recall"],
+                **{f"pooled_{metric}_{key}": value
+                   for metric in ("macro_f1", "balanced_accuracy")
+                   for key, value in result[f"pooled_{metric}"].items()},
             }
         )
     comparisons = []
@@ -187,6 +191,28 @@ def report():
     frame, paired = pd.DataFrame(rows), pd.DataFrame(comparisons)
     frame.to_csv(target / "deadline_core_scores.csv", index=False)
     paired.to_csv(target / "deadline_core_paired.csv", index=False)
+    display = []
+    for row in rows:
+        shown = {"method": row["method"]}
+        for metric in ("macro_f1", "balanced_accuracy", "accuracy"):
+            shown[f"{metric} mean ± SD"] = (
+                f"{100 * row[metric + '_mean']:.1f} ± {100 * row[metric + '_std']:.1f}"
+            )
+        for metric in ("macro_f1", "balanced_accuracy"):
+            shown[f"pooled {metric} [95% CI]"] = (
+                f"{100 * row['pooled_' + metric + '_value']:.1f} "
+                f"[{100 * row['pooled_' + metric + '_low']:.1f}, "
+                f"{100 * row['pooled_' + metric + '_high']:.1f}]"
+            )
+        shown.update(hispa_recall=f"{100 * row['hispa_recall']:.1f}", ece=f"{row['ece']:.3f}")
+        display.append(shown)
+    paired_display = pd.DataFrame([
+        {"A": row["A"], "B": row["B"], "metric": row["metric"],
+         "difference (pp)": f"{100 * row['difference']:.1f}",
+         "95% CI (pp)": f"[{100 * row['low']:.1f}, {100 * row['high']:.1f}]",
+         "round wins": f"{row['round_wins']}/{row['rounds']}", "verdict": row["verdict"]}
+        for row in comparisons
+    ])
     report = REPO_ROOT / "docs/reports/deadline_core_report.md"
     report.parent.mkdir(parents=True, exist_ok=True)
     report.write_text(
@@ -194,12 +220,23 @@ def report():
         "seed-0 headline models only. Test was evaluated once after validation selection. "
         "Stability seeds, 128/Otsu/448 whole-image settings, ablations, partition-order and Paddy "
         "evaluation are deferred. Incomplete whole-image searches are excluded rather than selected "
-        f"from a reduced budget: {incomplete}. Values below are proportions.\n\n"
-        + md_table(frame)
+        f"from a reduced budget: {incomplete}. Scores below are percentages; ECE is a proportion. "
+        "Confidence intervals use class-stratified pooled out-of-fold bootstrap resampling. "
+        "Paired differences are percentage points (pp).\n\n"
+        + md_table(pd.DataFrame(display))
         + "\n\n"
-        + md_table(paired)
+        + md_table(paired_display)
         + "\n"
     )
+    (target / "deadline_report_provenance.json").write_text(json.dumps({
+        "experiment_code_version": require_clean_code(),
+        "controller_commit": subprocess.check_output(
+            ["git", "rev-parse", "HEAD"], cwd=Path(__file__).resolve().parents[1], text=True
+        ).strip(),
+        "report_script_sha256": hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
+        "evaluation_plan_sha256": hashlib.sha256(plan.read_bytes()).hexdigest(),
+        "methods": items, "incomplete_whole_image_searches": incomplete,
+    }, indent=2) + "\n")
 
 
 if __name__ == "__main__":
