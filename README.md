@@ -31,7 +31,7 @@ Course project at FAST School of Computing, FAST-NUCES Lahore, and the basis of 
 | Phase 2: Introduction and Literature Review | Submitted (`deliverables/phase2/`) |
 | Phase 3: Methodology and Experimental Setup | Final (`deliverables/phase3/`) |
 | Phase 4: Experiments and Results | In progress |
-| Final paper | Not started |
+| Final paper | Broader experiments and Discussion/Conclusion deferred to the November 22 final |
 | Environment (local machine + Kaggle GPUs) | Done and verified |
 | Experiments | Stages 0–4 complete (3,334 eligible primary photos). E1 tile and whole-photo caches extracted. Deadline priority: full-budget core MIL/probe comparisons locally and complete 224 px architecture comparisons on Kaggle. Other settings, ablations, partition-order and Paddy evaluation are deferred. See `manuals/stages3-7.md` and `docs/logbook.md`. |
 
@@ -107,6 +107,10 @@ uv run python -m src.smoke_check --require-dinov3 --run-name smoke_mine
 ```
 
 ---
+
+## Phase 4 submission
+
+Today's agreed scope is the core study, with original training/search budgets retained. See [the submission guide](manuals/phase4_submission.md). Working paper: `paper/phase4_results.tex`; code-containing notebook: `notebooks/phase4_submission.ipynb`. Draft paper builds permit explicit missing-evidence messages; final builds require completed evidence. The broader Stage 8–13 programme is reserved for the final paper.
 
 ## Running experiments
 
