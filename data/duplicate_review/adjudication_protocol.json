@@ -1,0 +1,31 @@
+{
+  "adjudicator": "model_rater_c",
+  "type": "AI model",
+  "approved_by": "Ahsan, 2026-11-08, conversation",
+  "method": "Visual reinspection of all 61 disagreements at larger 500px previews; both original reviewers preserved; this is model_rater_c adjudication, not joint human settlement.",
+  "export_timestamp_note": "One batch export after inspection, not per-pair decision timestamps.",
+  "high_resolution_rechecks": [
+    {
+      "pair_id": "p047455",
+      "old_adjudication": "same",
+      "final": "different",
+      "reason": "Different white marks: left has a small round mark on the right half; right has long pale streaks on the left half and different vein spacing.",
+      "detail_long_side_px": 1200
+    },
+    {
+      "pair_id": "p073975",
+      "old_adjudication": "same",
+      "final": "different",
+      "reason": "Left has separated short central pale marks; right has a round pink-brown mark left of centre and many longer pale marks on the right.",
+      "detail_long_side_px": 1200
+    },
+    {
+      "pair_id": "p044943",
+      "old_adjudication": "same",
+      "final": "different",
+      "reason": "Different surface marks and vein patterns: left is largely smooth with sparse fine flecks; right has a conspicuous central cluster of white scars.",
+      "detail_long_side_px": 1200
+    }
+  ],
+  "limitation": "Model judgments are not a substitute for independent expert botanical review. Small previews can obscure identifying marks."
+}

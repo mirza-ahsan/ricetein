@@ -29,11 +29,11 @@ from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import OneHotEncoder, StandardScaler
 
 from src import metrics, otsu, stats
-from src.config import REPO_ROOT, dataset_dir, load_config, path_for
+from src.config import REPO_ROOT, dataset_dir, load_config, output_root, path_for
 from src.inventory import read_inventory
 from src.inventory_report import md_table
 from src.leaf_width import rescale_factor
-from src.records import RunRecorder
+from src.records import RunRecorder, get_default_runs_dir, require_clean_code, reusable_run
 from src.review_tool import load_photo
 from src.seeding import seed_everything
 from src.split import read_folds, round_column
@@ -58,7 +58,7 @@ def photo_histograms(path: str) -> np.ndarray:
 
 def histograms(config: dict[str, Any], photo_ids: list[str], workers: int | None = None) -> np.ndarray:
     """(n, 1024) histograms for ``photo_ids``, cached (git-ignored) and rebuilt if the photo list changes."""
-    target = REPO_ROOT / config["sanity"]["histogram_cache"]
+    target = output_root() / config["sanity"]["histogram_cache"]
     if target.exists():
         with np.load(target, allow_pickle=False) as saved:
             if saved["ids"].tolist() == photo_ids:
@@ -143,12 +143,18 @@ def summarise(predictions: pd.DataFrame, config: dict[str, Any]) -> dict[str, An
 
 def run(config: dict[str, Any], names: tuple[str, ...] = BASELINES,
         workers: int | None = None) -> dict[str, Any]:
+    require_clean_code()
     seed_everything(config["seed"], config["determinism"])
     table, checksum = read_folds(config)
     inputs = features(config, table, workers)
     results = {}
     for name in names:
+        if reusable_run(f"stage4_{name}", {**config, "baseline": name}, checksum):
+            saved = get_default_runs_dir() / f"stage4_{name}" / "metrics.json"
+            results[name] = json.loads(saved.read_text())
+            continue
         recorder = RunRecorder(f"stage4_{name}", config={**config, "baseline": name}, split_checksum=checksum,
+                               overwrite=True,
                                data_version={"primary": config["datasets"]["primary"]["version"]})
         rounds = range(1, config["split"]["n_folds"] + 1)
         predictions = pd.concat([predict_round(name, table, inputs.get(name), r, config["classes"],
@@ -178,6 +184,7 @@ def report(config: dict[str, Any], results: dict[str, Any]) -> str:
             "edit by hand. Scores in percent on the **test** folds of the locked split (mean ± sd, 5 rounds, "
             "and the pooled out-of-fold predictions with 95% bootstrap intervals). Nothing here is tuned, so "
             "test scores are reported directly. Chance: 25% balanced accuracy.\n\n" + md_table(rows) + "\n")
+    path_for(config, "reports").mkdir(parents=True, exist_ok=True)
     (path_for(config, "reports") / "sanity_report.md").write_text(text)
     return text
 

@@ -43,6 +43,42 @@ def get_default_runs_dir() -> Path:
     return output_root() / "runs"
 
 
+def require_clean_code() -> str:
+    version = get_code_version()
+    if version == "unknown" or version.endswith("-dirty"):
+        raise RuntimeError(f"code version {version}: commit before real experiments")
+    return version
+
+
+def completed_run(name: str, artifacts: tuple[str, ...] = ("metrics.json", "predictions.csv")) -> bool:
+    folder = get_default_runs_dir() / name
+    record = folder / "record.json"
+    return (record.exists() and json.loads(record.read_text()).get("status") == "completed"
+            and all((folder / artifact).exists() for artifact in artifacts))
+
+
+def reusable_run(name: str, config: Mapping[str, Any], checksum: str,
+                 artifacts: tuple[str, ...] = ("metrics.json", "predictions.csv")) -> bool:
+    """Completed runs may be reused only with the same settings, split and clean source code."""
+    if not completed_run(name, artifacts):
+        return False
+    record = json.loads((get_default_runs_dir() / name / "record.json").read_text())
+    expected = json.loads(json.dumps(config, default=_json_default))
+    source = record["code_version"]
+    if (record["config"] != expected or record["split_checksum"] != checksum
+            or source == "unknown" or source.endswith("-dirty")):
+        raise ValueError(f"{name}: existing results have different settings, split or untraceable code")
+    current = require_clean_code()
+    if source != current:
+        try:
+            differences = _git("diff", source, current, "--", *CODE_PATHS)
+        except Exception as exc:
+            raise ValueError(f"{name}: cannot verify the previous code") from exc
+        if differences:
+            raise ValueError(f"{name}: source code changed; archive affected runs after logging the fix")
+    return True
+
+
 def _git(*args: str) -> str:
     return subprocess.check_output(["git", *args], cwd=REPO_ROOT, stderr=subprocess.DEVNULL).decode().strip()
 

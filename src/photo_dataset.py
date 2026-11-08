@@ -8,6 +8,9 @@ augmentation on validation or test photos raises (the leakage rule, enforced in 
 
 from __future__ import annotations
 
+import hashlib
+import json
+import os
 from multiprocessing import Pool
 from typing import Any
 
@@ -17,7 +20,7 @@ import pandas as pd
 import torch
 
 from src import augment, otsu
-from src.config import REPO_ROOT, dataset_dir
+from src.config import REPO_ROOT, dataset_dir, output_root
 from src.inventory import read_inventory
 from src.review_tool import load_photo
 from src.split import round_column
@@ -63,20 +66,34 @@ def photo_cache(config: dict[str, Any], size: int, use_otsu: bool, workers: int 
     built once."""
     photo_ids_ = photo_ids(config)
     side = cache_size(size)
-    folder = REPO_ROOT / config["wholeimage"]["cache_dir"]
+    folder = output_root() / config["wholeimage"]["cache_dir"]
     stem = f"photos_{side}{'_otsu' if use_otsu else ''}"
     data, ids = folder / f"{stem}.u8", folder / f"{stem}.ids.txt"
+    spec_path = folder / f"{stem}.spec.json"
+    source = ["src/photo_dataset.py", "src/otsu.py", config["inventory"]["files"]["primary"]]
+    spec = {"format": 1, "side": side, "otsu": use_otsu,
+            "source": {p: hashlib.sha256((REPO_ROOT / p).read_bytes()).hexdigest() for p in source}}
+    if spec_path.exists() and json.loads(spec_path.read_text()) != spec:
+        raise ValueError(f"{data}: preprocessing changed; archive the old cache before rebuilding")
+    if data.exists() and not spec_path.exists():
+        raise ValueError(f"{data}: legacy cache lacks provenance; archive before rebuilding")
     if not (ids.exists() and ids.read_text().split("\n") == photo_ids_):
         folder.mkdir(parents=True, exist_ok=True)
+        spec_path.write_text(json.dumps(spec, indent=2))
         ids.unlink(missing_ok=True)  # a half-written cache must never look complete
         root = dataset_dir(config, "primary")
-        out = np.memmap(data, np.uint8, "w+", shape=(len(photo_ids_), side, side, 3))
+        temporary = data.with_suffix(".tmp")
+        out = np.memmap(temporary, np.uint8, "w+", shape=(len(photo_ids_), side, side, 3))
         jobs = [(str(root / p), side, use_otsu) for p in photo_ids_]
         with Pool(workers) as pool:
             for i, image in enumerate(pool.imap(_prepare, jobs, chunksize=16)):
                 out[i] = image
         out.flush()
+        del out
+        os.replace(temporary, data)
         ids.write_text("\n".join(photo_ids_))
+    if data.stat().st_size != len(photo_ids_) * side * side * 3:
+        raise ValueError(f"{data}: resized photo cache has an invalid byte count")
     return np.memmap(data, np.uint8, "r", shape=(len(photo_ids_), side, side, 3))
 
 

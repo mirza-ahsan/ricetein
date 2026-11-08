@@ -24,7 +24,7 @@ from torch import nn
 from src import metrics
 from src.config import load_config
 from src.photo_dataset import PhotoDataset, photo_cache, photo_ids
-from src.records import RunRecorder, get_default_runs_dir
+from src.records import RunRecorder, completed_run, get_default_runs_dir, require_clean_code
 from src.seeding import seed_everything
 from src.split import read_folds
 
@@ -32,10 +32,11 @@ from src.split import read_folds
 def build_model(config: dict[str, Any], size: int) -> nn.Module:
     """The pretrained model at its pinned revision, with a fresh 4-class head."""
     import timm
-    from huggingface_hub import snapshot_download
+
+    from src.kaggle_bootstrap import pinned_snapshot
 
     spec = config["wholeimage"]["models"][config["wholeimage"]["model"]]
-    folder = snapshot_download(spec["repo"], revision=spec["revision"])
+    folder = pinned_snapshot(spec["repo"], spec["revision"])
     kwargs = spec.get("size_kwargs", {}).get(size, {})
     return timm.create_model(spec["repo"].split("/")[1], pretrained=True, num_classes=len(config["classes"]),
                              pretrained_cfg_overlay={"file": f"{folder}/model.safetensors"}, **kwargs)
@@ -95,6 +96,7 @@ def loaders(config: dict[str, Any], folds: pd.DataFrame, round_: int, roles: tup
 
 
 def train(config: dict[str, Any], lr: float, round_: int) -> dict[str, Any]:
+    require_clean_code()
     w = config["wholeimage"]
     seed_everything(config["seed"], w["determinism"])
     folds, checksum = read_folds(config)
@@ -153,7 +155,7 @@ def train(config: dict[str, Any], lr: float, round_: int) -> dict[str, Any]:
 
 
 def done(name: str) -> bool:
-    return (get_default_runs_dir() / name / "metrics.json").exists()
+    return completed_run(name, ("model.pt", "metrics.json", "predictions.csv"))
 
 
 def main() -> None:
@@ -163,6 +165,10 @@ def main() -> None:
     parser.add_argument("--round", type=int, help="one round (default: all)")
     args = parser.parse_args()
     config = load_config(args.config)
+    if config["wholeimage"]["size"] != 224 or config["wholeimage"]["otsu"]:
+        if args.lr is None:
+            parser.error("128/Otsu/high-resolution runs require --lr selected on 224px validation; "
+                         "use src.stage5")
     lrs = [args.lr] if args.lr else config["wholeimage"]["lrs"]
     rounds = [args.round] if args.round else range(1, config["split"]["n_folds"] + 1)
     for lr in lrs:

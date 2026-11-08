@@ -1,0 +1,1 @@
+pair_id,comparison,dataset_a,photo_a,dataset_b,photo_b,round,class_a,class_b,hash_bits,cosine,by_hash,by_cosine,inliers,passed,model_rater_b,model_rater_c,settled,final

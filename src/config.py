@@ -37,6 +37,19 @@ def output_root() -> Path:
     return KAGGLE_WORKING if on_kaggle() else REPO_ROOT
 
 
+def cache_folder(name: str, *, write: bool = False) -> Path:
+    """Writable cache output, or a completed cache attached as ricetein-features on Kaggle."""
+    folder = output_root() / "cache" / name
+    if write or folder.exists() or not on_kaggle():
+        return folder
+    mounted = find_kaggle_input("ricetein-features")
+    if mounted is not None:
+        for candidate in (mounted / "cache" / name, mounted / name):
+            if candidate.exists():
+                return candidate
+    raise FileNotFoundError(f"cache {name}: build it first or attach ricetein-features")
+
+
 def read_yaml(path: str | Path) -> dict[str, Any]:
     with open(path, encoding="utf-8") as f:
         data = yaml.safe_load(f)

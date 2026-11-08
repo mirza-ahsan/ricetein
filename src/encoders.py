@@ -14,7 +14,7 @@ import numpy as np
 import torch
 from torch import nn
 
-from src.kaggle_bootstrap import pinned_pretrained
+from src.kaggle_bootstrap import pinned_pretrained, pinned_snapshot
 
 
 def load_encoder(config: dict[str, Any], code: str, device: torch.device) -> nn.Module:
@@ -22,9 +22,7 @@ def load_encoder(config: dict[str, Any], code: str, device: torch.device) -> nn.
     spec = config["encoders"][code]
     if spec["library"] == "timm":
         import timm
-        from huggingface_hub import snapshot_download
-
-        folder = snapshot_download(f"timm/{spec['name']}", revision=spec["revision"])
+        folder = pinned_snapshot(f"timm/{spec['name']}", spec["revision"])
         model = timm.create_model(spec["name"], pretrained=True, num_classes=0,
                                   pretrained_cfg_overlay={"file": f"{folder}/model.safetensors"})
     else:

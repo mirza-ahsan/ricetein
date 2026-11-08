@@ -1,0 +1,4 @@
+extends: probe_e1_224.yaml
+probe:
+  name: e1_512
+  size: 512

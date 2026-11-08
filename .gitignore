@@ -39,6 +39,8 @@ runs/**/*.onnx
 runs/**/*.npz
 runs/**/*.h5
 runs/**/*.pkl
+runs/**/*.db
+runs/**/*.db-journal
 
 # ML experiment logging
 wandb/

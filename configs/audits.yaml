@@ -10,7 +10,7 @@
 extends: inventory.yaml        # inventory file paths (and, through it, base.yaml)
 
 reviewers: [ahsan, harris, umer]   # people who label, review or check (each works alone, in their own order)
-model_reviewers: [model_rater_a, model_rater_b] # AI model raters (Ahsan, 2026-11-08): two independent instances of one AI model; always
+model_reviewers: [model_rater_a, model_rater_b, model_rater_c] # model_rater_c second duplicate rater approved by Ahsan, 2026-11-08; always
                                     # named as model raters, and their agreement overstates what two people would show
 
 duplicates:

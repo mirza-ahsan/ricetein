@@ -38,3 +38,9 @@ def test_jobs_cut_tiles_and_shrink_big_tiles(tmp_path, monkeypatch):
     _, _, tiles, _ = jobs[0]
     assert tiles.shape == (4, 224, 224, 3)
     assert embed.photo_key("Healthy/IMG_1.jpg") == "Healthy__IMG_1"
+
+
+def test_reduced_jpeg_decode_does_not_apply_scale_twice(tmp_path):
+    Image.new('RGB', (2400, 1600), 'green').save(tmp_path/'large.jpg')
+    clean = embed.version_settings(AUGMENT, 0, 0, 'p')
+    assert embed.load_version(str(tmp_path/'large.jpg'), .25, clean).shape == (400, 600, 3)

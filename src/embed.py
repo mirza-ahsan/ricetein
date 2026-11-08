@@ -17,6 +17,7 @@ size. Resumable: finished files are skipped; each file is written whole, then re
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import os
 import time
@@ -29,12 +30,12 @@ from PIL import Image, ImageOps
 from torchvision.transforms.v2 import functional as F
 
 from src import otsu, tiling
-from src.config import REPO_ROOT, dataset_dir, load_config
+from src.config import REPO_ROOT, cache_folder, dataset_dir, load_config
 from src.encoders import describe, load_encoder
 from src.inventory import read_inventory
 from src.leaf_width import rescale_factor
 from src.photo_dataset import prepare_square
-from src.records import get_code_version, get_hardware_info
+from src.records import get_code_version, get_hardware_info, require_clean_code
 from src.seeding import seed_everything
 
 
@@ -60,12 +61,12 @@ def load_version(path: str, factor: float, change: dict[str, Any]) -> np.ndarray
     """The photo scaled by ``factor`` x zoom, with the version's flip, rotation and colour change."""
     with Image.open(path) as image:
         scale = factor * change["zoom"]
-        image.draft("RGB", (int(image.width * scale), int(image.height * scale)))  # only shrinks when it can
+        size = (round(image.width * scale), round(image.height * scale))
+        image.draft("RGB", size)  # dimensions must refer to the original, before JPEG's reduced decode
         image = ImageOps.exif_transpose(image).convert("RGB")
-        size = (round(image.width * scale), round(image.height * scale)) if scale != 1 else image.size
         if image.size != size:
             image = image.resize(size, Image.Resampling.LANCZOS, reducing_gap=3.0)
-    x = torch.from_numpy(np.asarray(image)).permute(2, 0, 1)
+    x = torch.from_numpy(np.array(image)).permute(2, 0, 1)
     if change["flip"]:
         x = torch.flip(x, dims=(2,))
     x = torch.rot90(x, change["rot90"], dims=(1, 2))
@@ -124,17 +125,90 @@ def save(target, cls: torch.Tensor, mean: torch.Tensor | None, boxes: np.ndarray
     os.replace(partial, target)
 
 
+def cache_spec(config: dict[str, Any]) -> dict[str, Any]:
+    """Everything determining the descriptors; changing it requires a fresh cache."""
+    e = config["embed"]
+    inputs = [config["inventory"]["files"]["primary"]]
+    if e["scale"] == "common":
+        inputs.append(config["pixel_scale"]["decision_file"])
+    source_files = ["src/embed.py", "src/encoders.py", "src/tiling.py", "src/otsu.py", "src/leaf_width.py",
+                    "src/photo_dataset.py"]
+    return {"format": 2, "embed": e, "encoder": config["encoders"][e["encoder"]],
+            "determinism": config["determinism"],
+            "source": {p: hashlib.sha256((REPO_ROOT / p).read_bytes()).hexdigest() for p in source_files},
+            "normalisation": config["normalisation"], "augment": config["augment"], "seed": config["seed"],
+            "inputs": {p: hashlib.sha256((REPO_ROOT / p).read_bytes()).hexdigest() for p in inputs}}
+
+
+def validate_cache(config: dict[str, Any]) -> dict[str, Any]:
+    """Check every photo/version, array shape and finite value, without loading the cache into RAM."""
+    e = config["embed"]
+    folder = cache_folder(e["name"])
+    spec = json.loads((folder / "spec.json").read_text())
+    if spec != cache_spec(config):
+        raise ValueError(f"{folder}: cache settings differ")
+    inventory = read_inventory(config["inventory"]["files"]["primary"])
+    ids = sorted(inventory.loc[inventory["opened_ok"], "photo_id"])
+    rows, files, size = 0, 0, 0
+    for version in range(e["versions"]):
+        for photo_id in ids:
+            path = folder / f"v{version}" / f"{photo_key(photo_id)}.npz"
+            with np.load(path, allow_pickle=False) as data:
+                arrays = [data["cls"]]
+                if config["encoders"][e["encoder"]]["library"] != "timm":
+                    arrays.append(data["mean"])
+                n = len(arrays[0])
+                if (n == 0 or data["boxes"].shape != (n, 4)
+                        or any(a.shape != (n, config["encoders"][e["encoder"]]["dim"])
+                               or a.dtype != np.float16 or not np.isfinite(a).all() for a in arrays)):
+                    raise ValueError(f"{path}: invalid descriptor arrays")
+                rows += n
+            files += 1
+            size += path.stat().st_size
+    return {"name": e["name"], "photos": len(ids), "versions": e["versions"], "files": files,
+            "descriptor_rows": rows, "bytes": size,
+            "spec_sha256": hashlib.sha256(json.dumps(spec, sort_keys=True).encode()).hexdigest()}
+
+
+def completed_cache(config: dict[str, Any], name: str) -> dict[str, Any]:
+    folder = cache_folder(name)
+    complete = json.loads((folder / "complete.json").read_text())
+    spec = json.loads((folder / "spec.json").read_text())
+    fingerprint = hashlib.sha256(json.dumps(spec, sort_keys=True).encode()).hexdigest()
+    if complete["spec_sha256"] != fingerprint or complete["name"] != name:
+        raise ValueError(f"{name}: cache manifest does not match its settings")
+    if (spec["encoder"] != config["encoders"][spec["embed"]["encoder"]]
+            or spec["normalisation"] != config["normalisation"]):
+        raise ValueError(f"{name}: encoder or normalisation differs from the recorded cache")
+    for path, checksum in {**spec["inputs"], **spec["source"]}.items():
+        if hashlib.sha256((REPO_ROOT / path).read_bytes()).hexdigest() != checksum:
+            raise ValueError(f"{name}: cache source/input {path} changed")
+    return complete
+
+
 def run(config: dict[str, Any], workers: int = 6) -> int:
     from tqdm import tqdm
 
+    require_clean_code()
     e = config["embed"]
     seed_everything(config["seed"], config["determinism"])
     inventory = read_inventory(config["inventory"]["files"]["primary"])
     photo_ids = sorted(inventory.loc[inventory["opened_ok"], "photo_id"])
-    folder = REPO_ROOT / "cache" / e["name"]
+    folder = cache_folder(e["name"], write=True)
+    folder.mkdir(parents=True, exist_ok=True)
+    spec_path = folder / "spec.json"
+    spec = cache_spec(config)
+    if spec_path.exists():
+        if json.loads(spec_path.read_text()) != spec:
+            raise ValueError(f"{folder}: settings changed; archive this cache before rebuilding")
+    elif any(folder.glob("v*/*.npz")):
+        raise ValueError(f"{folder}: legacy cache has no provenance; archive before rebuilding")
+    else:
+        spec_path.write_text(json.dumps(spec, indent=2))
     todo = [(p, v) for v in range(e["versions"]) for p in photo_ids
             if not (folder / f"v{v}" / f"{photo_key(p)}.npz").exists()]
     if not todo:
+        (folder / "complete.json").write_text(json.dumps(validate_cache(config), indent=2))
         return 0
     meta = {"config": config, "code_version": get_code_version(), "hardware": get_hardware_info(),
             "started": time.strftime("%Y-%m-%dT%H:%M:%S"), "to_do": len(todo)}
@@ -142,7 +216,8 @@ def run(config: dict[str, Any], workers: int = 6) -> int:
     model = load_encoder(config, e["encoder"], device)
     spec = config["encoders"][e["encoder"]]
     jobs = Jobs(config, todo, scale_factors(config, photo_ids))
-    loader = torch.utils.data.DataLoader(jobs, batch_size=None, num_workers=workers, prefetch_factor=4)
+    options = {"prefetch_factor": 2} if workers else {}
+    loader = torch.utils.data.DataLoader(jobs, batch_size=None, num_workers=workers, **options)
     for photo_id, version, images, boxes in tqdm(loader, total=len(todo), desc=e["name"]):
         with torch.autocast("cuda", dtype=torch.float16):
             if e.get("whole_sizes"):  # one image per size, each described on its own
@@ -156,6 +231,7 @@ def run(config: dict[str, Any], workers: int = 6) -> int:
     meta["finished"] = time.strftime("%Y-%m-%dT%H:%M:%S")
     (folder / f"record_{meta['started'].replace(':', '')}.json").write_text(json.dumps(meta, indent=2,
                                                                                        default=str))
+    (folder / "complete.json").write_text(json.dumps(validate_cache(config), indent=2))
     return len(todo)
 
 

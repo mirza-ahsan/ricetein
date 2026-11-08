@@ -119,3 +119,12 @@ The dataset comprises 16,225 high-resolution smartphone images across 13 classes
 
 * **Dhan-Shomadhan** (Mendeley, DOI: 10.17632/znsxdctwtt.1): Secondary zero-shot candidate if time permits.
 * **RiceSeg-5932** (Mendeley, 2025): Pixel-level segmentation masks for quantitative lesion attention overlap testing.
+
+
+## 2026-11-08 audit and experimental eligibility
+
+The Stage 2 audit uses disclosed AI model raters. Backgrounds: `model_rater_a` and `model_rater_b`; duplicate pairs: `model_rater_b` and `model_rater_c`, with model_rater_c adjudication explicitly approved by Ahsan. Original verdicts and high-resolution recheck reasons are retained. The configured label sanity check (`model_rater_a`, 80 photos) flags one suspect; original labels remain the main analysis labels.
+
+The duplicate audit produces 3,054 groups over 3,355 primary photos. Excluding the 21 photos in confirmed cross-class pairs leaves **3,334 primary experimental photos**. No primary–Paddy Doctor overlap was confirmed. The final Paddy Doctor shared-class list counts byte-identical images once: **8,086 photos**, from 8,164 original files (78 extra copies removed). These eligible counts do not replace the original release counts above.
+
+The permanent split and its checksums are in `docs/reports/split_report.md`. The 50-photo Otsu quality check is a disclosed model_rater_c qualitative review (`data/otsu_review.csv`, `docs/reports/otsu_report.md`), not a human pixel-level segmentation annotation.

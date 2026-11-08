@@ -198,8 +198,10 @@ def model_note(config: dict[str, Any], names: list[str]) -> str:
     models = [n for n in names if n in config.get("model_reviewers", [])]
     if not models:
         return ""
-    return (f" Model raters, not people: `{'`, `'.join(models)}` (independent instances of one AI model that did not "
-            "see each other's answers; same-model agreement overstates what two people would show).")
+    family = ("independent instances of one AI model" if all(n in ("model_rater_a", "model_rater_b") for n in models)
+              else "AI model instances")
+    return (f" Model raters, not people: `{'`, `'.join(models)}` ({family}; initial reviews did not "
+            "use each other's answers. Model agreement does not establish human inter-rater reliability).")
 
 
 def person_name(parser: Any, value: str | None, allowed: list[str], flag: str) -> str:
