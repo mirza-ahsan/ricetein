@@ -1,0 +1,266 @@
+% Adapted from the frozen Phase 2 submission; survey tables retained.
+\section{Introduction}
+% ===================================================================
+
+\subsection{Importance}
+
+Rice (\textit{Oryza sativa}) is the primary source of dietary energy for
+approximately half of the global population, and the crop is cultivated on more
+than 160 million hectares worldwide \cite{faostat2024}. A global assessment of
+crop losses attributable to pathogens and pests places the mean yield loss for
+rice at roughly 30\,\%, the highest among the five major food crops
+\cite{savary2019}. The economic exposure is particularly acute in South Asia.
+Pakistan is among the ten largest rice exporters and rice is the country's
+second most important cereal after wheat, with basmati varieties accounting for a
+substantial share of agricultural export earnings \cite{gopk2024}. In this
+setting a single unmanaged outbreak of bacterial leaf blight or leaf blast can
+remove a significant fraction of a smallholder's annual income. Because the
+window in which a foliar disease can be controlled by targeted fungicide or
+bactericide application is short, often a matter of days, the practical value of
+a diagnostic tool is determined less by its peak laboratory accuracy than by
+whether it remains reliable on the images a farmer can actually capture in a
+flooded field with a mid-range smartphone. Conventional diagnosis depends on
+trained plant pathologists, and the ratio of extension officers to cultivated
+area in most rice-growing regions makes timely expert inspection infeasible at
+scale. An automated, image-based diagnostic capability therefore addresses a
+concrete and well-documented bottleneck in food production.
+
+\subsection{Background}
+
+Automated plant disease recognition has passed through three broad phases. Early
+systems extracted handcrafted descriptors of colour, shape and texture from
+manually delineated lesion regions and classified them with shallow learners
+such as support vector machines, artificial neural networks or gradient-boosted
+trees \cite{orillo2014, pugoy2011, azim2021}. The release of large annotated
+image collections and the demonstration that ImageNet-pretrained convolutional
+neural networks (CNNs) transfer effectively to leaf imagery \cite{mohanty2016}
+moved the field decisively toward end-to-end deep learning, and a large body of
+rice-specific work now reports high in-domain accuracy using transfer learning
+from architectures such as VGG, ResNet, Inception and DenseNet
+\cite{lu2017, chen2020, ghosal2020, tejaswini2022}. Most recently, attention-based
+architectures \cite{dosovitskiy2021} and hybrid convolution--transformer designs
+have been applied to the same task \cite{alfalluji2025, vitresnet2025,
+globallocal2026}, while a parallel line of work has pursued generative data
+augmentation with adversarial and diffusion models to compensate for the
+scarcity of labelled disease images \cite{ali2026, muhammad2023, fhwd2025}. A
+third thread emphasises deployment, compressing models through pruning,
+quantisation and knowledge distillation so that inference can be performed on a
+smartphone or single-board computer \cite{edge2026, liu2025}. Across all three
+threads the dominant problem formulation has remained constant: a single
+whole-image label is predicted from a single aggressively downsampled view of
+the leaf.
+
+\subsection{Problem Statement}
+
+That formulation is a poor match for the physical structure of the task. Leaf
+disease is a \emph{local} phenomenon observed in a \emph{global} image. A
+diagnostic lesion may occupy well under one percent of the frame, while the
+remainder of the image consists of healthy tissue, neighbouring leaves, soil,
+standing water and shadow. When an image captured at $1881\times1881$ pixels is
+resized to $128\times128$, its pixel count is reduced by a factor of more than
+200, and the chlorotic halo or greyish necrotic centre that separates brown spot
+from leaf blast is averaged into a few indistinguishable pixels. The standard
+remedy is to remove the background before classification, but the two available
+strategies each carry a cost. Global thresholding operators such as Otsu's
+method \cite{otsu1979} assume a bimodal intensity histogram, operate on a
+grayscale projection that discards the colour information carrying much of the
+diagnostic signal, and degrade when leaf and background occupy overlapping
+intensity ranges. Semantic segmentation networks avoid those assumptions but
+require pixel-level lesion or leaf masks, which are expensive to produce and
+unavailable for the public rice datasets in general use. The problem this project
+addresses is therefore: given high-resolution rice leaf images annotated only
+with an image-level disease label, how can lesion-scale detail be preserved and
+irrelevant image content be suppressed without recourse to pixel-level
+supervision, and how should the resulting system be evaluated so that the
+reported figures support a claim about field behaviour?
+
+\subsection{Research Gap}
+
+The literature reviewed in Section~\ref{sec:lit} exhibits three gaps that
+together define the space this project occupies. The \textbf{resolution gap} is
+that resolution is treated as a fixed preprocessing constant rather than an
+experimental variable; we found no rice disease study that evaluates
+resolution-preserving region aggregation as an alternative to whole-image
+downsampling, even though the analogous technique is standard practice in
+gigapixel medical imaging \cite{ilse2018, lu2021clam}. The \textbf{supervision
+gap} is that background suppression is either hand-engineered and brittle or
+annotation-hungry; a \emph{learned}, annotation-free mechanism that identifies
+informative regions from image-level labels alone has not been evaluated for
+rice disease recognition, despite early demonstrations of the underlying idea in
+maize \cite{dechant2017} and citrus \cite{bollis2020}. The \textbf{protocol gap}
+is that overall accuracy on a randomly partitioned imbalanced dataset remains the
+headline metric, class-wise metrics and repeated runs are frequently omitted, and
+cross-dataset evaluation is the exception rather than the rule, which leaves the
+generalisation claims that motivate the work largely untested.
+
+\subsection{Evidence}
+
+Each gap is supported by evidence internal to the reviewed literature rather
+than by assertion. On resolution, the input sizes reported across the rice
+studies we surveyed cluster tightly in the $128$--$256$ pixel range regardless of
+the native capture resolution, which for the most widely used public rice
+dataset is $1881\times1881$ pixels \cite{do2019}; no ablation over input
+resolution is reported in any of them. On supervision, results are informative in
+both directions: a hand-tuned threshold applied to raw rice images has been
+observed to leave classifier accuracy essentially unchanged \cite{ali2026},
+whereas lesion-level and patch-level formulations have produced substantial gains
+in maize field imagery \cite{dechant2017} and across fourteen plant species
+\cite{barbedo2019}, indicating that the benefit lies in operating at lesion scale
+rather than in background removal as such. It is also relevant that at least one
+study using the same rice dataset reports its backgrounds to be largely uniform
+\cite{tejaswini2022}, which weakens the premise on which background removal is
+usually justified for that data. On protocol, a recent systematic perspective on
+plant disease datasets identifies random splitting as a potential source of
+overestimated test performance, because multiple near-duplicate views of the same
+physical observation can be distributed across the training and test partitions,
+and notes that dataset splitting and annotation strategy are scarcely discussed
+in the applied literature \cite{xu2024}. Independently, models achieving above
+90\,\% on several benchmarks have been reported to fall to 58.15\,\% on a rice
+dataset they were not tuned for \cite{thakur2023}, and work on frozen
+self-supervised features documents a pronounced degradation when
+laboratory-trained plant disease models are evaluated on field imagery
+\cite{nguyen2026, plantclr2026}. The magnitude of that reported drop is larger
+than most of the architectural improvements the field currently competes over.
+
+\subsection{Aims}
+
+The aim of this project is to develop and rigorously evaluate a
+resolution-preserving, weakly supervised pipeline for rice leaf disease
+recognition that requires no annotation beyond the image-level disease label
+already present in public datasets. The intended contribution is not a new
+backbone architecture but a change of problem formulation: instead of classifying
+one downsampled view of the leaf, the image is partitioned into a set of
+high-detail regions at a common leaf scale, each region is embedded by a frozen visual encoder,
+and a learned attention mechanism aggregates the region embeddings into a single
+image-level prediction while also producing a map of learned region weights.
+Whether those weights faithfully explain a prediction remains a separate
+experimental question. A secondary and equally deliberate aim is
+methodological: to report the resulting system under an evaluation protocol that
+is explicit about partitioning order, reports class-balanced metrics with
+variation across held-out folds. The broader planned study also includes
+zero-shot evaluation on an independently collected field dataset; that
+experiment is deferred and no field-generalisation result is claimed here.
+
+\subsection{Objectives}
+
+The original project objectives are listed below. This submission addresses
+the core in-domain comparisons and aggregation experiment. The full resolution
+and thresholding ablations, external-data evaluation, attention-faithfulness
+tests and compression objective remain unfinished, as specified in
+Section~\ref{sec:method}.
+
+\begin{enumerate}
+\item To assemble a two-dataset experimental benchmark comprising a
+high-resolution primary dataset for in-domain development and an independently
+collected, expert-annotated field dataset with overlapping disease classes for
+out-of-distribution evaluation.
+\item To specify and implement a leakage-free evaluation protocol in which
+partitioning precedes all augmentation, split indices are fixed and published,
+and macro-averaged F1 score and balanced accuracy are reported alongside overall
+accuracy with mean and standard deviation over repeated runs.
+\item To reproduce competitive whole-image baselines, including a threshold-based
+preprocessing pipeline and modern convolutional and transformer backbones, under
+that protocol, so that all subsequent comparisons are internally consistent.
+\item To implement the proposed tile-based weakly supervised model, including
+region partitioning, embedding with a frozen encoder, and attention-based
+aggregation trained from image-level labels only.
+\item To quantify the contribution of each design element through ablation,
+specifically input resolution, the choice of aggregation function, and the
+presence or absence of threshold-based preprocessing.
+\item To assess generalisation by evaluating all models zero-shot on the
+secondary dataset, and to assess interpretability by comparing the model's
+attention maps against visible symptom locations.
+\item To characterise the computational cost of the proposed pipeline in terms of
+parameters, storage and inference latency, and to establish whether it can be
+compressed to a form suitable for on-device deployment.
+\end{enumerate}
+
+% ------------------- SURVEY TABLE, PART I -------------------
+\begin{table*}[!t]
+\renewcommand{\arraystretch}{1.0}
+\setlength{\tabcolsep}{3pt}
+\caption{Literature Survey, Part I: Classical Methods, {CNN} Transfer Learning, Transformers and Generative Augmentation}
+\label{tab:survey1}
+\centering
+\scriptsize
+\begin{tabular}{L{0.045\textwidth} L{0.030\textwidth} L{0.155\textwidth} L{0.145\textwidth} L{0.085\textwidth} L{0.135\textwidth} L{0.255\textwidth}}
+\toprule
+\textbf{Ref.} & \textbf{Yr.} & \textbf{Method} & \textbf{Dataset} & \textbf{Metrics} & \textbf{Performance} & \textbf{Key limitations} \\
+\midrule
+
+\cite{orillo2014} & 2014 & Colour/texture features $+$ back-propagation ANN, MATLAB segmentation & Own set: 55 blight, 37 brown spot, 42 blast images & Accuracy & 100\,\% reported & Only 134 images, no held-out protocol described; only 134 images; independent generalisation remains unestablished \\
+
+\cite{azim2021} & 2021 & Saturation threshold for background, hue threshold for lesions, statistical colour/shape/texture features $+$ XGBoost & UCI Rice Leaf Diseases (3 classes, 120 images) & Accuracy & High accuracy on a 120-image set & Threshold values tuned to a single acquisition setup; dataset far too small for a reliable estimate \\
+
+\cite{sethy2020} & 2020 & Deep CNN features $+$ SVM classifier on pooled embeddings & Own Mendeley rice set, 5{,}932 images, 4 classes & Accuracy, F1 & $>$\,98\,\% accuracy reported & Single-source, uniform-background imagery; no cross-dataset or class-balanced reporting \\
+
+\cite{lu2017} & 2017 & Custom CNN trained from scratch on rice field images & Own set, 500 images, 10 rice diseases & Accuracy & 95.48\,\% (10-fold CV) & Very small dataset relative to class count; no per-class reporting; not reproducible (data unavailable) \\
+
+\cite{chen2020} & 2020 & DenseNet pretrained on ImageNet combined with Inception modules (the \emph{InceptionDenseNet} design reused in later rice work) & 515-image rice set & Accuracy & 94.07\,\% average; 98.63\,\% class prediction & Architecture only loosely specified; 515 images; no external validation \\
+
+\cite{ghosal2020} & 2020 & VGGNet transfer learning & Public rice leaf set, 1{,}649 images & Accuracy & 92.46\,\% train / 81\,\% test & Large train--test gap indicates overfitting; accuracy only \\
+
+\cite{tejaswini2022} & 2022 & Comparison of a 5-layer CNN against VGG16/VGG19 & Rice Diseases Image Dataset (Kaggle), 4 classes & Accuracy, precision, recall & 78.2\,\% (best, 5-layer CNN) & Explicitly notes the dataset's backgrounds are uniform, so background removal is unnecessary ; the role of preprocessing requires direct evaluation \\
+
+\cite{thakur2023} & 2023 & VGG-ICNN: lightweight CNN for multi-crop disease identification & PlantVillage, Embrapa, Apple, Maize, Rice (5 datasets) & Accuracy & $>$\,90\,\% on four datasets; \textbf{58.15\,\%} on the rice set & Demonstrates that a model strong on several benchmarks can collapse on an unseen rice dataset; direct evidence of the generalisation problem \\
+
+\cite{alfalluji2025} & 2025 & ViT, hybrid ConvNeXt and ResNet50 with Grad-CAM/LIME explanation & Two public rice sets (4{,}684 images / 3 classes; 10{,}165 images / 5 classes) & Accuracy & 100\,\% and 99.72\,\% (3-class); 90.69\,\% (5-class) & Near-saturated 3-class scores suggest benchmark exhaustion; the 10-point drop on the harder 5-class task is not analysed; no cross-dataset test \\
+
+\cite{vitresnet2025} & 2025 & Feature-level fusion of a ViT branch and a pretrained ResNet18 branch & Public biotic rice leaf disease set & Acc., precision, recall, F1, AUC & 94.4\,\% acc., F1 0.942, AUC 0.985 & Reports full metric suite (good practice) but remains a single-dataset in-domain evaluation; fusion cost not quantified \\
+
+\cite{globallocal2026} & 2026 & Two-stream Swin Transformer $+$ ConvNeXt with attention-based adaptive feature fusion and Grad-CAM & Public rice leaf disease datasets & Acc., F1, cross-validation, cross-dataset & Outperforms single-backbone baselines; includes cross-dataset testing & One of few rice studies to test cross-dataset; heavy dual-backbone model unsuited to edge use; still classifies a single downsampled view \\
+
+\cite{ali2026} & 2026 & Pix2Pix GAN augmentation $\rightarrow$ Otsu thresholding $\rightarrow$ InceptionDenseNet, images resized to $128\times128$ & Rice Diseases Image Dataset $+$ 40 web-scraped blight images (3{,}393 images, 5 classes); secondary set D2 & Accuracy & 86.98\,\% vs.\ 74\,\% raw-data baseline; Otsu alone $\approx$ no change & Accuracy only on a set that is 44\,\% healthy; $128\times128$ input; different input and class configuration; not directly comparable with the present protocol \\
+
+\cite{muhammad2023} & 2023 & Mask-guided diffusion (RePaint) compared against mask-guided GAN (InstaGAN) for augmentation & Public plant disease imagery & FID, downstream classification accuracy & Diffusion output preferred over GAN on fidelity and downstream accuracy & Requires segmentation masks to guide generation; downstream gain not isolated under a leakage-controlled protocol \\
+
+\bottomrule
+\end{tabular}
+\end{table*}
+
+% ------------------- SURVEY TABLE, PART II -------------------
+\begin{table*}[!t]
+\renewcommand{\arraystretch}{1.0}
+\setlength{\tabcolsep}{3pt}
+\caption{Literature Survey, Part II: Severity Estimation, Weakly Supervised and Patch-Based Learning, Foundation Models, Datasets and Edge Deployment}
+\label{tab:survey2}
+\centering
+\scriptsize
+\begin{tabular}{L{0.045\textwidth} L{0.030\textwidth} L{0.155\textwidth} L{0.145\textwidth} L{0.085\textwidth} L{0.135\textwidth} L{0.255\textwidth}}
+\toprule
+\textbf{Ref.} & \textbf{Yr.} & \textbf{Method} & \textbf{Dataset} & \textbf{Metrics} & \textbf{Performance} & \textbf{Key limitations} \\
+\midrule
+
+\cite{fhwd2025} & 2025 & FHWD: frequency-domain and wavelet augmentation network with a dual-discriminator GAN & Crop disease image sets incl.\ \textit{Panax notoginseng} & FID, downstream accuracy & FID 42.73, a 74.71\,\% improvement over the baseline generator & Optimises generator fidelity; the link from lower FID to better field generalisation is assumed rather than demonstrated \\
+
+\cite{sudhesh2025} & 2025 & RCAMNet: multi-class segmentation (U-Net / DeepLabv3 / Detectron2) followed by dual-path CBAM attention for joint classification and severity staging & BLBVisionDB (own), field $+$ greenhouse, 5 severity categories by leaf area infected & Acc., IoU & Effective joint staging and classification & Requires expert pixel-level annotation and a purpose-built severity-labelled dataset; not transferable to public rice sets that lack masks \\
+
+\cite{logavitool2025} & 2025 & U-Net with ResNet-101 encoder on UAV multispectral $+$ NDVI imagery, ground truth from the IRRI Standard Evaluation System & Own UAV survey of Thai rice fields & mIoU, F1, precision, recall & mIoU up to 97.20\,\%, F1 98.56\,\% & Requires a multispectral UAV platform and expert IRRI scoring; not applicable to smartphone RGB imagery \\
+
+\cite{dechant2017} & 2017 & Three-stage pipeline: per-region CNNs classify small image segments, their outputs form heat maps, a final CNN classifies the whole image from the heat maps & Own field imagery of maize, northern leaf blight & Accuracy & 96.7\,\% on held-out test images & Requires manual lesion marking to train the stage-1 region classifiers; fixed non-learned aggregation; maize rather than rice \\
+
+\cite{barbedo2019} & 2019 & Classification of individually cropped lesions and spots rather than whole leaves & 14 plant species, 79 disease classes & Accuracy & Substantial improvement over whole-leaf classification & Lesions must be cropped by hand, so the approach does not scale; no learned mechanism for selecting regions \\
+
+\cite{bollis2020} & 2020 & Weakly supervised multiple instance learning guided by activation maps to select regions of interest in high-resolution images & Citrus Pest Benchmark (own) & Accuracy & Outperforms whole-image CNN baselines & Two-stage saliency-then-MIL design rather than end-to-end attention; pest detection in citrus, not rice disease \\
+
+\cite{dinoagri2025} & 2025 & DINOv2 foundation features under linear probing, full fine-tuning and LoRA; distillation into MobileNetV3 & Four in-house and public sets: disease, weed, growth stage & Acc., F1, kNN probe & LoRA best overall; frozen linear probe competitive at far lower cost; DINOv2 features beat other SSL features under distillation & Not evaluated on rice; probing experiments use whole downsampled images, so the resolution question is untouched \\
+
+\cite{nguyen2026} & 2026 & Frozen DINOv2 features evaluated for laboratory-to-field transfer without any field labels & PlantVillage (lab) $\rightarrow$ PlantDoc (field) & Acc., macro-F1 & Frozen self-supervised features substantially reduce the lab-to-field degradation seen in supervised backbones & Cross-crop rather than rice-specific; frozen features are used on whole images; no region-level aggregation \\
+
+\cite{plantclr2026} & 2026 & SimCLR-style contrastive self-supervised pretraining with an explicit two-stage protocol preventing train/val/test information leakage & PlantVillage $\rightarrow$ Cassava (cross-dataset) & Acc., macro-F1 & Improved robustness under domain shift relative to supervised pretraining & Demonstrates good protocol practice but on cassava; single-view whole-image classification retained \\
+
+\cite{xu2024} & 2024 & Systematic perspective and taxonomy of plant disease recognition datasets, with emphasis on splitting and annotation strategy & Survey of public plant disease datasets & N/A (perspective) & Identifies random splitting as a cause of overestimated test performance; notes splitting is rarely discussed & Perspective rather than experiment; provides no quantification of the resulting inflation for any specific dataset \\
+
+\cite{petchiammal2023} & 2023 & Paddy Doctor benchmark release with CNN and four transfer-learning baselines (VGG16, MobileNet, Xception, ResNet34) & Paddy Doctor: 16{,}225 expert-annotated field images, 13 classes, $1080\times1440$ & F1 score & ResNet34 highest F1 97.50\,\% & Strong field dataset and reporting, but baselines classify downsampled whole images; no weakly supervised or region-level baseline \\
+
+\cite{singh2020} & 2020 & PlantDoc: in-the-wild plant disease detection dataset, deliberately constructed to break laboratory shortcuts & PlantDoc, 2{,}598 images, 13 species, 27 classes & Acc., mAP & Training on in-the-wild data markedly reduces classification error versus laboratory-trained models & Not rice-specific and long-tailed; establishes the domain-shift problem without solving it \\
+
+\cite{edge2026} & 2026 & Benchmarking MobileNet-V4 against MobileNet-V2/V3 and ResNet34 across GPU, CPU and Raspberry Pi 5 & Public rice disease dataset & Acc., latency & 97.84\,\% acc.; 39\,ms CPU, 88.91\,ms on Raspberry Pi 5 & Reports latency rigorously but uses in-domain accuracy only; no cross-dataset test of the deployed model \\
+
+\cite{liu2025} & 2025 & SCD-YOLOv11 with DepGraph-based structured pruning and channel-wise feature distillation & Public rice disease detection set (Roboflow) & mAP@50, mAP@50:95, size & 1.9\,MB model, 97.4\,\% mAP@50, 76.2\,\% mAP@50:95 & Detection-oriented and requires bounding-box annotation; evaluated on one dataset \\
+
+\bottomrule
+\end{tabular}
+\end{table*}
+
+% ===================================================================

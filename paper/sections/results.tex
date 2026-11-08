@@ -1,0 +1,123 @@
+\section{Experiments and Results}
+\label{sec:results}
+
+\subsection{Experimental Organisation}
+The experiments first establish chance and shortcut controls, then compare
+whole-image classification with high-detail tile aggregation, isolate the
+pooling rule, and examine prediction behaviour and computational requirements.
+Every reported method uses the same eligible photographs, locked grouped folds,
+class order and evaluation metrics from Section~\ref{sec:method:metrics}.
+Hyperparameters are selected using validation data, and tables are generated
+from saved run records and held-out predictions. Deferred experiments are
+identified separately; a missing result is never represented by a score of zero.
+
+\subsection{Sanity and Shortcut Controls}
+The purpose of the controls is to establish class-prior performance and determine
+whether simple acquisition cues can predict the labels without a full disease
+recognition model. Table~\ref{tab:phase4-sanity} reports the six control methods,
+including fold-wise spread and pooled uncertainty. Background-only inputs use
+an Otsu-derived leaf mask and may retain leaf pixels when that mask is imperfect;
+their scores therefore do not isolate background information perfectly.
+\PhaseFourInput{phase4_sanity}
+
+\subsection{Whole-Image and Tile-Model Comparison}
+The main comparison tests whether high-detail tile representations improve
+in-domain classification relative to downsampled whole images. The whole-photo
+probes hold the frozen encoder family constant; the fine-tuned architectures
+provide practical supervised comparators. These methods also differ in pooling,
+trainable capacity and optimisation, so their scores alone do not isolate a pure
+causal effect of input resolution. Table~\ref{tab:phase4-core} reports all
+completed frozen core configurations. Boldface, where used, marks the largest
+reported mean, while statistical superiority follows the paired rule below.
+\PhaseFourInput{phase4_core}
+
+\subsection{Aggregation Comparison and Class-Wise Performance}
+The mean, max and gated-attention models use the same tile cache, split and
+independent $40$-trial search budgets. This comparison examines whether a learned
+weighting of tiles improves on fixed pooling. Table~\ref{tab:phase4-paired}
+reports paired macro-F1 differences, confidence intervals and round wins.
+Class-wise precision and recall, starting with Table~\ref{tab:phase4-per-class}, expose
+performance differences hidden by overall accuracy, including the predeclared
+hispa diagnostic.
+\PhaseFourInput{phase4_paired}
+\PhaseFourInput{phase4_per_class}
+
+\subsection{Qualitative Results and Error Analysis}
+Confusion matrices in Fig.~\ref{fig:phase4-confusion} identify recurring
+class confusions across the core models.
+\PhaseFourInput{phase4_errors}
+Fig.~\ref{fig:phase4-predictions}
+shows correct and incorrect predictions for each true class, together with a
+fixed-seed random sample. The examples describe model behaviour; they are not an
+independent estimate of test performance. We include failures rather than
+selecting only visually favourable cases.
+\begin{figure*}[!t]
+\centering
+\IfFileExists{../results/figures/phase4_confusion.png}{%
+\includegraphics[width=\textwidth,height=0.72\textheight,keepaspectratio]{../results/figures/phase4_confusion.png}%
+}{\fbox{\parbox{0.9\textwidth}{Draft: confusion matrices await the frozen core test predictions.}}}
+\caption{Pooled out-of-fold confusion matrices for the frozen core methods.
+Cells show photograph counts; colour is normalised within the true-class row.
+The class order is healthy, leaf blast, brown spot and hispa. Each eligible
+photograph contributes once to each method.}
+\label{fig:phase4-confusion}
+\end{figure*}
+
+\begin{figure*}[!t]
+\centering
+\IfFileExists{../results/figures/phase4_predictions.png}{%
+\includegraphics[width=\textwidth,height=0.8\textheight,keepaspectratio]{../results/figures/phase4_predictions.png}%
+}{\fbox{\parbox{0.9\textwidth}{Draft: prediction examples await the frozen attention-model test predictions.}}}
+\caption{Attention-MIL prediction examples, grouped by true class. For each
+class, the display selects the most confident correct prediction,
+the most confident error, and one random example (seed $2026$), retaining
+overlap between these sets. Confidence is the maximum predicted class
+probability. Image labels distinguish truth, prediction and selection category;
+confidence does not imply calibrated diagnostic certainty.}
+\label{fig:phase4-predictions}
+\end{figure*}
+
+\IfFileExists{../results/figures/phase4_attention.png}{%
+Fig.~\ref{fig:phase4-attention} maps saved attention weights back to the input.
+The overlays are descriptive and do not establish lesion segmentation quality
+or causal faithfulness.
+\begin{figure*}[!t]
+\centering
+\includegraphics[width=\textwidth,height=0.75\textheight,keepaspectratio]{../results/figures/phase4_attention.png}
+\caption{Attention-MIL overlays from held-out predictions. Attention weights
+are placed on their corresponding common-scale tile footprints. Overlapping
+tile contributions are averaged per pixel, then normalised independently from zero to the maximum
+for each photograph. The inferno colour overlay uses opacity $0.55$; colour is
+relative attention, not a pixel-level disease probability.}
+\label{fig:phase4-attention}
+\end{figure*}
+}{Attention overlays are pending reconstruction from saved test-time tile weights.
+This draft makes no attention-localisation claim.}
+
+\subsection{Computational Performance}
+Table~\ref{tab:phase4-cost} reports parameter counts, selected final-fit
+durations, memory and checkpoint size. Table~\ref{tab:phase4-latency} reports
+measured prediction latency with hardware and timing boundaries identified. Frozen
+encoder parameters are distinguished from trainable head parameters. Cached-head
+prediction includes loading unaugmented descriptors and producing probabilities,
+but excludes raw-image decoding, tiling and encoder extraction. Whole-image
+prediction includes image preparation and the network. Neither measurement is a
+full evaluation of tiled end-to-end deployment. The timing sample uses $100$
+fixed round-one training photographs and excludes three warm-up runs; CPU and
+GPU paths are reported separately where implemented. Reported training durations refer to the
+specified completed fits; concurrent workloads, interrupted attempts and
+hardware differences limit direct wall-time comparisons.
+\PhaseFourInput{phase4_cost}
+\PhaseFourInput{phase4_latency}
+Full tiled-encoder latency remains part of the deferred cost study.
+
+\subsection{Results Summary and Scope}
+\PhaseFourInput{phase4_summary}
+The conclusions of this submission concern the audited primary dataset under the
+fixed grouped split. Additional input sizes and Otsu conditions, alternate
+encoders and descriptors beyond the selected searches, independent stability
+seeds, partition-order experiments, Paddy Doctor transfer, ensembles, deletion
+and human heat-map assessments, and compression studies remain outside the
+reported core comparison. The wider field-generalisation and attention-faithfulness
+questions remain open. Detailed interpretation and the final limitations and
+conclusion sections are reserved for the final deliverable.

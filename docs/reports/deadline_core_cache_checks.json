@@ -1,0 +1,51 @@
+{
+  "code_version": "d44f65f",
+  "checks": {
+    "e1_dinov3_vitb16": {
+      "cache": {
+        "name": "e1_dinov3_vitb16",
+        "photos": 3355,
+        "versions": 8,
+        "files": 26840,
+        "descriptor_rows": 2104572,
+        "bytes": 6518833616,
+        "spec_sha256": "b622e1453721b9830ac76ea851af14692b1d2989f473667e5c959d92825eb035"
+      },
+      "repeatability": {
+        "repeatable": true,
+        "saved_output_matches": true,
+        "sample_photos": [
+          "BrownSpot/IMG_20190419_095712.jpg",
+          "Healthy/IMG_20190419_110647.jpg",
+          "Healthy/IMG_20190419_172123.jpg",
+          "Hispa/IMG_20190419_094245.jpg",
+          "LeafBlast/IMG_20190419_112112.jpg",
+          "LeafBlast/IMG_5526.jpg"
+        ]
+      }
+    },
+    "wholephoto": {
+      "cache": {
+        "name": "e1_wholephoto",
+        "photos": 3355,
+        "versions": 8,
+        "files": 26840,
+        "descriptor_rows": 53680,
+        "bytes": 185679120,
+        "spec_sha256": "f676f53b910e45c91a7f53c670d6e4ee1b45accbd3cbe119f0628d843d7b5515"
+      },
+      "repeatability": {
+        "repeatable": true,
+        "saved_output_matches": true,
+        "sample_photos": [
+          "BrownSpot/IMG_20190419_095712.jpg",
+          "Healthy/IMG_20190419_110647.jpg",
+          "Healthy/IMG_20190419_172123.jpg",
+          "Hispa/IMG_20190419_094245.jpg",
+          "LeafBlast/IMG_20190419_112112.jpg",
+          "LeafBlast/IMG_5526.jpg"
+        ]
+      }
+    }
+  }
+}

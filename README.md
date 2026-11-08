@@ -30,10 +30,10 @@ Course project at FAST School of Computing, FAST-NUCES Lahore, and the basis of 
 | Phase 1: Dataset Description | Submitted (`deliverables/phase1/`) |
 | Phase 2: Introduction and Literature Review | Submitted (`deliverables/phase2/`) |
 | Phase 3: Methodology and Experimental Setup | Final (`deliverables/phase3/`) |
-| Phase 4: Experiments and Results | In progress |
-| Final paper | Not started |
+| Phase 4: Experiments and Results | Core-study PDF and notebook ready locally in `submission/phase4/`; not uploaded to the course portal |
+| Final paper | Broader experiments and Discussion/Conclusion deferred to the November 22 final |
 | Environment (local machine + Kaggle GPUs) | Done and verified |
-| Experiments | Stages 0–4 complete (audits disclose model raters; 3,334 primary photos in the locked split). Full Stage 5–7 pipeline running locally; Stage 6 feature extraction in progress. Stage 8 not started. See `manuals/stages3-7.md` |
+| Experiments | Stages 0–4 and the scoped nine-method core study are complete (3,334 eligible primary photos). Best mean test macro-F1: Swin-T 83.7 ± 1.3%; attention MIL: 82.4 ± 2.0%. Five rounds and original tuning budgets retained. Other settings, ablations, stability seeds, partition-order and Paddy evaluation remain deferred. See `manuals/phase4_submission.md` and `docs/logbook.md`. |
 
 ---
 
@@ -107,6 +107,10 @@ uv run python -m src.smoke_check --require-dinov3 --run-name smoke_mine
 ```
 
 ---
+
+## Phase 4 submission
+
+Today's agreed scope is the core study, with original training/search budgets retained. See [the submission guide](manuals/phase4_submission.md). Working paper: `paper/phase4_results.tex`; code-containing notebook: `notebooks/phase4_submission.ipynb`. Draft paper builds permit explicit missing-evidence messages; final builds require completed evidence. The broader Stage 8–13 programme is reserved for the final paper.
 
 ## Running experiments
 
