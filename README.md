@@ -33,7 +33,7 @@ Course project at FAST School of Computing, FAST-NUCES Lahore, and the basis of 
 | Phase 4: Experiments and Results | In progress |
 | Final paper | Not started |
 | Environment (local machine + Kaggle GPUs) | Done and verified |
-| Experiments | Stages 0–3 complete (audits disclose model raters; 3,334 primary photos in the locked split). Stages 4–7 code/configs built; full experiments pending. Stage 8 not started. See `manuals/stages3-7.md` |
+| Experiments | Stages 0–4 complete (audits disclose model raters; 3,334 primary photos in the locked split). Full Stage 5–7 pipeline running locally; Stage 6 feature extraction in progress. Stage 8 not started. See `manuals/stages3-7.md` |
 
 ---
 

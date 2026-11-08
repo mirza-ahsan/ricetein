@@ -1,0 +1,715 @@
+{
+  "test": {
+    "macro_f1": {
+      "mean": 0.15371834811087148,
+      "std": 7.144557800143143e-05
+    },
+    "balanced_accuracy": {
+      "mean": 0.25,
+      "std": 0.0
+    },
+    "accuracy": {
+      "mean": 0.44391137764451105,
+      "std": 0.00029799340029981053
+    }
+  },
+  "val": {
+    "macro_f1": {
+      "mean": 0.15352723528801465,
+      "std": 0.00022522939776174823
+    },
+    "balanced_accuracy": {
+      "mean": 0.25,
+      "std": 0.0
+    },
+    "accuracy": {
+      "mean": 0.44311536131716667,
+      "std": 0.0009381209721504302
+    }
+  },
+  "pooled_test": {
+    "macro_f1": 0.15371832156211052,
+    "balanced_accuracy": 0.25,
+    "accuracy": 0.4439112177564487,
+    "per_class": {
+      "healthy": {
+        "precision": 0.4439112177564487,
+        "recall": 1.0,
+        "f1": 0.6148732862484421,
+        "support": 1480
+      },
+      "leaf_blast": {
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0,
+        "support": 773
+      },
+      "brown_spot": {
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0,
+        "support": 517
+      },
+      "hispa": {
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0,
+        "support": 564
+      }
+    },
+    "confusion": [
+      [
+        1480,
+        0,
+        0,
+        0
+      ],
+      [
+        773,
+        0,
+        0,
+        0
+      ],
+      [
+        517,
+        0,
+        0,
+        0
+      ],
+      [
+        564,
+        0,
+        0,
+        0
+      ]
+    ],
+    "n": 3334
+  },
+  "pooled_macro_f1": {
+    "value": 0.15371832156211052,
+    "low": 0.15371832156211052,
+    "high": 0.15371832156211052
+  },
+  "pooled_balanced_accuracy": {
+    "value": 0.25,
+    "low": 0.25,
+    "high": 0.25
+  },
+  "ece": 0.5560887822435513,
+  "per_round_test": {
+    "rounds": {
+      "1": {
+        "macro_f1": 0.1536863966770509,
+        "balanced_accuracy": 0.25,
+        "accuracy": 0.44377811094452774,
+        "per_class": {
+          "healthy": {
+            "precision": 0.44377811094452774,
+            "recall": 1.0,
+            "f1": 0.6147455867082036,
+            "support": 296
+          },
+          "leaf_blast": {
+            "precision": 0.0,
+            "recall": 0.0,
+            "f1": 0.0,
+            "support": 154
+          },
+          "brown_spot": {
+            "precision": 0.0,
+            "recall": 0.0,
+            "f1": 0.0,
+            "support": 104
+          },
+          "hispa": {
+            "precision": 0.0,
+            "recall": 0.0,
+            "f1": 0.0,
+            "support": 113
+          }
+        },
+        "confusion": [
+          [
+            296,
+            0,
+            0,
+            0
+          ],
+          [
+            154,
+            0,
+            0,
+            0
+          ],
+          [
+            104,
+            0,
+            0,
+            0
+          ],
+          [
+            113,
+            0,
+            0,
+            0
+          ]
+        ],
+        "n": 667
+      },
+      "2": {
+        "macro_f1": 0.1536863966770509,
+        "balanced_accuracy": 0.25,
+        "accuracy": 0.44377811094452774,
+        "per_class": {
+          "healthy": {
+            "precision": 0.44377811094452774,
+            "recall": 1.0,
+            "f1": 0.6147455867082036,
+            "support": 296
+          },
+          "leaf_blast": {
+            "precision": 0.0,
+            "recall": 0.0,
+            "f1": 0.0,
+            "support": 154
+          },
+          "brown_spot": {
+            "precision": 0.0,
+            "recall": 0.0,
+            "f1": 0.0,
+            "support": 104
+          },
+          "hispa": {
+            "precision": 0.0,
+            "recall": 0.0,
+            "f1": 0.0,
+            "support": 113
+          }
+        },
+        "confusion": [
+          [
+            296,
+            0,
+            0,
+            0
+          ],
+          [
+            154,
+            0,
+            0,
+            0
+          ],
+          [
+            104,
+            0,
+            0,
+            0
+          ],
+          [
+            113,
+            0,
+            0,
+            0
+          ]
+        ],
+        "n": 667
+      },
+      "3": {
+        "macro_f1": 0.1536863966770509,
+        "balanced_accuracy": 0.25,
+        "accuracy": 0.44377811094452774,
+        "per_class": {
+          "healthy": {
+            "precision": 0.44377811094452774,
+            "recall": 1.0,
+            "f1": 0.6147455867082036,
+            "support": 296
+          },
+          "leaf_blast": {
+            "precision": 0.0,
+            "recall": 0.0,
+            "f1": 0.0,
+            "support": 155
+          },
+          "brown_spot": {
+            "precision": 0.0,
+            "recall": 0.0,
+            "f1": 0.0,
+            "support": 103
+          },
+          "hispa": {
+            "precision": 0.0,
+            "recall": 0.0,
+            "f1": 0.0,
+            "support": 113
+          }
+        },
+        "confusion": [
+          [
+            296,
+            0,
+            0,
+            0
+          ],
+          [
+            155,
+            0,
+            0,
+            0
+          ],
+          [
+            103,
+            0,
+            0,
+            0
+          ],
+          [
+            113,
+            0,
+            0,
+            0
+          ]
+        ],
+        "n": 667
+      },
+      "4": {
+        "macro_f1": 0.1536863966770509,
+        "balanced_accuracy": 0.25,
+        "accuracy": 0.44377811094452774,
+        "per_class": {
+          "healthy": {
+            "precision": 0.44377811094452774,
+            "recall": 1.0,
+            "f1": 0.6147455867082036,
+            "support": 296
+          },
+          "leaf_blast": {
+            "precision": 0.0,
+            "recall": 0.0,
+            "f1": 0.0,
+            "support": 155
+          },
+          "brown_spot": {
+            "precision": 0.0,
+            "recall": 0.0,
+            "f1": 0.0,
+            "support": 103
+          },
+          "hispa": {
+            "precision": 0.0,
+            "recall": 0.0,
+            "f1": 0.0,
+            "support": 113
+          }
+        },
+        "confusion": [
+          [
+            296,
+            0,
+            0,
+            0
+          ],
+          [
+            155,
+            0,
+            0,
+            0
+          ],
+          [
+            103,
+            0,
+            0,
+            0
+          ],
+          [
+            113,
+            0,
+            0,
+            0
+          ]
+        ],
+        "n": 667
+      },
+      "5": {
+        "macro_f1": 0.15384615384615385,
+        "balanced_accuracy": 0.25,
+        "accuracy": 0.4444444444444444,
+        "per_class": {
+          "healthy": {
+            "precision": 0.4444444444444444,
+            "recall": 1.0,
+            "f1": 0.6153846153846154,
+            "support": 296
+          },
+          "leaf_blast": {
+            "precision": 0.0,
+            "recall": 0.0,
+            "f1": 0.0,
+            "support": 155
+          },
+          "brown_spot": {
+            "precision": 0.0,
+            "recall": 0.0,
+            "f1": 0.0,
+            "support": 103
+          },
+          "hispa": {
+            "precision": 0.0,
+            "recall": 0.0,
+            "f1": 0.0,
+            "support": 112
+          }
+        },
+        "confusion": [
+          [
+            296,
+            0,
+            0,
+            0
+          ],
+          [
+            155,
+            0,
+            0,
+            0
+          ],
+          [
+            103,
+            0,
+            0,
+            0
+          ],
+          [
+            112,
+            0,
+            0,
+            0
+          ]
+        ],
+        "n": 666
+      }
+    },
+    "summary": {
+      "macro_f1": {
+        "mean": 0.15371834811087148,
+        "std": 7.144557800143143e-05
+      },
+      "balanced_accuracy": {
+        "mean": 0.25,
+        "std": 0.0
+      },
+      "accuracy": {
+        "mean": 0.44391137764451105,
+        "std": 0.00029799340029981053
+      }
+    }
+  },
+  "per_round_validation": {
+    "rounds": {
+      "1": {
+        "macro_f1": 0.15320910973084886,
+        "balanced_accuracy": 0.25,
+        "accuracy": 0.4417910447761194,
+        "per_class": {
+          "healthy": {
+            "precision": 0.4417910447761194,
+            "recall": 1.0,
+            "f1": 0.6128364389233955,
+            "support": 148
+          },
+          "leaf_blast": {
+            "precision": 0.0,
+            "recall": 0.0,
+            "f1": 0.0,
+            "support": 78
+          },
+          "brown_spot": {
+            "precision": 0.0,
+            "recall": 0.0,
+            "f1": 0.0,
+            "support": 52
+          },
+          "hispa": {
+            "precision": 0.0,
+            "recall": 0.0,
+            "f1": 0.0,
+            "support": 57
+          }
+        },
+        "confusion": [
+          [
+            148,
+            0,
+            0,
+            0
+          ],
+          [
+            78,
+            0,
+            0,
+            0
+          ],
+          [
+            52,
+            0,
+            0,
+            0
+          ],
+          [
+            57,
+            0,
+            0,
+            0
+          ]
+        ],
+        "n": 335
+      },
+      "2": {
+        "macro_f1": 0.15352697095435686,
+        "balanced_accuracy": 0.25,
+        "accuracy": 0.4431137724550898,
+        "per_class": {
+          "healthy": {
+            "precision": 0.4431137724550898,
+            "recall": 1.0,
+            "f1": 0.6141078838174274,
+            "support": 148
+          },
+          "leaf_blast": {
+            "precision": 0.0,
+            "recall": 0.0,
+            "f1": 0.0,
+            "support": 78
+          },
+          "brown_spot": {
+            "precision": 0.0,
+            "recall": 0.0,
+            "f1": 0.0,
+            "support": 52
+          },
+          "hispa": {
+            "precision": 0.0,
+            "recall": 0.0,
+            "f1": 0.0,
+            "support": 56
+          }
+        },
+        "confusion": [
+          [
+            148,
+            0,
+            0,
+            0
+          ],
+          [
+            78,
+            0,
+            0,
+            0
+          ],
+          [
+            52,
+            0,
+            0,
+            0
+          ],
+          [
+            56,
+            0,
+            0,
+            0
+          ]
+        ],
+        "n": 334
+      },
+      "3": {
+        "macro_f1": 0.15384615384615385,
+        "balanced_accuracy": 0.25,
+        "accuracy": 0.4444444444444444,
+        "per_class": {
+          "healthy": {
+            "precision": 0.4444444444444444,
+            "recall": 1.0,
+            "f1": 0.6153846153846154,
+            "support": 148
+          },
+          "leaf_blast": {
+            "precision": 0.0,
+            "recall": 0.0,
+            "f1": 0.0,
+            "support": 77
+          },
+          "brown_spot": {
+            "precision": 0.0,
+            "recall": 0.0,
+            "f1": 0.0,
+            "support": 52
+          },
+          "hispa": {
+            "precision": 0.0,
+            "recall": 0.0,
+            "f1": 0.0,
+            "support": 56
+          }
+        },
+        "confusion": [
+          [
+            148,
+            0,
+            0,
+            0
+          ],
+          [
+            77,
+            0,
+            0,
+            0
+          ],
+          [
+            52,
+            0,
+            0,
+            0
+          ],
+          [
+            56,
+            0,
+            0,
+            0
+          ]
+        ],
+        "n": 333
+      },
+      "4": {
+        "macro_f1": 0.15352697095435686,
+        "balanced_accuracy": 0.25,
+        "accuracy": 0.4431137724550898,
+        "per_class": {
+          "healthy": {
+            "precision": 0.4431137724550898,
+            "recall": 1.0,
+            "f1": 0.6141078838174274,
+            "support": 148
+          },
+          "leaf_blast": {
+            "precision": 0.0,
+            "recall": 0.0,
+            "f1": 0.0,
+            "support": 78
+          },
+          "brown_spot": {
+            "precision": 0.0,
+            "recall": 0.0,
+            "f1": 0.0,
+            "support": 52
+          },
+          "hispa": {
+            "precision": 0.0,
+            "recall": 0.0,
+            "f1": 0.0,
+            "support": 56
+          }
+        },
+        "confusion": [
+          [
+            148,
+            0,
+            0,
+            0
+          ],
+          [
+            78,
+            0,
+            0,
+            0
+          ],
+          [
+            52,
+            0,
+            0,
+            0
+          ],
+          [
+            56,
+            0,
+            0,
+            0
+          ]
+        ],
+        "n": 334
+      },
+      "5": {
+        "macro_f1": 0.15352697095435686,
+        "balanced_accuracy": 0.25,
+        "accuracy": 0.4431137724550898,
+        "per_class": {
+          "healthy": {
+            "precision": 0.4431137724550898,
+            "recall": 1.0,
+            "f1": 0.6141078838174274,
+            "support": 148
+          },
+          "leaf_blast": {
+            "precision": 0.0,
+            "recall": 0.0,
+            "f1": 0.0,
+            "support": 78
+          },
+          "brown_spot": {
+            "precision": 0.0,
+            "recall": 0.0,
+            "f1": 0.0,
+            "support": 52
+          },
+          "hispa": {
+            "precision": 0.0,
+            "recall": 0.0,
+            "f1": 0.0,
+            "support": 56
+          }
+        },
+        "confusion": [
+          [
+            148,
+            0,
+            0,
+            0
+          ],
+          [
+            78,
+            0,
+            0,
+            0
+          ],
+          [
+            52,
+            0,
+            0,
+            0
+          ],
+          [
+            56,
+            0,
+            0,
+            0
+          ]
+        ],
+        "n": 334
+      }
+    },
+    "summary": {
+      "macro_f1": {
+        "mean": 0.15352723528801465,
+        "std": 0.00022522939776174823
+      },
+      "balanced_accuracy": {
+        "mean": 0.25,
+        "std": 0.0
+      },
+      "accuracy": {
+        "mean": 0.44311536131716667,
+        "std": 0.0009381209721504302
+      }
+    }
+  }
+}
