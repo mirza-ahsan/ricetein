@@ -19,10 +19,10 @@ htmlcov/
 .ipynb_checkpoints/
 
 # Data and caching
-data/raw/
+data/raw
 data/downloads/
 data/tmp/
-cache/
+cache
 *.zip
 *.tar
 *.tar.gz
