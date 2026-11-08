@@ -1,0 +1,9 @@
+[2026-11-08 13:38:29] [INFO] ============================================================
+[2026-11-08 13:38:29] [INFO] Run: stage4_random_prior
+[2026-11-08 13:38:29] [INFO] Folder: /home/aztrek/projects/ricetein/runs/stage4_random_prior
+[2026-11-08 13:38:29] [INFO] Code version: 4a9f52b
+[2026-11-08 13:38:29] [INFO] GPU: NVIDIA GeForce RTX 4060 (7.68 GB)
+[2026-11-08 13:38:29] [INFO] ============================================================
+[2026-11-08 13:38:29] [INFO] Saved predictions.csv
+[2026-11-08 13:38:45] [INFO] Saved metrics.json
+[2026-11-08 13:38:45] [INFO] Run finished in 15.37s (status: completed); saved record.json
