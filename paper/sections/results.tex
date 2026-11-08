@@ -44,7 +44,9 @@ hispa diagnostic.
 
 \subsection{Qualitative Results and Error Analysis}
 Confusion matrices in Fig.~\ref{fig:phase4-confusion} identify recurring
-class confusions across the core models. Fig.~\ref{fig:phase4-predictions}
+class confusions across the core models.
+\PhaseFourInput{phase4_errors}
+Fig.~\ref{fig:phase4-predictions}
 shows correct and incorrect predictions for each true class, together with a
 fixed-seed random sample. The examples describe model behaviour; they are not an
 independent estimate of test performance. We include failures rather than
@@ -67,8 +69,8 @@ photograph contributes once to each method.}
 \includegraphics[width=\textwidth,height=0.8\textheight,keepaspectratio]{../results/figures/phase4_predictions.png}%
 }{\fbox{\parbox{0.9\textwidth}{Draft: prediction examples await the frozen attention-model test predictions.}}}
 \caption{Attention-MIL prediction examples, grouped by true class. For each
-class, the display selects up to three most confident correct predictions,
-three most confident errors, and three random examples (seed $2026$), retaining
+class, the display selects the most confident correct prediction,
+the most confident error, and one random example (seed $2026$), retaining
 overlap between these sets. Confidence is the maximum predicted class
 probability. Image labels distinguish truth, prediction and selection category;
 confidence does not imply calibrated diagnostic certainty.}
@@ -93,21 +95,20 @@ relative attention, not a pixel-level disease probability.}
 This draft makes no attention-localisation claim.}
 
 \subsection{Computational Performance}
-Table~\ref{tab:phase4-cost} reports available parameter, timing, memory and
-storage measurements with their hardware and measurement boundaries. Frozen
+Table~\ref{tab:phase4-cost} reports parameter counts, selected final-fit
+durations, memory and checkpoint size. Table~\ref{tab:phase4-latency} reports
+measured prediction latency with hardware and timing boundaries identified. Frozen
 encoder parameters are distinguished from trainable head parameters. Cached-head
-prediction excludes image decoding and descriptor extraction and must not be
-read as end-to-end inference latency. Reported training durations refer to the
+prediction includes loading unaugmented descriptors and producing probabilities,
+but excludes raw-image decoding, tiling and encoder extraction. Whole-image
+prediction includes image preparation and the network. Neither measurement is a
+full evaluation of tiled end-to-end deployment. The timing sample uses $100$
+fixed round-one training photographs and excludes three warm-up runs; CPU and
+GPU paths are reported separately where implemented. Reported training durations refer to the
 specified completed fits; concurrent workloads, interrupted attempts and
 hardware differences limit direct wall-time comparisons.
 \PhaseFourInput{phase4_cost}
 \PhaseFourInput{phase4_latency}
-The latency measurements in Table~\ref{tab:phase4-latency} use the same fixed
-100 primary training photographs for each method, with three warm-up observations
-excluded. Whole-image timings include raw-image decoding, preprocessing and
-classification. MIL and probe timings include reading saved descriptors and the
-decision stage; they exclude tiling and frozen-encoder computation. These timing
-boundaries differ and must not be interpreted as an end-to-end speed comparison.
 Full tiled-encoder latency remains part of the deferred cost study.
 
 \subsection{Results Summary and Scope}

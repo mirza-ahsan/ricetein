@@ -33,7 +33,7 @@ Course project at FAST School of Computing, FAST-NUCES Lahore, and the basis of 
 | Phase 4: Experiments and Results | In progress |
 | Final paper | Broader experiments and Discussion/Conclusion deferred to the November 22 final |
 | Environment (local machine + Kaggle GPUs) | Done and verified |
-| Experiments | Stages 0–4 complete (3,334 eligible primary photos). E1 tile and whole-photo caches extracted. Deadline priority: full-budget core MIL/probe comparisons locally and complete 224 px architecture comparisons on Kaggle. Other settings, ablations, partition-order and Paddy evaluation are deferred. See `manuals/stages3-7.md` and `docs/logbook.md`. |
+| Experiments | Stages 0–4 complete (3,334 eligible primary photos). All 60 whole-image fits, both complete probe searches, all 120 MIL tuning trials and 15 headline MIL final fits finished. The nine-method core evaluation and submission assembly are in progress. Other settings, ablations, partition-order and Paddy evaluation remain deferred. See `manuals/stages3-7.md` and `docs/logbook.md`. |
 
 ---
 
