@@ -30,10 +30,10 @@ Course project at FAST School of Computing, FAST-NUCES Lahore, and the basis of 
 | Phase 1: Dataset Description | Submitted (`deliverables/phase1/`) |
 | Phase 2: Introduction and Literature Review | Submitted (`deliverables/phase2/`) |
 | Phase 3: Methodology and Experimental Setup | Final (`deliverables/phase3/`) |
-| Phase 4: Experiments and Results | In progress |
+| Phase 4: Experiments and Results | Core-study PDF and notebook ready locally in `submission/phase4/`; not uploaded to the course portal |
 | Final paper | Broader experiments and Discussion/Conclusion deferred to the November 22 final |
 | Environment (local machine + Kaggle GPUs) | Done and verified |
-| Experiments | Stages 0–4 complete (3,334 eligible primary photos). All 60 whole-image fits, both complete probe searches, all 120 MIL tuning trials and 15 headline MIL final fits finished. The nine-method core evaluation and submission assembly are in progress. Other settings, ablations, partition-order and Paddy evaluation remain deferred. See `manuals/stages3-7.md` and `docs/logbook.md`. |
+| Experiments | Stages 0–4 and the scoped nine-method core study are complete (3,334 eligible primary photos). Best mean test macro-F1: Swin-T 83.7 ± 1.3%; attention MIL: 82.4 ± 2.0%. Five rounds and original tuning budgets retained. Other settings, ablations, stability seeds, partition-order and Paddy evaluation remain deferred. See `manuals/phase4_submission.md` and `docs/logbook.md`. |
 
 ---
 

@@ -117,3 +117,8 @@ kaggle/kernels/*/*.ipynb
 !kaggle/kernels/00-smoke/*.ipynb
 !kaggle/kernels/00-skeleton/*.ipynb
 
+# Local submission files containing dataset photographs; source/metrics stay tracked.
+results/figures/phase4_predictions.png
+results/figures/phase4_attention.png
+results/tables/phase4_computational_progress.json
+submission/phase4/
