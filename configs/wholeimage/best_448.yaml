@@ -1,0 +1,5 @@
+extends: recipe.yaml
+wholeimage:
+  model: null  # src.stage5 resolves from five-round 224px no-Otsu validation; saved in each run record
+  size: 448
+  otsu: false

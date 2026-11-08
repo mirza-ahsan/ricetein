@@ -1,0 +1,19 @@
+# ===================================================================
+# configs/embed/tiling.yaml: shared settings of every Stage 6 cache (handbook Stage 6)
+# ===================================================================
+# Each cache file extends this one and sets its name and encoder (plus what it changes).
+# ===================================================================
+extends: ../inventory.yaml           # inventory files and the pixel-scale decision
+
+augment:                             # versions 1-7: one whole-photo change each, then re-tiled
+  zoom: 0.15                         # zoom factor in [0.85, 1.15]
+  jitter: 0.2                        # brightness, contrast and saturation factors in [0.8, 1.2]
+  hue: 0.02                          # hue shift in [-0.02, 0.02]
+
+embed:
+  tile: 224                          # tile cut from the scaled photo
+  input: 224                         # tile size the encoder sees
+  scale: common                      # common: rescale_factor() first (Stage 1 decision); native: as stored
+  otsu: false
+  versions: 8                        # 1 clean + 7 augmented (training use only)
+  batch: 128                         # tiles per encoder pass

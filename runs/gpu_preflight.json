@@ -1,0 +1,90 @@
+{
+  "kind": "random-tensor diagnostic, no research scores",
+  "gpu": "NVIDIA GeForce RTX 4060",
+  "results": [
+    {
+      "model": "inceptionv3",
+      "size": 128,
+      "batch": 32,
+      "fits": true,
+      "peak_allocated_mb": 400.392578125
+    },
+    {
+      "model": "inceptionv3",
+      "size": 224,
+      "batch": 32,
+      "fits": true,
+      "peak_allocated_mb": 1004.654296875
+    },
+    {
+      "model": "inceptionv3",
+      "size": 448,
+      "batch": 16,
+      "fits": true,
+      "peak_allocated_mb": 2038.755859375
+    },
+    {
+      "model": "efficientnetv2s",
+      "size": 128,
+      "batch": 32,
+      "fits": true,
+      "peak_allocated_mb": 927.76611328125
+    },
+    {
+      "model": "efficientnetv2s",
+      "size": 224,
+      "batch": 32,
+      "fits": true,
+      "peak_allocated_mb": 2581.3408203125
+    },
+    {
+      "model": "efficientnetv2s",
+      "size": 448,
+      "batch": 16,
+      "fits": true,
+      "peak_allocated_mb": 4899.0908203125
+    },
+    {
+      "model": "convnext_tiny",
+      "size": 128,
+      "batch": 32,
+      "fits": true,
+      "peak_allocated_mb": 844.2431640625
+    },
+    {
+      "model": "convnext_tiny",
+      "size": 224,
+      "batch": 32,
+      "fits": true,
+      "peak_allocated_mb": 2100.927734375
+    },
+    {
+      "model": "convnext_tiny",
+      "size": 448,
+      "batch": 16,
+      "fits": true,
+      "peak_allocated_mb": 4030.45703125
+    },
+    {
+      "model": "swin_tiny",
+      "size": 128,
+      "batch": 32,
+      "fits": true,
+      "peak_allocated_mb": 812.26708984375
+    },
+    {
+      "model": "swin_tiny",
+      "size": 224,
+      "batch": 32,
+      "fits": true,
+      "peak_allocated_mb": 2353.95068359375
+    },
+    {
+      "model": "swin_tiny",
+      "size": 448,
+      "batch": 16,
+      "fits": true,
+      "peak_allocated_mb": 4520.34521484375
+    }
+  ]
+}

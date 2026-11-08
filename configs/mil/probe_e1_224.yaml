@@ -1,0 +1,10 @@
+extends: ../split.yaml
+probe:
+  name: e1_224
+  cache: e1_wholephoto
+  size: 224
+  sizes: [224, 512]
+  versions: 8
+  descriptor: cls
+  # L2 penalty strength; sklearn C is its reciprocal.
+  l2_strengths: [0.001, 0.01, 0.1, 1.0, 10.0, 100.0]

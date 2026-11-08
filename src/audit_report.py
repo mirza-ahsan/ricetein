@@ -33,7 +33,7 @@ def background_section(config: dict[str, Any]) -> str:
     settings = config["background"]
     text = ("## 1. Backgrounds (2a)\n\n"
             f"Sample: {settings['per_class']} random photos per class (seed {config['seed']}), frozen in "
-            f"`{settings['sample_file']}`. Two team members label every photo alone, in their own shuffled "
+            f"`{settings['sample_file']}`. Two raters label every photo alone, in their own shuffled "
             "order, without seeing its class: plain or cluttered, plus several leaves, hand, strong shadow. "
             "Disagreements on the background are settled together; both original labels are kept.\n\n")
     result = background_audit.results(config)
@@ -65,7 +65,7 @@ def duplicates_section(config: dict[str, Any]) -> str:
             f"Automatic check: SIFT keypoints (photos at {check['long_side']} px), ratio test "
             f"{check['ratio']}, each keypoint used once, RANSAC similarity transform (tolerance "
             f"{check['ransac_px']} px, scale {check['min_scale']}-{check['max_scale']}x, also against the "
-            f"mirrored photo); a pair passes with >= {check['min_inliers']} distinct inliers. People review "
+            f"mirrored photo); a pair passes with >= {check['min_inliers']} distinct inliers. Raters review "
             "every "
             f"passed pair plus {settings['rejected_sample']} random rejected pairs per comparison, blind to "
             "class and check result (deviation from \"review every flagged pair\": handbook §24, "
@@ -99,7 +99,10 @@ def duplicates_section(config: dict[str, Any]) -> str:
     kappa = "n/a" if result["kappa"] is None else f"{result['kappa']:.2f}"
     return text + (
         f"Reviewers {first} and {second}: Cohen's kappa {kappa}; "
-        f"{int(pairs['settled'].sum())} disagreements settled together."
+        f"{int(pairs['settled'].sum())} disagreements adjudicated. "
+        "Duplicate disagreements were adjudicated by model_rater_c with Ahsan's approval; original verdicts are "
+        "preserved. Protocol and high-resolution rechecks: "
+        "`data/duplicate_review/adjudication_protocol.json`."
         f"{review_tool.model_note(config, [first, second])}\n\n"
         + md_table(outcome.reset_index())
         + "\n\nWhat the automatic check misses: " + "; ".join(misses) + ".\n\n"
@@ -114,7 +117,7 @@ def duplicates_section(config: dict[str, Any]) -> str:
 def label_section(config: dict[str, Any]) -> str:
     settings = config["label_check"]
     text = ("## 3. Label sanity check (2d)\n\n"
-            f"Each team member looks at their own {settings['per_class']} random photos per class with the "
+            f"Each configured checker looks at {settings['per_class']} random photos per class with the "
             "label shown, and says whether it looks right, looks like another class, or is unclear. "
             "No label is changed: the main results always use the original labels.\n\n")
     result = label_check.results(config)

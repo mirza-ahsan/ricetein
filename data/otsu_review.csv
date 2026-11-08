@@ -1,0 +1,51 @@
+photo_id,rater,rater_type,retained_shadow,removed_leaf,failure,note,reviewed_at
+BrownSpot/IMG_20190420_194501.jpg,model_rater_c,AI model,True,False,True,conspicuous connected shadow remains,2026-11-08T08:20:30+00:00
+BrownSpot/IMG_20190420_190225.jpg,model_rater_c,AI model,False,False,False,no clear failure at review scale,2026-11-08T08:20:30+00:00
+LeafBlast/IMG_20190419_132259.jpg,model_rater_c,AI model,False,False,False,no clear failure at review scale,2026-11-08T08:20:30+00:00
+LeafBlast/IMG_20190419_132023.jpg,model_rater_c,AI model,False,False,False,no clear failure at review scale,2026-11-08T08:20:30+00:00
+Hispa/IMG_20190419_172810.jpg,model_rater_c,AI model,True,False,True,conspicuous connected shadow remains,2026-11-08T08:20:30+00:00
+LeafBlast/IMG_20190419_135000.jpg,model_rater_c,AI model,True,False,True,conspicuous connected shadow remains,2026-11-08T08:20:30+00:00
+BrownSpot/IMG_20190420_194828.jpg,model_rater_c,AI model,False,False,False,no clear failure at review scale,2026-11-08T08:20:30+00:00
+Healthy/IMG_20190424_130807.jpg,model_rater_c,AI model,True,False,True,conspicuous connected shadow remains,2026-11-08T08:20:30+00:00
+BrownSpot/IMG_20190420_194605.jpg,model_rater_c,AI model,False,False,False,no clear failure at review scale,2026-11-08T08:20:30+00:00
+Healthy/IMG_20190419_140001.jpg,model_rater_c,AI model,False,False,False,no clear failure at review scale,2026-11-08T08:20:30+00:00
+Healthy/IMG_20190424_130646.jpg,model_rater_c,AI model,False,False,False,no clear failure at review scale,2026-11-08T08:20:30+00:00
+LeafBlast/IMG_20190419_112244.jpg,model_rater_c,AI model,False,True,True,visible leaf or pale symptom material removed,2026-11-08T08:20:30+00:00
+Healthy/IMG_20190424_132052.jpg,model_rater_c,AI model,False,False,False,no clear failure at review scale,2026-11-08T08:20:30+00:00
+Healthy/IMG_20190419_141144.jpg,model_rater_c,AI model,True,False,True,conspicuous connected shadow remains,2026-11-08T08:20:30+00:00
+Hispa/IMG_20190424_131808.jpg,model_rater_c,AI model,False,True,True,visible leaf or pale symptom material removed,2026-11-08T08:20:30+00:00
+Healthy/IMG_20190419_171250.jpg,model_rater_c,AI model,True,False,True,conspicuous connected shadow remains,2026-11-08T08:20:30+00:00
+BrownSpot/IMG_20190420_190653.jpg,model_rater_c,AI model,False,False,False,no clear failure at review scale,2026-11-08T08:20:30+00:00
+BrownSpot/IMG_20190420_185608.jpg,model_rater_c,AI model,False,False,False,no clear failure at review scale,2026-11-08T08:20:30+00:00
+Hispa/IMG_20190419_134839.jpg,model_rater_c,AI model,False,False,False,no clear failure at review scale,2026-11-08T08:20:30+00:00
+Hispa/IMG_20190419_144909.jpg,model_rater_c,AI model,False,False,False,no clear failure at review scale,2026-11-08T08:20:30+00:00
+BrownSpot/IMG_20190419_161758.jpg,model_rater_c,AI model,True,False,True,conspicuous connected shadow remains,2026-11-08T08:20:30+00:00
+Healthy/IMG_20190424_132057.jpg,model_rater_c,AI model,False,False,False,no clear failure at review scale,2026-11-08T08:20:30+00:00
+LeafBlast/IMG_20190419_112538.jpg,model_rater_c,AI model,False,True,True,visible leaf or pale symptom material removed,2026-11-08T08:20:30+00:00
+Hispa/IMG_20190419_123903.jpg,model_rater_c,AI model,False,False,False,no clear failure at review scale,2026-11-08T08:20:30+00:00
+Hispa/IMG_20190419_140107.jpg,model_rater_c,AI model,False,False,False,no clear failure at review scale,2026-11-08T08:20:30+00:00
+Healthy/IMG_20190419_134619.jpg,model_rater_c,AI model,False,False,False,no clear failure at review scale,2026-11-08T08:20:30+00:00
+Hispa/IMG_20190419_094254.jpg,model_rater_c,AI model,True,False,True,conspicuous connected shadow remains,2026-11-08T08:20:30+00:00
+BrownSpot/IMG_20190419_113238.jpg,model_rater_c,AI model,True,False,True,conspicuous connected shadow remains,2026-11-08T08:20:30+00:00
+Healthy/IMG_20190419_100054.jpg,model_rater_c,AI model,True,False,True,conspicuous connected shadow remains,2026-11-08T08:20:30+00:00
+LeafBlast/IMG_20190419_172007.jpg,model_rater_c,AI model,True,False,True,conspicuous connected shadow remains,2026-11-08T08:20:30+00:00
+BrownSpot/IMG_20190421_200114.jpg,model_rater_c,AI model,False,False,False,no clear failure at review scale,2026-11-08T08:20:30+00:00
+BrownSpot/IMG_20190420_190403.jpg,model_rater_c,AI model,False,False,False,no clear failure at review scale,2026-11-08T08:20:30+00:00
+BrownSpot/IMG_20190419_103508.jpg,model_rater_c,AI model,False,False,False,no clear failure at review scale,2026-11-08T08:20:30+00:00
+LeafBlast/IMG_20190419_175430.jpg,model_rater_c,AI model,False,False,False,no clear failure at review scale,2026-11-08T08:20:30+00:00
+Healthy/IMG_20190419_145405.jpg,model_rater_c,AI model,True,False,True,conspicuous connected shadow remains,2026-11-08T08:20:30+00:00
+Healthy/IMG_20190419_100208.jpg,model_rater_c,AI model,False,True,True,visible leaf or pale symptom material removed,2026-11-08T08:20:30+00:00
+LeafBlast/IMG_3084.jpg,model_rater_c,AI model,False,False,False,no clear failure at review scale,2026-11-08T08:20:30+00:00
+Hispa/IMG_20190419_103423.jpg,model_rater_c,AI model,False,False,False,no clear failure at review scale,2026-11-08T08:20:30+00:00
+Healthy/IMG_20190419_172200.jpg,model_rater_c,AI model,False,False,False,no clear failure at review scale,2026-11-08T08:20:30+00:00
+LeafBlast/IMG_20190419_135929.jpg,model_rater_c,AI model,False,True,True,visible leaf or pale symptom material removed,2026-11-08T08:20:30+00:00
+Healthy/IMG_20190424_132503.jpg,model_rater_c,AI model,False,False,False,no clear failure at review scale,2026-11-08T08:20:30+00:00
+Healthy/IMG_20190419_173858.jpg,model_rater_c,AI model,True,False,True,conspicuous connected shadow remains,2026-11-08T08:20:30+00:00
+Hispa/IMG_20190419_173018.jpg,model_rater_c,AI model,True,False,True,conspicuous connected shadow remains,2026-11-08T08:20:30+00:00
+Hispa/IMG_20190419_115032.jpg,model_rater_c,AI model,True,False,True,conspicuous connected shadow remains,2026-11-08T08:20:30+00:00
+BrownSpot/IMG_20190419_114429.jpg,model_rater_c,AI model,False,False,False,no clear failure at review scale,2026-11-08T08:20:30+00:00
+Healthy/IMG_20190419_145007.jpg,model_rater_c,AI model,False,False,False,no clear failure at review scale,2026-11-08T08:20:30+00:00
+Healthy/IMG_20190424_131417.jpg,model_rater_c,AI model,True,False,True,conspicuous connected shadow remains,2026-11-08T08:20:30+00:00
+Hispa/IMG_20190419_144654.jpg,model_rater_c,AI model,True,False,True,conspicuous connected shadow remains,2026-11-08T08:20:30+00:00
+Healthy/IMG_20190424_133146.jpg,model_rater_c,AI model,False,False,False,no clear failure at review scale,2026-11-08T08:20:30+00:00
+Healthy/IMG_20190424_130008.jpg,model_rater_c,AI model,True,False,True,conspicuous connected shadow remains,2026-11-08T08:20:30+00:00

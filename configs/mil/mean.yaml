@@ -1,0 +1,5 @@
+extends: search_space.yaml
+mil:
+  name: mean
+  aggregator: mean
+  tuned_from: mean

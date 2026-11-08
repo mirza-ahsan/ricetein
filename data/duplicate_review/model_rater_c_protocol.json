@@ -1,0 +1,20 @@
+{
+  "rater": "model_rater_c",
+  "type": "AI model",
+  "items": 575,
+  "view": "blinded side-by-side contact sheets; 250px previews and 800px detail for uncertain pairs",
+  "independent": "Completed before opening the model_rater_b verdicts or automatic scores. Existing aggregate counts were known from project review.",
+  "timestamp": "reviewed_at records one batch export after visual review, not per-photo times",
+  "queue_sha256": "864dbe87a58872f45d7157e59d4b5e76e850f4890a6cc65d51fc41509beea942",
+  "detail_items": [
+    29,
+    46,
+    58,
+    253,
+    264,
+    309,
+    420,
+    432,
+    499
+  ]
+}

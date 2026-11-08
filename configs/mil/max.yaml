@@ -1,0 +1,5 @@
+extends: search_space.yaml
+mil:
+  name: max
+  aggregator: max
+  tuned_from: max

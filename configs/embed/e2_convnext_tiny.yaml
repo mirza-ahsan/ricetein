@@ -1,0 +1,5 @@
+extends: tiling.yaml
+
+embed:
+  name: e2_convnext_tiny
+  encoder: E2

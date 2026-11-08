@@ -79,6 +79,14 @@ def pinned_pretrained(repo_id: str, revision: str) -> tuple[str, dict[str, str]]
     return source, {}
 
 
+def pinned_snapshot(repo_id: str, revision: str) -> str:
+    """Pinned snapshot for timm too, with the same offline Kaggle revision check as DINO."""
+    from huggingface_hub import snapshot_download
+
+    source, kwargs = pinned_pretrained(repo_id, revision)
+    return source if source != repo_id else snapshot_download(repo_id, **kwargs)
+
+
 def code_dir() -> Path:
     found = find_kaggle_input(CODE_DATASET_SLUG)
     if found is None:

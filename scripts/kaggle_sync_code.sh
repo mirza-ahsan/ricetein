@@ -30,6 +30,10 @@ find "$STAGE" -mindepth 1 -not -name "dataset-metadata.json" -delete
 for d in src configs splits; do
     [ -d "$d" ] && cp -r "$d" "$STAGE/"
 done
+# Small, committed inputs used by image caches and the common-scale geometry calibration.
+mkdir -p "$STAGE/data"
+cp data/inventory.csv data/pixel_scale_decision.json data/groups.csv data/label_conflicts.csv \
+    data/cross_dataset_overlap.csv data/duplicate_miss_rule.json "$STAGE/data/"
 cp .python-version "$STAGE/"   # setup_env() builds the Kaggle environment with this exact Python
 find "$STAGE" -name "__pycache__" -type d -prune -exec rm -rf {} +
 find "$STAGE" -name "*.pyc" -delete

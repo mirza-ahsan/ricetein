@@ -1,0 +1,6 @@
+extends: recipe.yaml
+
+wholeimage:
+  model: inceptionv3
+  size: 224
+  otsu: false

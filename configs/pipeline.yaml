@@ -1,0 +1,5 @@
+extends: base.yaml
+pipeline:
+  workers: 4
+  cpu_threads: 4
+  caches: [e1_dinov3_vitb16, wholephoto, e2_convnext_tiny, e3_dinov2_vitb14, e4_dinov3_vits16, e1_otsu, e1_tile448, e1_native]

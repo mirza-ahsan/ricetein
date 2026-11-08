@@ -1,0 +1,22 @@
+# The pre-declared search space, unchanged. Every aggregator receives 40 complete trials,
+# each scored by mean validation macro-F1 over all five rounds.
+extends: ../split.yaml
+search:
+  seed: 0
+  trials: 40
+  lr: [1.0e-5, 1.0e-3]
+  weight_decay: [1.0e-5, 1.0e-2]
+  width: [128, 256, 512]
+  dropout: [0.0, 0.1, 0.25, 0.5]
+  tile_dropout: [0.0, 0.15, 0.3, 0.5]
+  descriptor: [c, m, cm]
+mil:
+  cache: e1_dinov3_vitb16
+  versions: 8
+  batch: 16
+  max_epochs: 100
+  patience: 15
+  adam_eps: 1.0e-8
+  class_weighting: true
+  stability_seeds: [1, 2]
+  cpu_threads: 4

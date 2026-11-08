@@ -1,0 +1,19 @@
+{
+  "applied": true,
+  "added_pairs": 0,
+  "round1_pairs": 575,
+  "misses": {
+    "sampled": {
+      "cross": 2,
+      "primary": 200
+    },
+    "confirmed": {
+      "cross": 0,
+      "primary": 0
+    },
+    "lowest_inliers": {
+      "cross": "none",
+      "primary": "none"
+    }
+  }
+}

@@ -1,0 +1,6 @@
+extends: tiling.yaml
+
+embed:
+  name: e1_wholephoto
+  encoder: E1
+  whole_sizes: [224, 512]   # the whole photo, padded to square (Stage 7.1 reference)

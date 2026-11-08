@@ -1,0 +1,6 @@
+extends: tiling.yaml
+
+embed:
+  name: e1_native
+  encoder: E1
+  scale: native        # no rescale (declared 2026-11-07, evaluated on test)
