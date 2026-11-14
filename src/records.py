@@ -13,6 +13,7 @@ on Kaggle):
 
 from __future__ import annotations
 
+import ast
 import csv
 import json
 import logging
@@ -33,6 +34,12 @@ from src.kaggle_bootstrap import CODE_DATASET_SLUG, find_kaggle_input
 
 # What counts as "the code" for a run's code version (also checked by scripts/kaggle_*.sh).
 CODE_PATHS = ("src", "configs", "splits", "pyproject.toml", "uv.lock")
+
+# The module whose code produces a run's numbers, by run-name prefix. A completed run stays reusable
+# while that module and everything it imports are unchanged (handbook §24, 2026-11-14).
+RUN_MODULES = {"stage4": "src.sanity_baselines", "stage5": "src.train_wholeimage",
+               "stage7a": "src.linear_probe", "stage7": "src.train_mil"}
+BOOKKEEPING = {"src/records.py"}  # writes records and decides reuse; computes no score
 
 # Package versions written into every record (missing ones are recorded as None).
 TRACKED_PACKAGES = ("torch", "torchvision", "timm", "transformers", "numpy", "scikit-learn", "pandas")
@@ -57,6 +64,33 @@ def completed_run(name: str, artifacts: tuple[str, ...] = ("metrics.json", "pred
             and all((folder / artifact).exists() for artifact in artifacts))
 
 
+def source_files(module: str) -> list[str]:
+    """Repo-relative files of ``module`` and of every ``src`` module it imports, directly or not."""
+    seen: dict[str, str] = {}
+    todo = [module]
+    while todo:
+        name = todo.pop()
+        path = REPO_ROOT / f"{name.replace('.', '/')}.py"
+        if name in seen or not path.exists():
+            continue
+        seen[name] = str(path.relative_to(REPO_ROOT))
+        for node in ast.walk(ast.parse(path.read_text(encoding="utf-8"))):
+            if isinstance(node, ast.ImportFrom) and node.module and node.module.split(".")[0] == "src":
+                todo += [node.module, *(f"{node.module}.{alias.name}" for alias in node.names)]
+            elif isinstance(node, ast.Import):
+                todo += [alias.name for alias in node.names if alias.name.startswith("src.")]
+    return sorted(seen.values())
+
+
+def code_paths(name: str) -> tuple[str, ...]:
+    """What must be unchanged for run ``name`` to be reused. Settings and the split are compared
+    separately, so a known run kind only depends on the code it executes and the locked packages."""
+    module = RUN_MODULES.get(name.split("_")[0])
+    if module is None:
+        return CODE_PATHS
+    return (*(f for f in source_files(module) if f not in BOOKKEEPING), "pyproject.toml", "uv.lock")
+
+
 def reusable_run(name: str, config: Mapping[str, Any], checksum: str,
                  artifacts: tuple[str, ...] = ("metrics.json", "predictions.csv")) -> bool:
     """Completed runs may be reused only with the same settings, split and clean source code."""
@@ -71,7 +105,7 @@ def reusable_run(name: str, config: Mapping[str, Any], checksum: str,
     current = require_clean_code()
     if source != current:
         try:
-            differences = _git("diff", source, current, "--", *CODE_PATHS)
+            differences = _git("diff", source, current, "--", *code_paths(name))
         except Exception as exc:
             raise ValueError(f"{name}: cannot verify the previous code") from exc
         if differences:
