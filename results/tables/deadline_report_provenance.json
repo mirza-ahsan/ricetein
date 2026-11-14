@@ -1,0 +1,101 @@
+{
+  "experiment_code_version": "d44f65f",
+  "controller_commit": "8c28ca96ee738513af67677f1d6b80c7e64cc9b9",
+  "report_script_sha256": "4a7c7a9cc8b14fe575c658d931fd42e1af55db24ddca57fbe8675db7f0edd3a4",
+  "evaluation_plan_sha256": "c076d9bed7435e261c6e1c970b03c17a6bb73574d156ed6f335c6dfd8971e4ac",
+  "methods": [
+    {
+      "name": "inceptionv3_224",
+      "runs": [
+        "stage5_inceptionv3_224_lr0.0003_r1",
+        "stage5_inceptionv3_224_lr0.0003_r2",
+        "stage5_inceptionv3_224_lr0.0003_r3",
+        "stage5_inceptionv3_224_lr0.0003_r4",
+        "stage5_inceptionv3_224_lr0.0003_r5"
+      ]
+    },
+    {
+      "name": "efficientnetv2s_224",
+      "runs": [
+        "stage5_efficientnetv2s_224_lr0.0003_r1",
+        "stage5_efficientnetv2s_224_lr0.0003_r2",
+        "stage5_efficientnetv2s_224_lr0.0003_r3",
+        "stage5_efficientnetv2s_224_lr0.0003_r4",
+        "stage5_efficientnetv2s_224_lr0.0003_r5"
+      ]
+    },
+    {
+      "name": "convnext_tiny_224",
+      "runs": [
+        "stage5_convnext_tiny_224_lr0.0003_r1",
+        "stage5_convnext_tiny_224_lr0.0003_r2",
+        "stage5_convnext_tiny_224_lr0.0003_r3",
+        "stage5_convnext_tiny_224_lr0.0003_r4",
+        "stage5_convnext_tiny_224_lr0.0003_r5"
+      ]
+    },
+    {
+      "name": "swin_tiny_224",
+      "runs": [
+        "stage5_swin_tiny_224_lr3e-05_r1",
+        "stage5_swin_tiny_224_lr3e-05_r2",
+        "stage5_swin_tiny_224_lr3e-05_r3",
+        "stage5_swin_tiny_224_lr3e-05_r4",
+        "stage5_swin_tiny_224_lr3e-05_r5"
+      ]
+    },
+    {
+      "name": "probe_224",
+      "runs": [
+        "stage7a_probe_e1_224_l2100_r1",
+        "stage7a_probe_e1_224_l2100_r2",
+        "stage7a_probe_e1_224_l2100_r3",
+        "stage7a_probe_e1_224_l2100_r4",
+        "stage7a_probe_e1_224_l2100_r5"
+      ]
+    },
+    {
+      "name": "probe_512",
+      "runs": [
+        "stage7a_probe_e1_512_l2100_r1",
+        "stage7a_probe_e1_512_l2100_r2",
+        "stage7a_probe_e1_512_l2100_r3",
+        "stage7a_probe_e1_512_l2100_r4",
+        "stage7a_probe_e1_512_l2100_r5"
+      ]
+    },
+    {
+      "name": "mean",
+      "runs": [
+        "stage7_mean_r1",
+        "stage7_mean_r2",
+        "stage7_mean_r3",
+        "stage7_mean_r4",
+        "stage7_mean_r5"
+      ]
+    },
+    {
+      "name": "max",
+      "runs": [
+        "stage7_max_r1",
+        "stage7_max_r2",
+        "stage7_max_r3",
+        "stage7_max_r4",
+        "stage7_max_r5"
+      ]
+    },
+    {
+      "name": "attention",
+      "runs": [
+        "stage7_attention_r1",
+        "stage7_attention_r2",
+        "stage7_attention_r3",
+        "stage7_attention_r4",
+        "stage7_attention_r5"
+      ]
+    }
+  ],
+  "incomplete_whole_image_searches": [],
+  "evaluation_adapter_sha256": "e7e82509763c4dce384f1a4827b00efba849aee5a1f23ca25e59c67a18218cfc",
+  "evaluation_recovery": "first attempt failed before loader construction; original marker archived"
+}

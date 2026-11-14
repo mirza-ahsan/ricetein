@@ -1,0 +1,11 @@
+{
+  "code_version": "d44f65f",
+  "tuning_trials_each": 40,
+  "rounds": 5,
+  "deferred": [
+    "additional stability seeds",
+    "Stage 5 128/Otsu/448",
+    "alternative caches",
+    "Stages 8\u201310"
+  ]
+}

@@ -1,0 +1,9 @@
+[2026-11-08 18:16:44] [INFO] ============================================================
+[2026-11-08 18:16:44] [INFO] Run: stage7a_probe_e1_512_l20.01_r1
+[2026-11-08 18:16:44] [INFO] Folder: /home/aztrek/projects/ricetein/runs/stage7a_probe_e1_512_l20.01_r1
+[2026-11-08 18:16:44] [INFO] Code version: d44f65f
+[2026-11-08 18:16:44] [INFO] GPU: NVIDIA GeForce RTX 4060 (7.68 GB)
+[2026-11-08 18:16:44] [INFO] ============================================================
+[2026-11-08 18:16:56] [INFO] Saved predictions.csv
+[2026-11-08 18:16:56] [INFO] Saved metrics.json
+[2026-11-08 18:16:56] [INFO] Run finished in 11.73s (status: completed); saved record.json

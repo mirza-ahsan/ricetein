@@ -1,0 +1,13 @@
+{
+  "failure": "JSON serializes integer batch-size keys as strings; KeyError: 224",
+  "stage": "before test DataLoader construction or test image iteration",
+  "original_started_marker": {
+    "evaluation_code": "d44f65f",
+    "plan_sha256": "c076d9bed7435e261c6e1c970b03c17a6bb73574d156ed6f335c6dfd8971e4ac"
+  },
+  "frozen_plan_sha256": "c076d9bed7435e261c6e1c970b03c17a6bb73574d156ed6f335c6dfd8971e4ac",
+  "failure_log_sha256": "2fff1525cd029884d7f05dc4204957ba8fbca615564e66096304df18b5edcffb",
+  "recovery_script_sha256": "e7e82509763c4dce384f1a4827b00efba849aee5a1f23ca25e59c67a18218cfc",
+  "recorded_at": "2026-11-08T17:14:39.918927+00:00",
+  "training_or_selection_changed": false
+}

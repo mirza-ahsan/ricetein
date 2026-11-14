@@ -1,0 +1,8 @@
+{
+  "stage": "6",
+  "state": "interrupted",
+  "pid": 30411,
+  "updated_at": "2026-11-08T08:46:44.850815+00:00",
+  "code_version": "d44f65f",
+  "reason": "Deadline priority: E1 tile and whole-photo caches completed; deferred alternative cache extraction stopped."
+}
