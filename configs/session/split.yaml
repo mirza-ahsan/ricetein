@@ -1,0 +1,15 @@
+# ===================================================================
+# configs/session/split.yaml: the session-blocked sensitivity split (declared 2026-11-14)
+# ===================================================================
+# Same photos, fold rule and seed as the locked split; whole capture blocks stay together.
+# Every configs/session/ file reads this fold file instead of splits/folds.csv.
+# splits/folds.csv is never changed.
+# ===================================================================
+extends: ../split.yaml
+
+session:
+  max_gap_seconds: 60              # a pause longer than this starts a new capture block
+  source_folds: splits/folds.csv   # the locked split: gives the eligible photos and duplicate groups
+
+split_files:
+  folds: splits/session_blocked/folds.csv
