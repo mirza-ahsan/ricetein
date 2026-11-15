@@ -1,0 +1,10 @@
+# All eight shortcut controls on the session-blocked split (declared 2026-11-14).
+extends: ../shortcut.yaml
+
+split_files:
+  folds: splits/session_blocked/folds.csv
+
+shortcut:
+  tag: _session
+  baselines: [majority, random_prior, colour_only, background_only, properties_only, camera_only,
+              time_neighbour, background_strict]

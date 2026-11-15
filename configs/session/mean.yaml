@@ -1,0 +1,6 @@
+# mean pooling retrained on the session-blocked split with the settings chosen on the locked split.
+extends: ../mil/mean.yaml
+split_files:
+  folds: splits/session_blocked/folds.csv
+mil:
+  name: mean_session

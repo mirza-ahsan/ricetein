@@ -1,0 +1,9 @@
+# A second, equal 40-trial study per aggregator with the learning-rate range moved one decade up
+# (declared 2026-11-14): the best mean-pooling learning rate sat on the declared upper bound (1e-3).
+# The better of the two studies, by validation, is that aggregator's configuration.
+extends: attention.yaml
+search:
+  lr: [1.0e-4, 1.0e-2]
+mil:
+  name: attention_wide
+  tuned_from: attention_wide

@@ -1,0 +1,6 @@
+# max pooling retrained on the session-blocked split with the settings chosen on the locked split.
+extends: ../mil/max.yaml
+split_files:
+  folds: splits/session_blocked/folds.csv
+mil:
+  name: max_session
