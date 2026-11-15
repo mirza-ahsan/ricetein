@@ -1,0 +1,167 @@
+{
+  "source": "/home/aztrek/projects/ricetein/kaggle/outputs/deadline-whole-0",
+  "runs": [
+    {
+      "run": "stage5_convnext_tiny_224_lr0.0001_r2",
+      "artifacts_sha256": {
+        "record.json": "7d4ad924124606b18fca7e5e71b84a4364df69e8e96b02e578032b9cb1923243",
+        "metrics.json": "457c0a2304bbb2e25508b18c6f121d791a0d6d73b7363bbcb6cb446d457ecc09",
+        "predictions.csv": "2737b1670d363b0972e549d3ef2f0a669fdcb83022dca8a34997e658abb3333f",
+        "model.pt": "df6974aaff95e186dd8ee270ac7628036e2808cc74cacebe984ce128144444dc"
+      }
+    },
+    {
+      "run": "stage5_convnext_tiny_224_lr0.0001_r5",
+      "artifacts_sha256": {
+        "record.json": "6b444d205b1a975bd9c65d1d57d2fd7e335e5cf2d48c9a93800395be10a55315",
+        "metrics.json": "4eac4febe3316dadd9f43135b5d3e3186bcd7f7cd4a6a4c05147033d95078e93",
+        "predictions.csv": "800cbefd4d2697eac29b5664e3bc4986eb7c34d07e66689125eddeb475103f1b",
+        "model.pt": "44ea855f9e5dbaa0edc20687ec1309845538cdabce0b0e9ff2d2db17baf3786e"
+      }
+    },
+    {
+      "run": "stage5_convnext_tiny_224_lr0.0003_r3",
+      "artifacts_sha256": {
+        "record.json": "4aff15500c513693003ce75e107bd49469ffe7c28a980e8d61850eed7cd17061",
+        "metrics.json": "c13cbd4ecfcc043b57741847bcd590f56fe03eb16f04bb62b06e7f262e89d56e",
+        "predictions.csv": "8cf189155d5240cad360c1b241ec08c7810b47e2ee36040b95efd196bc8a9b7e",
+        "model.pt": "0397112d63e3a632870ef235df8585c7dd6e96c43e041c5a3a2dacef1ae4d568"
+      }
+    },
+    {
+      "run": "stage5_convnext_tiny_224_lr3e-05_r1",
+      "artifacts_sha256": {
+        "record.json": "b3ae5c821271106a8da6271a024a252cf2973b3f3689610df7116f362697902e",
+        "metrics.json": "6b57b2eca3e8b5b21fd4733db07c6b7424ccd5958236057cd3a59be1e8c0cef8",
+        "predictions.csv": "ecd2f0f7f66bb39edf728364d379fbc7de40f0763bc71ded705c6755c1960449",
+        "model.pt": "34e8cc589458d0f656e552e96301912449ecae64808d15502506e0b952c8daa0"
+      }
+    },
+    {
+      "run": "stage5_convnext_tiny_224_lr3e-05_r4",
+      "artifacts_sha256": {
+        "record.json": "19d6c3c61233f873d69ac9c411f57addc46846acc17be6c2e6f66ba0b438a392",
+        "metrics.json": "a0cdc62144cf251f1bca92fdd1fcf10bd2bab6d8b01f3fd03f9f5b67479b1175",
+        "predictions.csv": "d211dc5a2b4e5f9fd772f584635c6ec3d6f38b63290e0a7059674c6f7966c7fb",
+        "model.pt": "ba45149f29981f99346254068722fa7e63c54b9e37b8e732d21b682881914fde"
+      }
+    },
+    {
+      "run": "stage5_efficientnetv2s_224_lr0.0001_r2",
+      "artifacts_sha256": {
+        "record.json": "62225af5c138a7003d3f4fe28f76f512a429929d9478537b310d414129f8683a",
+        "metrics.json": "0cee180a1d19ee4743a143598cdf0e5cf9aa2ab2ba3f10a3ab66c370dfc5b8b5",
+        "predictions.csv": "eb6339d4d7b170567d57d782d8888c26acfbe42477afe8e05019c351676df663",
+        "model.pt": "e6f0ee14494bbb334a459aa9adba8ec2c09f93a6d2b31a40881f9a1a180bdb07"
+      }
+    },
+    {
+      "run": "stage5_efficientnetv2s_224_lr0.0001_r5",
+      "artifacts_sha256": {
+        "record.json": "44ad8111744842cdf53deac85364afdbbbb25ec2da305c0b9503fbe3a658b184",
+        "metrics.json": "80901ea4b841ad8d2764c6ede3368d8a117ec01554dc2101d8b6f93f82d89289",
+        "predictions.csv": "e14b22437467326e334a83c60962e3b0433130112c13b43009bb12787a75cff6",
+        "model.pt": "df74f4fc6ac533f1a4b09817fd0ec71061f4f49d9759fc89a6c86b4dd723bfea"
+      }
+    },
+    {
+      "run": "stage5_efficientnetv2s_224_lr0.0003_r3",
+      "artifacts_sha256": {
+        "record.json": "6d60483738b4637f53c04eeb290910c3bcf0c62c2a502737342e63528544586c",
+        "metrics.json": "d7265c5def6e7d5b57404a48160ab647a55fef18f9a12cfd57b559c04abd4f1f",
+        "predictions.csv": "52ec6ec83c4032c58f85edd7e0e85be338bb2ab3124ae1c4260ef0791a46783f",
+        "model.pt": "8c4ea181880b38a18d62cdc0e1bc8afb6161127225937dc9770cbf085bf06fda"
+      }
+    },
+    {
+      "run": "stage5_efficientnetv2s_224_lr3e-05_r1",
+      "artifacts_sha256": {
+        "record.json": "0f98bbddc215a79f2453b0abbcc1e1ba31dd7833a53a677f874c56ae43722b0d",
+        "metrics.json": "58938e5efc2e37fcd1c60baf70bbeb06a06bdd07eec1cbea28cfea40f8393c97",
+        "predictions.csv": "117d6236456aa6639cbddd6db23d8803cd001e6335b410c42e40913fde657d3d",
+        "model.pt": "4f6e84c0dd43e29d376a3639a3e71bef5186d97cd0307acfa73e763c0aa0a0ed"
+      }
+    },
+    {
+      "run": "stage5_efficientnetv2s_224_lr3e-05_r4",
+      "artifacts_sha256": {
+        "record.json": "243cabc9f19ac0b973ee6459136a9c684d0b57294a1fea2f5fa06d75ec3283bd",
+        "metrics.json": "4ff1baaf2efa454df13b7f97e3e5bb2d71e95bb863c3f6df634947b58f0b85f4",
+        "predictions.csv": "351b0e562828c5180e0fa01bffac53ce07b7dbe286dd015bc198e3312b086c09",
+        "model.pt": "8a70817c545525cae7292b7ac5f788fa05bdb761cc5449a5535b500424307c19"
+      }
+    },
+    {
+      "run": "stage5_inceptionv3_224_lr0.0001_r2",
+      "artifacts_sha256": {
+        "record.json": "e6ce69faa9fea365f61a84388070ff487549719f8556e81caa7c2205c830bb0b",
+        "metrics.json": "98db651231db486821cb6fe058e37c9d901ed58cd445b9969b152980e0167998",
+        "predictions.csv": "d2e8363c20f37eb53c3c92f869db1aa3ce23256436ea54f165fbd9cec48814a5",
+        "model.pt": "1a8c8defee075b43d5aade74b115e591fbd027a492cbde76dd574d718fd93177"
+      }
+    },
+    {
+      "run": "stage5_inceptionv3_224_lr0.0001_r5",
+      "artifacts_sha256": {
+        "record.json": "846b50354aec3e42cf4449f9ef595ed9f1cb728579db07833ad00a0d918d5fed",
+        "metrics.json": "f6678496e79372a845988679434b364b4187d36dbe8caa0a7afe016dfe6f859b",
+        "predictions.csv": "3224608c315b7836806cfdc13d476c1e612baee544329e552e86b36d6c5f3e8a",
+        "model.pt": "bcd038455e814389f183a92766e55254c1476d0f45a91cf69f059be8423489b0"
+      }
+    },
+    {
+      "run": "stage5_inceptionv3_224_lr0.0003_r3",
+      "artifacts_sha256": {
+        "record.json": "5edd16711c28b040dfbe999ff3a55adec71cbcecd49afd74792fc3a69a5ea211",
+        "metrics.json": "a1e8dfd06e07ce5c3f02108cbd8a97b85a78b5b1da58f3137447350051726cd4",
+        "predictions.csv": "593c37c251639909b22b247b0c4589d8035bc8121317c6ddfa6805015d3b5a24",
+        "model.pt": "7e0db83cdd550df063055557f29c1aa7234d7e7d97b2ca4fc08255819d34e488"
+      }
+    },
+    {
+      "run": "stage5_inceptionv3_224_lr3e-05_r1",
+      "artifacts_sha256": {
+        "record.json": "b8ba1463c9c8b3d75ce0397b4d99f88424a2719e5534859e4ef5ca2d94e1224a",
+        "metrics.json": "84012ee3e13a64bff97e9d92e58c497f15ad4e648ae73689647ee808ad84efe1",
+        "predictions.csv": "beb16bd99517f6b29d0aff54e6929d22a42f3c7a3845e4f8bad7ca35e0640193",
+        "model.pt": "3f7b037b6e8f085674a48510845b88f34814b5c867754f2feb61820c196b02c3"
+      }
+    },
+    {
+      "run": "stage5_inceptionv3_224_lr3e-05_r4",
+      "artifacts_sha256": {
+        "record.json": "40ff0d1f77353d71c3732effa0585ed3d4b230756252cdfe15399fb686073363",
+        "metrics.json": "16e5d270ea64d8dbdd33d564b228e37b6b22c59f8542a06b80137237c91da2fd",
+        "predictions.csv": "5cbd13940d607b81a561300988f0efc04d75c13ae282346a7c5c0fc217bfba3b",
+        "model.pt": "fd1888b23550b7f7f4bba9a9bb1b1682239e4e0d0c8aabbd53a8b35371dd62f2"
+      }
+    },
+    {
+      "run": "stage5_swin_tiny_224_lr0.0001_r2",
+      "artifacts_sha256": {
+        "record.json": "2bde2d5e26058498236f972d24adde4e8b358794b447a72cf1f48ade9a03d88d",
+        "metrics.json": "54284ce0fc427fd08e36dbd6af08b4ab76f189765b103a4e8d7fc74c4de2fa43",
+        "predictions.csv": "dc52e1d47a918eee4e73e8231432495e0c1b8e1fbdbc98baf3fce82c445b1fa9",
+        "model.pt": "883e7a40f2d749654fda69b84e64fdea4591582fa9942f7ebc23cd273ee55a4f"
+      }
+    },
+    {
+      "run": "stage5_swin_tiny_224_lr3e-05_r1",
+      "artifacts_sha256": {
+        "record.json": "61d02d330f77f696799609be77806bb8f59266a95717d02d1a673c3bf24f3b08",
+        "metrics.json": "efc1171370c58daf764bae84b8aeb1b87e1422bda2aa83969018cfa29082e1a2",
+        "predictions.csv": "e96f76c9d339476b44b71dfe37944a598011a718f9ff3dbf1191ced3912e9abe",
+        "model.pt": "8386825ff0072d77eebab0ea723adee16df0219d33ca9e4d8a130eb95d6f2cbf"
+      }
+    },
+    {
+      "run": "stage5_swin_tiny_224_lr3e-05_r4",
+      "artifacts_sha256": {
+        "record.json": "40472adadec3460606a22599577bd60dbc601ea5ff0ce9c18811e7b16d9903c7",
+        "metrics.json": "344c6fbfbb1c5949c5acf7f14bc0dbb8f733e62b451b72f602a6233fab5298b8",
+        "predictions.csv": "a138cd50bf8e839d954058911d8c5a7025b2cae8cca1ebf3c98c5e26ae0c32cc",
+        "model.pt": "a184e21b8738ed48a4ac697b4868546025afd8a8d1cf8e73e687a103a23a25b9"
+      }
+    }
+  ]
+}

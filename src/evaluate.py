@@ -7,6 +7,7 @@ any test score is computed. A started marker prevents concurrent evaluation or s
 from __future__ import annotations
 
 import argparse
+import copy
 import hashlib
 import json
 import pickle
@@ -61,10 +62,27 @@ def freeze_plan(names: list[str], path: Path) -> dict:
     return plan
 
 
+def restore_size_keys(config: dict) -> dict:
+    """A copy of a recorded Stage 5 config whose size tables are keyed by integers again.
+
+    record.json is JSON, which turns the integer keys of ``batch_size`` and of each model's
+    ``size_kwargs`` into strings; looked up by an integer size, the first raises and the second
+    silently returns nothing (a Swin model at 128 or 448 px would be built for 224 px).
+    """
+    config = copy.deepcopy(config)
+    whole = config["wholeimage"]
+    whole["batch_size"] = {int(size): batch for size, batch in whole["batch_size"].items()}
+    for spec in whole["models"].values():
+        if "size_kwargs" in spec:
+            spec["size_kwargs"] = {int(size): kwargs for size, kwargs in spec["size_kwargs"].items()}
+    return config
+
+
 def evaluate_stage5(run_dir, record):
     from src import train_wholeimage as tw
 
-    config, round_ = record["config"], record["config"]["round"]
+    config = restore_size_keys(record["config"])
+    round_ = config["round"]
     seed_everything(config["seed"], config["wholeimage"]["determinism"])
     folds, _ = read_folds(config)
     device = torch.device("cuda")

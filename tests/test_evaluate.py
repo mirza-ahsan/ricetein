@@ -63,3 +63,19 @@ def test_dirty_training_run_cannot_be_selected(setup):
     with pytest.raises(ValueError, match="untraceable"):
         ev.freeze_plan([folder.name], plan)
     assert not calls
+
+
+def test_recorded_stage5_config_gets_its_integer_size_keys_back():
+    """record.json stores size tables with string keys; evaluation must look them up by integer size."""
+    from src.config import load_config
+
+    config = load_config("configs/wholeimage/swin_tiny_128.yaml")
+    recorded = json.loads(json.dumps({**config, "lr": 3e-5, "round": 1}))
+    assert "224" in recorded["wholeimage"]["batch_size"]  # the failure of the first deadline evaluation
+    restored = ev.restore_size_keys(recorded)
+    whole = restored["wholeimage"]
+    assert whole["batch_size"] == config["wholeimage"]["batch_size"]
+    assert whole["models"]["swin_tiny"]["size_kwargs"][128] == {"img_size": 128, "window_size": 4}
+    assert whole["models"] == config["wholeimage"]["models"]
+    assert "224" in recorded["wholeimage"]["batch_size"]  # the record itself is not modified
+    assert ev.restore_size_keys(restored) == restored
