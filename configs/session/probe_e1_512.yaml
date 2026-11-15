@@ -1,0 +1,6 @@
+# The 512 px whole-photo probe refitted on the session-blocked split (L2 strength chosen on the locked split).
+extends: ../mil/probe_e1_512.yaml
+split_files:
+  folds: splits/session_blocked/folds.csv
+probe:
+  name: e1_512_session

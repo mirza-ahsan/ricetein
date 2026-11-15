@@ -1,0 +1,12 @@
+# The tile decision-maker trained on ONE whole-photo description per photo (224 px): the same head and the
+# same 40-trial search as mean / max / attention, so the gap to the tile models is the effect of tiling
+# alone (declared 2026-11-14). The bag is built by src.wholephoto_bags from the Stage 6 whole-photo cache.
+extends: search_space.yaml
+mil:
+  name: whole224
+  aggregator: mean            # with one tile per bag, mean, max and attention are the same function
+  tuned_from: whole224
+  cache: e1_whole224_bag
+whole_bag:
+  source: e1_wholephoto
+  size: 224

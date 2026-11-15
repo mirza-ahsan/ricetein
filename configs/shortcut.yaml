@@ -1,0 +1,9 @@
+# ===================================================================
+# configs/shortcut.yaml: the two extra shortcut controls on the locked split (declared 2026-11-14)
+# ===================================================================
+extends: sanity.yaml
+
+shortcut:
+  tag: ""                                         # run names: stage4b_<baseline><tag>
+  baselines: [time_neighbour, background_strict]  # the six Stage 4b baselines already exist for this split
+  histogram_cache: cache/shortcut_histograms.npz  # paper-pixel HSV histograms per photo (git-ignored)
