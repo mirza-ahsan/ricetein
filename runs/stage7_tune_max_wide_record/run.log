@@ -1,0 +1,48 @@
+[2026-11-15 21:35:34] [INFO] ============================================================
+[2026-11-15 21:35:34] [INFO] Run: stage7_tune_max_wide_record
+[2026-11-15 21:35:34] [INFO] Folder: /home/aztrek/projects/ricetein/runs/stage7_tune_max_wide_record
+[2026-11-15 21:35:34] [INFO] Code version: b2a6ce9
+[2026-11-15 21:35:34] [INFO] GPU: NVIDIA GeForce RTX 4060 (7.68 GB)
+[2026-11-15 21:35:34] [INFO] ============================================================
+[2026-11-15 21:43:05] [INFO] Epoch 000 -> lr: 0.0013, weight_decay: 0.0014, width: 128, dropout: 0.5000, tile_dropout: 0.1500, descriptor: c, mean_val_macro_f1: 0.8194
+[2026-11-15 21:52:58] [INFO] Epoch 001 -> lr: 0.0001, weight_decay: 0.0031, width: 512, dropout: 0.0000, tile_dropout: 0.3000, descriptor: cm, mean_val_macro_f1: 0.8158
+[2026-11-15 22:00:14] [INFO] Epoch 002 -> lr: 0.0008, weight_decay: 0.0005, width: 256, dropout: 0.1000, tile_dropout: 0.1500, descriptor: c, mean_val_macro_f1: 0.8276
+[2026-11-15 22:08:14] [INFO] Epoch 003 -> lr: 0.0004, weight_decay: 0.0001, width: 512, dropout: 0.5000, tile_dropout: 0.1500, descriptor: m, mean_val_macro_f1: 0.7955
+[2026-11-15 22:16:58] [INFO] Epoch 004 -> lr: 0.0002, weight_decay: 0.0001, width: 512, dropout: 0.5000, tile_dropout: 0.1500, descriptor: m, mean_val_macro_f1: 0.7962
+[2026-11-15 22:24:24] [INFO] Epoch 005 -> lr: 0.0004, weight_decay: 0.0002, width: 256, dropout: 0.5000, tile_dropout: 0.0000, descriptor: c, mean_val_macro_f1: 0.8222
+[2026-11-15 22:31:28] [INFO] Epoch 006 -> lr: 0.0015, weight_decay: 0.0000, width: 128, dropout: 0.2500, tile_dropout: 0.1500, descriptor: c, mean_val_macro_f1: 0.8262
+[2026-11-15 22:39:14] [INFO] Epoch 007 -> lr: 0.0025, weight_decay: 0.0001, width: 512, dropout: 0.1000, tile_dropout: 0.1500, descriptor: c, mean_val_macro_f1: 0.8322
+[2026-11-15 22:46:44] [INFO] Epoch 008 -> lr: 0.0021, weight_decay: 0.0001, width: 128, dropout: 0.2500, tile_dropout: 0.5000, descriptor: cm, mean_val_macro_f1: 0.7988
+[2026-11-15 22:53:47] [INFO] Epoch 009 -> lr: 0.0041, weight_decay: 0.0013, width: 256, dropout: 0.0000, tile_dropout: 0.3000, descriptor: c, mean_val_macro_f1: 0.8148
+[2026-11-15 23:04:58] [INFO] Epoch 010 -> lr: 0.0001, weight_decay: 0.0000, width: 512, dropout: 0.1000, tile_dropout: 0.1500, descriptor: c, mean_val_macro_f1: 0.8217
+[2026-11-15 23:09:29] [INFO] Epoch 011 -> lr: 0.0053, weight_decay: 0.0002, width: 512, dropout: 0.1000, tile_dropout: 0.5000, descriptor: c, mean_val_macro_f1: 0.7993
+[2026-11-15 23:17:06] [INFO] Epoch 012 -> lr: 0.0006, weight_decay: 0.0007, width: 256, dropout: 0.1000, tile_dropout: 0.1500, descriptor: c, mean_val_macro_f1: 0.8304
+[2026-11-15 23:24:01] [INFO] Epoch 013 -> lr: 0.0067, weight_decay: 0.0036, width: 256, dropout: 0.1000, tile_dropout: 0.1500, descriptor: c, mean_val_macro_f1: 0.8169
+[2026-11-15 23:29:30] [INFO] Epoch 014 -> lr: 0.0014, weight_decay: 0.0000, width: 512, dropout: 0.1000, tile_dropout: 0.1500, descriptor: c, mean_val_macro_f1: 0.8272
+[2026-11-15 23:36:34] [INFO] Epoch 015 -> lr: 0.0028, weight_decay: 0.0015, width: 512, dropout: 0.1000, tile_dropout: 0.1500, descriptor: c, mean_val_macro_f1: 0.8250
+[2026-11-15 23:47:30] [INFO] Epoch 016 -> lr: 0.0002, weight_decay: 0.0024, width: 256, dropout: 0.1000, tile_dropout: 0.0000, descriptor: m, mean_val_macro_f1: 0.8057
+[2026-11-15 23:57:20] [INFO] Epoch 017 -> lr: 0.0005, weight_decay: 0.0000, width: 512, dropout: 0.1000, tile_dropout: 0.1500, descriptor: cm, mean_val_macro_f1: 0.8348
+[2026-11-16 00:04:35] [INFO] Epoch 018 -> lr: 0.0005, weight_decay: 0.0000, width: 512, dropout: 0.1000, tile_dropout: 0.1500, descriptor: c, mean_val_macro_f1: 0.8351
+[2026-11-16 00:13:27] [INFO] Epoch 019 -> lr: 0.0006, weight_decay: 0.0000, width: 512, dropout: 0.2500, tile_dropout: 0.1500, descriptor: cm, mean_val_macro_f1: 0.8311
+[2026-11-16 00:21:30] [INFO] Epoch 020 -> lr: 0.0004, weight_decay: 0.0000, width: 512, dropout: 0.0000, tile_dropout: 0.5000, descriptor: cm, mean_val_macro_f1: 0.8076
+[2026-11-16 00:29:03] [INFO] Epoch 021 -> lr: 0.0005, weight_decay: 0.0000, width: 512, dropout: 0.1000, tile_dropout: 0.0000, descriptor: c, mean_val_macro_f1: 0.8381
+[2026-11-16 00:37:28] [INFO] Epoch 022 -> lr: 0.0005, weight_decay: 0.0000, width: 512, dropout: 0.1000, tile_dropout: 0.0000, descriptor: c, mean_val_macro_f1: 0.8417
+[2026-11-16 00:43:48] [INFO] Epoch 023 -> lr: 0.0009, weight_decay: 0.0000, width: 512, dropout: 0.1000, tile_dropout: 0.0000, descriptor: c, mean_val_macro_f1: 0.8348
+[2026-11-16 00:53:02] [INFO] Epoch 024 -> lr: 0.0006, weight_decay: 0.0000, width: 512, dropout: 0.1000, tile_dropout: 0.0000, descriptor: c, mean_val_macro_f1: 0.8381
+[2026-11-16 01:00:53] [INFO] Epoch 025 -> lr: 0.0003, weight_decay: 0.0000, width: 512, dropout: 0.1000, tile_dropout: 0.0000, descriptor: m, mean_val_macro_f1: 0.8205
+[2026-11-16 01:09:29] [INFO] Epoch 026 -> lr: 0.0003, weight_decay: 0.0003, width: 512, dropout: 0.1000, tile_dropout: 0.0000, descriptor: c, mean_val_macro_f1: 0.8346
+[2026-11-16 01:18:18] [INFO] Epoch 027 -> lr: 0.0009, weight_decay: 0.0001, width: 256, dropout: 0.1000, tile_dropout: 0.0000, descriptor: c, mean_val_macro_f1: 0.8426
+[2026-11-16 01:24:51] [INFO] Epoch 028 -> lr: 0.0021, weight_decay: 0.0000, width: 256, dropout: 0.1000, tile_dropout: 0.0000, descriptor: c, mean_val_macro_f1: 0.8296
+[2026-11-16 01:33:07] [INFO] Epoch 029 -> lr: 0.0004, weight_decay: 0.0001, width: 256, dropout: 0.1000, tile_dropout: 0.5000, descriptor: c, mean_val_macro_f1: 0.8165
+[2026-11-16 01:40:40] [INFO] Epoch 030 -> lr: 0.0008, weight_decay: 0.0001, width: 512, dropout: 0.1000, tile_dropout: 0.0000, descriptor: c, mean_val_macro_f1: 0.8413
+[2026-11-16 01:47:46] [INFO] Epoch 031 -> lr: 0.0007, weight_decay: 0.0002, width: 512, dropout: 0.1000, tile_dropout: 0.0000, descriptor: c, mean_val_macro_f1: 0.8460
+[2026-11-16 01:51:05] [INFO] Epoch 032 -> lr: 0.0010, weight_decay: 0.0001, width: 256, dropout: 0.2500, tile_dropout: 0.0000, descriptor: c, mean_val_macro_f1: 0.8348
+[2026-11-16 01:53:55] [INFO] Epoch 033 -> lr: 0.0006, weight_decay: 0.0002, width: 512, dropout: 0.1000, tile_dropout: 0.0000, descriptor: c, mean_val_macro_f1: 0.8315
+[2026-11-16 01:56:53] [INFO] Epoch 034 -> lr: 0.0020, weight_decay: 0.0001, width: 256, dropout: 0.1000, tile_dropout: 0.0000, descriptor: c, mean_val_macro_f1: 0.8289
+[2026-11-16 02:00:32] [INFO] Epoch 035 -> lr: 0.0008, weight_decay: 0.0007, width: 512, dropout: 0.0000, tile_dropout: 0.0000, descriptor: c, mean_val_macro_f1: 0.8399
+[2026-11-16 02:04:17] [INFO] Epoch 036 -> lr: 0.0004, weight_decay: 0.0000, width: 256, dropout: 0.1000, tile_dropout: 0.0000, descriptor: c, mean_val_macro_f1: 0.8405
+[2026-11-16 02:07:11] [INFO] Epoch 037 -> lr: 0.0013, weight_decay: 0.0003, width: 512, dropout: 0.1000, tile_dropout: 0.0000, descriptor: c, mean_val_macro_f1: 0.8347
+[2026-11-16 02:11:44] [INFO] Epoch 038 -> lr: 0.0002, weight_decay: 0.0002, width: 512, dropout: 0.2500, tile_dropout: 0.0000, descriptor: c, mean_val_macro_f1: 0.8450
+[2026-11-16 02:16:24] [INFO] Epoch 039 -> lr: 0.0002, weight_decay: 0.0007, width: 512, dropout: 0.2500, tile_dropout: 0.0000, descriptor: c, mean_val_macro_f1: 0.8363
+[2026-11-16 02:16:24] [INFO] Saved metrics.json
+[2026-11-16 02:16:24] [INFO] Run finished in 16849.61s (status: completed); saved record.json

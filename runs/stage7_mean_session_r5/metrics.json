@@ -1,0 +1,13 @@
+{
+  "best_epoch": 63,
+  "val_macro_f1": 0.8012609443292579,
+  "params": {
+    "lr": 0.0009448429441264096,
+    "weight_decay": 5.1679211542802594e-05,
+    "width": 256,
+    "dropout": 0.1,
+    "tile_dropout": 0.0,
+    "descriptor": "c"
+  },
+  "partition": "val"
+}

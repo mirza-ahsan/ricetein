@@ -1,0 +1,9 @@
+[2026-11-15 21:35:47] [INFO] ============================================================
+[2026-11-15 21:35:47] [INFO] Run: stage4b_camera_only_session
+[2026-11-15 21:35:47] [INFO] Folder: /home/aztrek/projects/ricetein/runs/stage4b_camera_only_session
+[2026-11-15 21:35:47] [INFO] Code version: b2a6ce9
+[2026-11-15 21:35:47] [INFO] GPU: NVIDIA GeForce RTX 4060 (7.68 GB)
+[2026-11-15 21:35:47] [INFO] ============================================================
+[2026-11-15 21:35:47] [INFO] Saved predictions.csv
+[2026-11-15 21:36:04] [INFO] Saved metrics.json
+[2026-11-15 21:36:04] [INFO] Run finished in 17.46s (status: completed); saved record.json
