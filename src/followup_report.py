@@ -56,11 +56,11 @@ def block_interval(true, pred, blocks, metric, settings, seed=0, other=None) -> 
     return {"value": value(np.arange(len(true))), "low": low, "high": high}
 
 
-def require_tested() -> None:
+def require_tested(plan_name: str = "followup_evaluation_plan.json") -> None:
     root = get_default_runs_dir()
-    plan = root / "followup_evaluation_plan.json"
+    plan = root / plan_name
     if not plan.exists():
-        raise RuntimeError("runs/followup_evaluation_plan.json is missing: run `followup select` and `evaluate`")
+        raise RuntimeError(f"runs/{plan_name} is missing: run the study's `select` and `evaluate` first")
     missing = [name for name in read_json(plan)["runs"] if not (root / name / "test_predictions.csv").exists()]
     if missing:
         raise RuntimeError(f"{len(missing)} planned runs have no test predictions yet, e.g. {missing[0]}")
@@ -152,14 +152,15 @@ def search_table(selection: dict[str, Any]) -> pd.DataFrame:
     return pd.DataFrame(rows)
 
 
-def stability_table() -> pd.DataFrame:
+def stability_table(stems: dict[str, str]) -> pd.DataFrame:
+    """Validation macro-F1 per seed and round. ``stems``: aggregator -> the name of its MIL config and runs."""
     root, rows = get_default_runs_dir(), []
-    for name in AGGREGATORS:
-        config = load_config(f"configs/mil/{name}.yaml")
+    for name, stem in stems.items():
+        config = load_config(f"configs/mil/{stem}.yaml")
         seeds = [config["seed"], *config["mil"]["stability_seeds"]]
         means = []
         for index, seed in enumerate(seeds):
-            scores = [read_json(root / f"stage7_{name}{'' if index == 0 else f'_s{seed}'}_r{r}" / "metrics.json")
+            scores = [read_json(root / f"stage7_{stem}{'' if index == 0 else f'_s{seed}'}_r{r}" / "metrics.json")
                       ["val_macro_f1"] for r in ROUNDS]
             rows += [{"aggregator": name, "seed": seed, "round": r, "val_macro_f1": s}
                      for r, s in enumerate(scores, 1)]
@@ -321,7 +322,8 @@ def main() -> None:
             scored[key] = method_scores(table(names), blocks, config)
         return scored[key]
 
-    shortcuts, stability = shortcut_table(), stability_table()   # cheap and most likely to fail: do them first
+    # cheap and most likely to fail: do these two first
+    shortcuts, stability = shortcut_table(), stability_table({name: name for name in AGGREGATORS})
     core = core_methods()
     sensitivity = pd.DataFrame([
         {"method": method,
