@@ -1,6 +1,9 @@
 """Checks for src/session_report.py on made-up tables (no runs, no bootstrap)."""
 
+import json
+
 import pandas as pd
+import pytest
 
 from src import session_report as report
 
@@ -54,3 +57,14 @@ def test_build_report_has_every_section_and_no_missing_values():
     assert "whole512 (macro_f1)" in text                     # the row whose two verdicts differ is named
     assert "scored once" in text and "validation scores only" in text
     assert "NaN" not in text and "| nan |" not in text
+
+
+def test_the_report_refuses_a_selection_that_does_not_match_the_frozen_plan(tmp_path, monkeypatch):
+    monkeypatch.setattr(report, "get_default_runs_dir", lambda: tmp_path)
+    monkeypatch.setattr(report.fr, "get_default_runs_dir", lambda: tmp_path)
+    (tmp_path / report.PLAN).write_text(json.dumps({"runs": {"run_a": {}}}))
+    (tmp_path / "run_a").mkdir()
+    (tmp_path / "run_a" / "test_predictions.csv").write_text("")
+    (tmp_path / "session_selection.json").write_text(json.dumps({"methods": {"attention": {"runs": ["run_b"]}}}))
+    with pytest.raises(RuntimeError, match="name different runs"):
+        report.main()

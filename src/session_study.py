@@ -18,15 +18,40 @@ from __future__ import annotations
 import argparse
 from typing import Any
 
-from src import linear_probe, train_mil
+from src import evaluate, linear_probe, train_mil
 from src.config import load_config
-from src.followup import (AGGREGATORS, L2_LADDER, MODELS, ROUNDS, SIZES, best_value, better_study, edge_search,
-                          evaluate_once, keyed, read_json, require_complete, search_cnn, study, write_json)
+from src.followup import (
+    AGGREGATORS,
+    L2_LADDER,
+    MODELS,
+    ROUNDS,
+    SIZES,
+    best_value,
+    better_study,
+    completed,
+    edge_search,
+    evaluate_once,
+    keyed,
+    read_json,
+    require_complete,
+    search_cnn,
+    study,
+    write_json,
+)
 from src.records import get_default_runs_dir, require_clean_code
 from src.train_wholeimage import run_name
 
 HEADS = (*AGGREGATORS, "whole224", "whole512")   # the five methods that share the MIL head and its search
 STUDIES = tuple(f"{head}{suffix}" for head in HEADS for suffix in ("", "_wide"))
+PLAN = "session_evaluation_plan.json"
+
+
+def require_intact() -> None:
+    """Every run that was tested must still have its training files. The training code retrains a run whose
+    checkpoint is missing under the same name, which would lose its test files or let it be tested twice."""
+    for marker in sorted(get_default_runs_dir().glob("*/test_started.json")):
+        if not completed(marker.parent.name, evaluate.checkpoint(marker.parent).name):
+            raise RuntimeError(f"{marker.parent.name}: tested, but its training files are incomplete; stop and report")
 
 
 def cnn() -> None:
@@ -67,7 +92,10 @@ def select() -> dict[str, Any]:
     refit = read_json(runs / "followup_selection.json")["session"]   # the locked-split settings, refitted (D11)
     for method, entry in methods.items():
         entry["changed"] = entry["runs"] != refit.get(method)   # False: these runs were tested on 2026-11-16
-    require_complete([run for entry in methods.values() for run in entry["runs"]])
+    selected = [run for entry in methods.values() for run in entry["runs"]]
+    require_complete(selected)
+    if (runs / PLAN).exists() and set(read_json(runs / PLAN)["runs"]) != set(selected):
+        raise RuntimeError(f"runs/{PLAN} is frozen with other runs: the selection cannot change after `evaluate`")
     selection = {"partition": "val", "split": "splits/session_blocked/folds.csv",
                  "code_version": require_clean_code(), "methods": methods}
     write_json("session_selection.json", selection)
@@ -83,8 +111,7 @@ def seeds() -> None:
 
 def evaluate_selected() -> None:
     selection = read_json(get_default_runs_dir() / "session_selection.json")
-    evaluate_once([run for entry in selection["methods"].values() for run in entry["runs"]],
-                  "session_evaluation_plan.json")
+    evaluate_once([run for entry in selection["methods"].values() for run in entry["runs"]], PLAN)
 
 
 ACTIONS = {"cnn": cnn, "probes": probes, "select": select, "seeds": seeds, "evaluate": evaluate_selected}
@@ -95,6 +122,9 @@ def main() -> None:
     parser.add_argument("action", choices=[*ACTIONS, "study"])
     parser.add_argument("name", nargs="?", help=f"for 'study': one of {', '.join(STUDIES)}")
     args = parser.parse_args()
+    if args.action != "study" and args.name is not None:
+        parser.error(f"{args.action} takes no name")
+    require_intact()
     if args.action == "study":
         if args.name not in STUDIES:
             parser.error(f"study needs one of: {', '.join(STUDIES)}")

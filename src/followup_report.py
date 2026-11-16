@@ -1,4 +1,4 @@
-"""Tables and the report of the follow-up study (declared 2026-11-14; manuals/followup_plan.md).
+"""Tables and the report of the follow-up study (declared 2026-11-14; handbook §24).
 
     uv run python -m src.followup_report
 
@@ -212,6 +212,27 @@ def changed_verdicts(frame: pd.DataFrame) -> str:
         for r in differing.itertuples()) + "."
 
 
+def search_text(search: pd.DataFrame, changed_label: str = "selection changed") -> pd.DataFrame:
+    return pd.DataFrame({"method": search["method"], "value tried": search["value"],
+                         "mean val macro-F1": search["mean_val_macro_f1"].map(percent),
+                         "in declared grid / study": search["declared"].map({True: "yes", False: "added"}),
+                         "selected": search["selected"].map({True: "yes", False: ""}),
+                         changed_label: search["selection_changed"].map({True: "yes", False: "no"})})
+
+
+def final_text(final: pd.DataFrame) -> pd.DataFrame:
+    return pd.DataFrame({"method": final["method"]} | score_columns(final, "macro_f1", "macro-F1")
+                        | score_columns(final, "balanced_accuracy", "balanced acc.")
+                        | {"ECE": final["ece"].map(lambda x: f"{x:.3f}")})
+
+
+def stability_text(stability: pd.DataFrame) -> pd.DataFrame:
+    shown = stability.copy()
+    shown["val macro-F1"] = [plus_minus(v, s) if pd.notna(s) else percent(v)
+                             for v, s in zip(shown["val_macro_f1"], shown["sd"])]
+    return shown[["aggregator", "seed", "round", "val macro-F1"]]
+
+
 def build_report(tables: dict[str, pd.DataFrame]) -> str:
     shortcuts, sensitivity, final = tables["shortcuts"], tables["split_sensitivity"], tables["final"]
     shown_shortcuts = pd.DataFrame({"baseline": shortcuts["baseline"]} | {
@@ -221,23 +242,12 @@ def build_report(tables: dict[str, pd.DataFrame]) -> str:
                                      | score_columns(sensitivity, "locked_macro_f1", "locked macro-F1")
                                      | score_columns(sensitivity, "session_macro_f1", "session macro-F1")
                                      | {"drop (points)": sensitivity["drop_points"].map(lambda x: f"{x:.1f}")})
-    search = tables["search"]
-    shown_search = pd.DataFrame({"method": search["method"], "value tried": search["value"],
-                                 "mean val macro-F1": search["mean_val_macro_f1"].map(percent),
-                                 "in declared grid / study": search["declared"].map({True: "yes", False: "added"}),
-                                 "selected": search["selected"].map({True: "yes", False: ""}),
-                                 "selection changed": search["selection_changed"].map({True: "yes", False: "no"})})
-    shown_final = pd.DataFrame({"method": final["method"]} | score_columns(final, "macro_f1", "macro-F1")
-                               | score_columns(final, "balanced_accuracy", "balanced acc.")
-                               | {"ECE": final["ece"].map(lambda x: f"{x:.3f}")})
-    stability = tables["stability"].copy()
-    stability["val macro-F1"] = [plus_minus(v, s) if pd.notna(s) else percent(v)
-                                 for v, s in zip(stability["val_macro_f1"], stability["sd"])]
-    shown_stability = stability[["aggregator", "seed", "round", "val macro-F1"]]
+    shown_search, shown_final = search_text(tables["search"]), final_text(final)
+    shown_stability = stability_text(tables["stability"])
     return f"""# Follow-up study: split sensitivity, extended searches and controls
 
 Built by `src/followup_report.py` from `runs/` and `splits/session_blocked/folds.csv`; do not edit by hand.
-Study plan: `manuals/followup_plan.md`. All scores are percentages.
+Study plan: handbook §24, rows of 2026-11-14. All scores are percentages.
 
 **Which photos each number comes from**
 

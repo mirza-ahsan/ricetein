@@ -18,10 +18,10 @@ from src.config import REPO_ROOT, load_config
 from src.followup import AGGREGATORS, MAX_EXTENSIONS, read_json
 from src.inventory_report import md_table
 from src.records import get_default_runs_dir
+from src.session_study import PLAN
 
 TABLES = REPO_ROOT / "results/tables"
 REPORT = REPO_ROOT / "docs/reports/session_report.md"
-PLAN = "session_evaluation_plan.json"
 
 
 def side_by_side(final: pd.DataFrame, locked: pd.DataFrame, refit: pd.DataFrame) -> pd.DataFrame:
@@ -41,16 +41,9 @@ def side_by_side(final: pd.DataFrame, locked: pd.DataFrame, refit: pd.DataFrame)
 
 
 def build_report(tables: dict[str, pd.DataFrame]) -> str:
-    search, final, sides, shortcuts = tables["search"], tables["final"], tables["side_by_side"], tables["shortcuts"]
-    shown_search = pd.DataFrame({"method": search["method"], "value tried": search["value"],
-                                 "mean val macro-F1": search["mean_val_macro_f1"].map(fr.percent),
-                                 "in declared grid / study": search["declared"].map({True: "yes", False: "added"}),
-                                 "selected": search["selected"].map({True: "yes", False: ""}),
-                                 "differs from the locked-split setting": search["selection_changed"].map(
-                                     {True: "yes", False: "no"})})
-    shown_final = pd.DataFrame({"method": final["method"]} | fr.score_columns(final, "macro_f1", "macro-F1")
-                               | fr.score_columns(final, "balanced_accuracy", "balanced acc.")
-                               | {"ECE": final["ece"].map(lambda x: f"{x:.3f}")})
+    sides, shortcuts = tables["side_by_side"], tables["shortcuts"]
+    shown_search = fr.search_text(tables["search"], "selected runs differ from those tested on 2026-11-16")
+    shown_final = fr.final_text(tables["final"])
 
     def cell(mean: float, sd: float) -> str:
         return "—" if pd.isna(mean) else fr.plus_minus(mean, sd)
@@ -61,11 +54,9 @@ def build_report(tables: dict[str, pd.DataFrame]) -> str:
         "session split, locked-split settings": [cell(m, s) for m, s in zip(sides["refit_mean"], sides["refit_sd"])],
         "session split, tuned on it": [cell(m, s) for m, s in zip(sides["tuned_mean"], sides["tuned_sd"])]})
     shown_shortcuts = pd.DataFrame({"baseline": shortcuts["baseline"]} | {
-        label: [fr.plus_minus(m, s) for m, s in zip(shortcuts[f"session_{metric}_mean"], shortcuts[f"session_{metric}_sd"])]
+        label: [fr.plus_minus(m, s)
+                for m, s in zip(shortcuts[f"session_{metric}_mean"], shortcuts[f"session_{metric}_sd"])]
         for metric, label in (("macro_f1", "macro-F1"), ("balanced_accuracy", "balanced acc."))})
-    stability = tables["stability"].copy()
-    stability["val macro-F1"] = [fr.plus_minus(v, s) if pd.notna(s) else fr.percent(v)
-                                 for v, s in zip(stability["val_macro_f1"], stability["sd"])]
     return f"""# Session-blocked split: every method tuned on its own validation photos
 
 Built by `src/session_report.py` from `runs/`, `splits/session_blocked/folds.csv` and the follow-up tables;
@@ -91,6 +82,15 @@ do not edit by hand. Protocol: handbook §24, 2026-11-16. All scores are percent
 - Tuning budgets differ between method families: each of the five head methods keeps the better of two
   40-trial studies, a CNN has three learning rates plus up to {MAX_EXTENSIONS} added ones, and a probe has six
   L2 strengths plus up to {MAX_EXTENSIONS} added ones. Within a family the budget is the same.
+  The head studies are widened only towards higher learning rates; a CNN or probe grid can grow at either end.
+- A photo that is a validation photo in one round is a test photo in another round (41.9% of the photos). Settings
+  chosen on the five-round validation mean are therefore not independent of the pooled test photos. This holds
+  for every method, and a larger search can gain more from it.
+- Test scores use one training seed (seed 0). The stability seeds are validation only and cover mean, max and
+  attention, so the "4 of 5 rounds" rule does not include seed-to-seed variation.
+- Section 1 column "selected runs differ from those tested on 2026-11-16": "no" means the search chose the
+  locked-split setting again, so that method's test score was already known before this protocol was declared.
+  It is always "yes" for the five head methods, whose runs are new.
 - The photo range is stratified by class; the block range resamples whole blocks and is not, so it also
   contains class-count variation. That is part of why it is wider.
 
@@ -123,7 +123,7 @@ refits the nine core settings chosen on the locked split; the whole-photo contro
 
 Seed 0 is the declared run; seeds 1 and 2 are the declared stability seeds. Validation only.
 
-{md_table(stability[["aggregator", "seed", "round", "val macro-F1"]])}
+{md_table(fr.stability_text(tables["stability"]))}
 """
 
 
@@ -132,6 +132,8 @@ def main() -> None:
     config, root = load_config("configs/pipeline.yaml"), get_default_runs_dir()
     selection, blocks = read_json(root / "session_selection.json"), fr.block_of()
     methods = selection["methods"]
+    if {run for entry in methods.values() for run in entry["runs"]} != set(read_json(root / PLAN)["runs"]):
+        raise RuntimeError(f"runs/session_selection.json and runs/{PLAN} name different runs")
     # cheap and most likely to fail: do these first
     stability = fr.stability_table({name: methods[name]["study"] for name in AGGREGATORS})
     shortcuts = pd.read_csv(TABLES / "followup_shortcuts.csv")

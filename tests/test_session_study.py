@@ -62,8 +62,8 @@ def test_every_session_study_config_changes_only_the_split_the_names_and_the_wid
             lr = [1e-4, 1e-2] if suffix else locked["search"]["lr"]
             assert config["search"] == {**locked["search"], "lr": lr}
             assert config.get("whole_bag") == locked.get("whole_bag")
-            different = {k for k in locked if locked[k] != config[k]} - {"split_files", "mil", "search", "config_file"}
-            assert not different
+            different = {k for k in locked.keys() | config.keys() if locked.get(k) != config.get(k)}
+            assert different <= {"split_files", "mil", "search", "config_file"}
 
 
 def test_the_ten_studies_are_the_five_heads_with_and_without_the_wide_range():
@@ -132,7 +132,8 @@ def test_select_refuses_while_any_selected_run_is_unfinished(runs, monkeypatch):
 def test_seeds_refit_only_the_selected_tile_studies(runs, monkeypatch):
     session_study.select()
     fitted = []
-    monkeypatch.setattr(session_study.train_mil, "final", lambda config, seeds: fitted.append((config["mil"]["name"], seeds)))
+    monkeypatch.setattr(session_study.train_mil, "final",
+                        lambda config, seeds: fitted.append((config["mil"]["name"], seeds)))
     session_study.seeds()
     assert fitted == [("session_mean_wide", [0, 1, 2]), ("session_max", [0, 1, 2]), ("session_attention", [0, 1, 2])]
 
@@ -144,9 +145,47 @@ def test_evaluate_freezes_one_plan_and_skips_runs_that_were_already_tested(runs,
     (tested_before / "test_metrics.json").write_text("{}")
     (tested_before / "test_predictions.csv").write_text("")
     frozen, tested = {}, []
-    monkeypatch.setattr(followup.evaluate, "freeze_plan", lambda names, path: frozen.update(names=list(names), path=path))
+    monkeypatch.setattr(followup.evaluate, "freeze_plan",
+                        lambda names, path: frozen.update(names=list(names), path=path))
     monkeypatch.setattr(followup.evaluate, "evaluate", lambda name, plan: tested.append(name))
     session_study.evaluate_selected()
-    assert len(frozen["names"]) == len(set(frozen["names"])) == 55 and frozen["path"] == runs / "session_evaluation_plan.json"
+    assert len(frozen["names"]) == len(set(frozen["names"])) == 55
+    assert frozen["path"] == runs / "session_evaluation_plan.json"
     assert tested_before.name in frozen["names"] and tested_before.name not in tested
     assert len(tested) == 54 and "stage7_session_attention_r1" in tested
+
+
+def test_select_cannot_change_once_the_test_plan_is_frozen(runs):
+    selection = session_study.select()
+    names = [run for entry in selection["methods"].values() for run in entry["runs"]]
+    (runs / session_study.PLAN).write_text(json.dumps({"runs": {name: {} for name in names}}))
+    assert session_study.select() == selection                      # the same choice is still fine
+    (runs / "session_search_probe_224.json").write_text(json.dumps({"10": 0.6, "100": 0.7}))
+    with pytest.raises(RuntimeError, match="frozen with other runs"):
+        session_study.select()
+    assert json.loads((runs / "session_selection.json").read_text()) == selection
+
+
+def test_a_tested_run_without_its_training_files_stops_every_action(runs, monkeypatch):
+    tested = runs / "stage5_swin_tiny_session_224_lr3e-05_r1"
+    tested.mkdir()
+    (tested / "test_started.json").write_text("{}")
+    session_study.require_intact()                                   # complete (the fixture says so): fine
+    monkeypatch.setattr(session_study, "completed", lambda name, checkpoint: False)
+    with pytest.raises(RuntimeError, match="stage5_swin_tiny_session_224_lr3e-05_r1: tested"):
+        session_study.require_intact()
+    monkeypatch.setattr("sys.argv", ["session_study", "cnn"])
+    with pytest.raises(RuntimeError, match="tested"):
+        session_study.main()
+
+
+def test_main_sends_a_study_name_to_its_session_config_and_rejects_stray_names(runs, monkeypatch):
+    started = []
+    monkeypatch.setattr(session_study, "study", started.append)
+    monkeypatch.setattr("sys.argv", ["session_study", "study", "attention_wide"])
+    session_study.main()
+    assert started == ["session_attention_wide"]
+    for argv in (["session_study", "study", "attention_session"], ["session_study", "select", "extra"]):
+        monkeypatch.setattr("sys.argv", argv)
+        with pytest.raises(SystemExit):
+            session_study.main()

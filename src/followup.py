@@ -1,4 +1,4 @@
-"""The follow-up study declared on 2026-11-14 (handbook §24; manuals/followup_plan.md).
+"""The follow-up study declared on 2026-11-14 (handbook §24, rows of that date).
 
     uv run python -m src.followup <action>
 
@@ -234,6 +234,7 @@ def select() -> dict[str, Any]:
                                     "changed": names != core[f"probe_{size}"]}
     for name in AGGREGATORS:
         chosen = better_study(name)
+        del chosen["study"]   # keeps runs/followup_selection.json as first written
         methods[name] = {**chosen, "changed": chosen["selected"] == "wide"}
     for size in SIZES:
         methods[f"whole{size}"] = {"runs": [f"stage7_whole{size}_r{r}" for r in ROUNDS], "changed": True}
