@@ -1,0 +1,36 @@
+{
+  "name": "e1_512_session",
+  "partition": "val",
+  "split_checksum": "28fa6372f49bb5ff1b082c4ff7ae2b2709a6a70c59f6de1f768b15f3e09aa8f8",
+  "trials": [
+    {
+      "l2_strength": 100.0,
+      "mean_val_macro_f1": 0.7183857566736231,
+      "rounds": [
+        0.6493709721650898,
+        0.7733100165949531,
+        0.6569899870434074,
+        0.6972276413737297,
+        0.8150301661909359
+      ]
+    }
+  ],
+  "selected": {
+    "l2_strength": 100.0,
+    "mean_val_macro_f1": 0.7183857566736231,
+    "rounds": [
+      0.6493709721650898,
+      0.7733100165949531,
+      0.6569899870434074,
+      0.6972276413737297,
+      0.8150301661909359
+    ]
+  },
+  "runs": [
+    "stage7a_probe_e1_512_session_l2100_r1",
+    "stage7a_probe_e1_512_session_l2100_r2",
+    "stage7a_probe_e1_512_session_l2100_r3",
+    "stage7a_probe_e1_512_session_l2100_r4",
+    "stage7a_probe_e1_512_session_l2100_r5"
+  ]
+}

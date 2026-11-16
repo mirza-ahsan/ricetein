@@ -1,0 +1,373 @@
+{
+  "run_name": "stage5_efficientnetv2s_224_lr0.001_r2",
+  "status": "completed",
+  "start_time": "2026-11-15T18:37:33.605876+00:00",
+  "end_time": "2026-11-15T18:43:56.675236+00:00",
+  "duration_seconds": 383.07,
+  "code_version": "b2a6ce9",
+  "split_checksum": "9891c146c2a369ac455a4794a4707509a1508b3005a680b5d2257206f7023ba7",
+  "data_version": {
+    "primary": "2019-11-15"
+  },
+  "hardware": {
+    "environment": "local",
+    "os": "Linux-7.2.15-1-omarchy-x86_64-with-glibc2.44",
+    "python": "3.12.13",
+    "cpu_count": 16,
+    "ram_total_gb": 14.49,
+    "cuda_available": true,
+    "gpu_name": "NVIDIA GeForce RTX 4060",
+    "gpu_count": 1,
+    "gpu_total_memory_gb": 7.68,
+    "cuda_version": "12.8",
+    "peak_gpu_memory_mb": 2789.84
+  },
+  "packages": {
+    "torch": "2.11.0+cu128",
+    "torchvision": "0.26.0+cu128",
+    "timm": "1.0.30",
+    "transformers": "5.17.0",
+    "numpy": "2.5.3",
+    "scikit-learn": "1.9.1",
+    "pandas": "3.0.6"
+  },
+  "config": {
+    "seed": 0,
+    "split_seed": 2026,
+    "determinism": "strict",
+    "classes": [
+      "healthy",
+      "leaf_blast",
+      "brown_spot",
+      "hispa"
+    ],
+    "datasets": {
+      "primary": {
+        "local_dir": "data/raw/rice_diseases",
+        "kaggle_slug": "rice-diseases-image-dataset",
+        "image_subdir": "LabelledRice/Labelled",
+        "ignored_subdirs": [
+          "RiceDiseaseDataset"
+        ],
+        "image_extension": ".jpg",
+        "version": "2019-11-15",
+        "licence": "MIT",
+        "expected_counts": {
+          "healthy": 1488,
+          "leaf_blast": 779,
+          "brown_spot": 523,
+          "hispa": 565
+        },
+        "class_folders": {
+          "healthy": "Healthy",
+          "leaf_blast": "LeafBlast",
+          "brown_spot": "BrownSpot",
+          "hispa": "Hispa"
+        }
+      },
+      "paddy": {
+        "local_dir": "data/raw/paddy_doctor",
+        "kaggle_slug": "paddy-doctor-full",
+        "image_subdir": "",
+        "metadata_file": "metadata.csv",
+        "image_extension": ".jpg",
+        "version": "IEEE DataPort full release (16,225 images, 13 classes)",
+        "licence": "CC BY 4.0",
+        "expected_counts": {
+          "healthy": 2405,
+          "leaf_blast": 2351,
+          "brown_spot": 1257,
+          "hispa": 2151
+        },
+        "class_folders": {
+          "healthy": "normal",
+          "leaf_blast": "blast",
+          "brown_spot": "brown_spot",
+          "hispa": "hispa"
+        },
+        "calibration_folders": [
+          "bacterial_leaf_blight",
+          "bacterial_leaf_streak",
+          "bacterial_panicle_blight",
+          "black_stem_borer",
+          "downy_mildew",
+          "leaf_roller",
+          "tungro",
+          "white_stem_borer",
+          "yellow_stem_borer"
+        ]
+      }
+    },
+    "paths": {
+      "configs": "configs",
+      "splits": "splits",
+      "runs": "runs",
+      "cache": "cache",
+      "results": "results",
+      "reports": "docs/reports"
+    },
+    "tiling": {
+      "tile_size": 224
+    },
+    "hashing": {
+      "hash_size": 8,
+      "draft_size": 256
+    },
+    "normalisation": {
+      "mean": [
+        0.485,
+        0.456,
+        0.406
+      ],
+      "std": [
+        0.229,
+        0.224,
+        0.225
+      ]
+    },
+    "main_encoder": "E1",
+    "encoders": {
+      "E1": {
+        "library": "transformers",
+        "name": "facebook/dinov3-vitb16-pretrain-lvd1689m",
+        "revision": "5931719e67bbdb9737e363e781fb0c67687896bc",
+        "params_m": 85.7,
+        "dim": 768,
+        "patch_size": 16,
+        "register_tokens": 4,
+        "on_kaggle_weights": true
+      },
+      "E2": {
+        "library": "timm",
+        "name": "convnext_tiny.fb_in1k",
+        "revision": "b43a6303c9fcf176d2d707478a128c2c91e93528",
+        "params_m": 27.8,
+        "dim": 768,
+        "on_kaggle_weights": false
+      },
+      "E3": {
+        "library": "transformers",
+        "name": "facebook/dinov2-base",
+        "revision": "f9e44c814b77203eaa57a6bdbbd535f21ede1415",
+        "params_m": 86.6,
+        "dim": 768,
+        "patch_size": 14,
+        "register_tokens": 0,
+        "on_kaggle_weights": false
+      },
+      "E4": {
+        "library": "transformers",
+        "name": "facebook/dinov3-vits16-pretrain-lvd1689m",
+        "revision": "114c1379950215c8b35dfcd4e90a5c251dde0d32",
+        "params_m": 21.6,
+        "dim": 384,
+        "patch_size": 16,
+        "register_tokens": 4,
+        "on_kaggle_weights": true
+      },
+      "E5": {
+        "library": "transformers",
+        "name": "facebook/dinov3-vitl16-pretrain-lvd1689m",
+        "revision": "ea8dc2863c51be0a264bab82070e3e8836b02d51",
+        "params_m": 303.1,
+        "dim": 1024,
+        "patch_size": 16,
+        "register_tokens": 4,
+        "on_kaggle_weights": false
+      }
+    },
+    "split": {
+      "n_folds": 5,
+      "val_fraction": 0.125,
+      "stratify_by": "class",
+      "group_by": "near_duplicate_group",
+      "exclude_label_conflicts": true,
+      "max_class_share_deviation": 0.02
+    },
+    "loss": {
+      "class_weighting": "inverse_frequency",
+      "label_smoothing": 0.1
+    },
+    "evaluation": {
+      "primary_metric": "macro_f1",
+      "secondary_metric": "balanced_accuracy",
+      "also_report": [
+        "accuracy",
+        "per_class_precision",
+        "per_class_recall",
+        "confusion_matrix",
+        "ece"
+      ],
+      "diagnostic_class": "hispa",
+      "bootstrap": {
+        "resamples": 2000,
+        "confidence": 0.95,
+        "stratified": true
+      },
+      "calibration_bins": 15,
+      "comparison": {
+        "ci_excludes_zero": true,
+        "min_round_wins": 4
+      },
+      "report_decimals": 1
+    },
+    "inventory": {
+      "files": {
+        "primary": "data/inventory.csv",
+        "paddy": "data/paddy_inventory.csv"
+      }
+    },
+    "pixel_scale": {
+      "selection_file": "data/leaf_width_selection.csv",
+      "measurements_dir": "data/leaf_width",
+      "measurements_file": "data/leaf_width_measurements.csv",
+      "decision_file": "data/pixel_scale_decision.json",
+      "n_photos": 30,
+      "measurers": 2,
+      "team": [
+        "ahsan",
+        "harris",
+        "umer"
+      ],
+      "model_raters": [
+        "model_rater_a"
+      ],
+      "spearman_threshold": 0.5,
+      "min_usable": 20
+    },
+    "report": {
+      "published_counts": {
+        "healthy": 1488,
+        "leaf_blast": 779,
+        "brown_spot": 523,
+        "hispa": 563
+      },
+      "inspected_phash_groups": {
+        "date": "2026-11-04",
+        "verdict": "different leaves with the same layout (one leaf lying diagonally on a white background)",
+        "hashes": [
+          "aaeaca1ef207fc01",
+          "abd095b5a50ff803",
+          "e280c0e0f0f8fcfe",
+          "ea94c0e0f0f8bc5e",
+          "ff38954aa552a954",
+          "ff88c06a351f4af0"
+        ]
+      }
+    },
+    "reviewers": [
+      "ahsan",
+      "harris",
+      "umer"
+    ],
+    "model_reviewers": [
+      "model_rater_a",
+      "model_rater_b",
+      "model_rater_c"
+    ],
+    "duplicates": {
+      "descriptor_cache": "cache/e1_whole224.npz",
+      "hash_cache": "cache/phash_d4.npz",
+      "keypoint_cache": "cache/sift",
+      "whole_size": 224,
+      "batch_size": 64,
+      "max_hash_bits": 8,
+      "min_cosine": 0.95,
+      "check": {
+        "long_side": 1200,
+        "contrast_threshold": 0.01,
+        "max_features": 2000,
+        "ratio": 0.75,
+        "ransac_px": 8.0,
+        "min_scale": 0.25,
+        "max_scale": 4.0,
+        "min_inliers": 15
+      },
+      "rejected_sample": 200,
+      "candidates_file": "data/duplicate_candidates.csv",
+      "review_file": "data/duplicate_review_queue.csv",
+      "review_dir": "data/duplicate_review",
+      "pairs_file": "data/duplicate_pairs.csv",
+      "groups_file": "data/groups.csv",
+      "conflicts_file": "data/label_conflicts.csv",
+      "overlap_file": "data/cross_dataset_overlap.csv"
+    },
+    "background": {
+      "per_class": 60,
+      "sample_file": "data/background_audit_sample.csv",
+      "labels_dir": "data/background_audit",
+      "audit_file": "data/background_audit.csv"
+    },
+    "label_check": {
+      "checkers": [
+        "model_rater_a"
+      ],
+      "per_class": 20,
+      "checks_dir": "data/label_check",
+      "suspects_file": "data/suspect_labels.csv"
+    },
+    "split_files": {
+      "folds": "splits/folds.csv",
+      "paddy4": "splits/paddy4.csv"
+    },
+    "wholeimage": {
+      "cache_dir": "cache/wholeimage",
+      "lrs": [
+        3e-05,
+        0.0001,
+        0.0003
+      ],
+      "weight_decay": 0.05,
+      "warmup_epochs": 2,
+      "max_epochs": 40,
+      "patience": 8,
+      "batch_size": {
+        "128": 32,
+        "224": 32,
+        "448": 16,
+        "512": 16
+      },
+      "workers": 8,
+      "determinism": "fast",
+      "models": {
+        "inceptionv3": {
+          "repo": "timm/inception_v3.tv_in1k",
+          "revision": "393d84cc85c467d8fbc0dc81a65c04e87a32572c"
+        },
+        "efficientnetv2s": {
+          "repo": "timm/tf_efficientnetv2_s.in1k",
+          "revision": "3af791b42d7e895c9da9b5aa4ed4e6b648e4ac0b"
+        },
+        "convnext_tiny": {
+          "repo": "timm/convnext_tiny.fb_in1k",
+          "revision": "b43a6303c9fcf176d2d707478a128c2c91e93528"
+        },
+        "swin_tiny": {
+          "repo": "timm/swin_tiny_patch4_window7_224.ms_in1k",
+          "revision": "4cc3a7275b50b53a7bec45f32c236ebe64227cff",
+          "size_kwargs": {
+            "128": {
+              "img_size": 128,
+              "window_size": 4
+            },
+            "224": {
+              "img_size": 224
+            },
+            "448": {
+              "img_size": 448
+            },
+            "512": {
+              "img_size": 512
+            }
+          }
+        }
+      },
+      "model": "efficientnetv2s",
+      "size": 224,
+      "otsu": false
+    },
+    "config_file": "configs/wholeimage/efficientnetv2s_224.yaml",
+    "lr": 0.001,
+    "round": 2
+  }
+}

@@ -1,0 +1,50 @@
+[2026-11-15 22:59:52] [INFO] ============================================================
+[2026-11-15 22:59:52] [INFO] Run: stage7_attention_s2_r5
+[2026-11-15 22:59:52] [INFO] Folder: /home/aztrek/projects/ricetein/runs/stage7_attention_s2_r5
+[2026-11-15 22:59:52] [INFO] Code version: b2a6ce9
+[2026-11-15 22:59:52] [INFO] GPU: NVIDIA GeForce RTX 4060 (7.68 GB)
+[2026-11-15 22:59:52] [INFO] ============================================================
+[2026-11-15 22:59:55] [INFO] Epoch 001 -> train_loss: 1.2176, val_macro_f1: 0.6078
+[2026-11-15 22:59:57] [INFO] Epoch 002 -> train_loss: 0.9541, val_macro_f1: 0.6979
+[2026-11-15 22:59:59] [INFO] Epoch 003 -> train_loss: 0.8903, val_macro_f1: 0.6647
+[2026-11-15 23:00:02] [INFO] Epoch 004 -> train_loss: 0.8545, val_macro_f1: 0.7253
+[2026-11-15 23:00:04] [INFO] Epoch 005 -> train_loss: 0.8448, val_macro_f1: 0.7000
+[2026-11-15 23:00:06] [INFO] Epoch 006 -> train_loss: 0.8297, val_macro_f1: 0.7279
+[2026-11-15 23:00:08] [INFO] Epoch 007 -> train_loss: 0.8199, val_macro_f1: 0.7382
+[2026-11-15 23:00:11] [INFO] Epoch 008 -> train_loss: 0.8092, val_macro_f1: 0.7542
+[2026-11-15 23:00:13] [INFO] Epoch 009 -> train_loss: 0.8051, val_macro_f1: 0.7397
+[2026-11-15 23:00:15] [INFO] Epoch 010 -> train_loss: 0.7995, val_macro_f1: 0.7449
+[2026-11-15 23:00:17] [INFO] Epoch 011 -> train_loss: 0.7815, val_macro_f1: 0.7468
+[2026-11-15 23:00:20] [INFO] Epoch 012 -> train_loss: 0.7726, val_macro_f1: 0.7488
+[2026-11-15 23:00:22] [INFO] Epoch 013 -> train_loss: 0.7757, val_macro_f1: 0.7551
+[2026-11-15 23:00:24] [INFO] Epoch 014 -> train_loss: 0.7636, val_macro_f1: 0.7696
+[2026-11-15 23:00:26] [INFO] Epoch 015 -> train_loss: 0.7525, val_macro_f1: 0.7457
+[2026-11-15 23:00:29] [INFO] Epoch 016 -> train_loss: 0.7292, val_macro_f1: 0.7672
+[2026-11-15 23:00:31] [INFO] Epoch 017 -> train_loss: 0.7402, val_macro_f1: 0.7693
+[2026-11-15 23:00:33] [INFO] Epoch 018 -> train_loss: 0.7428, val_macro_f1: 0.7790
+[2026-11-15 23:00:35] [INFO] Epoch 019 -> train_loss: 0.7294, val_macro_f1: 0.7497
+[2026-11-15 23:00:38] [INFO] Epoch 020 -> train_loss: 0.7318, val_macro_f1: 0.7685
+[2026-11-15 23:00:40] [INFO] Epoch 021 -> train_loss: 0.7357, val_macro_f1: 0.7371
+[2026-11-15 23:00:42] [INFO] Epoch 022 -> train_loss: 0.7337, val_macro_f1: 0.7875
+[2026-11-15 23:00:45] [INFO] Epoch 023 -> train_loss: 0.7191, val_macro_f1: 0.7943
+[2026-11-15 23:00:47] [INFO] Epoch 024 -> train_loss: 0.7162, val_macro_f1: 0.7932
+[2026-11-15 23:00:49] [INFO] Epoch 025 -> train_loss: 0.7241, val_macro_f1: 0.7797
+[2026-11-15 23:00:51] [INFO] Epoch 026 -> train_loss: 0.7088, val_macro_f1: 0.8311
+[2026-11-15 23:00:54] [INFO] Epoch 027 -> train_loss: 0.7031, val_macro_f1: 0.7831
+[2026-11-15 23:00:56] [INFO] Epoch 028 -> train_loss: 0.7038, val_macro_f1: 0.8072
+[2026-11-15 23:00:58] [INFO] Epoch 029 -> train_loss: 0.6950, val_macro_f1: 0.7865
+[2026-11-15 23:01:00] [INFO] Epoch 030 -> train_loss: 0.7066, val_macro_f1: 0.7970
+[2026-11-15 23:01:03] [INFO] Epoch 031 -> train_loss: 0.6926, val_macro_f1: 0.7927
+[2026-11-15 23:01:05] [INFO] Epoch 032 -> train_loss: 0.7075, val_macro_f1: 0.7878
+[2026-11-15 23:01:07] [INFO] Epoch 033 -> train_loss: 0.6916, val_macro_f1: 0.7752
+[2026-11-15 23:01:09] [INFO] Epoch 034 -> train_loss: 0.6720, val_macro_f1: 0.7911
+[2026-11-15 23:01:12] [INFO] Epoch 035 -> train_loss: 0.6735, val_macro_f1: 0.7862
+[2026-11-15 23:01:14] [INFO] Epoch 036 -> train_loss: 0.6750, val_macro_f1: 0.7957
+[2026-11-15 23:01:16] [INFO] Epoch 037 -> train_loss: 0.6888, val_macro_f1: 0.8092
+[2026-11-15 23:01:19] [INFO] Epoch 038 -> train_loss: 0.6805, val_macro_f1: 0.7754
+[2026-11-15 23:01:21] [INFO] Epoch 039 -> train_loss: 0.6582, val_macro_f1: 0.7742
+[2026-11-15 23:01:23] [INFO] Epoch 040 -> train_loss: 0.6825, val_macro_f1: 0.8050
+[2026-11-15 23:01:26] [INFO] Epoch 041 -> train_loss: 0.6694, val_macro_f1: 0.7609
+[2026-11-15 23:01:26] [INFO] Saved predictions.csv
+[2026-11-15 23:01:26] [INFO] Saved metrics.json
+[2026-11-15 23:01:26] [INFO] Run finished in 93.2s (status: completed); saved record.json

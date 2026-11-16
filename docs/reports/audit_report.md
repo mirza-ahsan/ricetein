@@ -6,7 +6,7 @@ Built by `src/audit_report.py` from the audit files; do not edit by hand.
 
 Sample: 60 random photos per class (seed 0), frozen in `data/background_audit_sample.csv`. Two raters label every photo alone, in their own shuffled order, without seeing its class: plain or cluttered, plus several leaves, hand, strong shadow. Disagreements on the background are settled together; both original labels are kept.
 
-**Plain background: 100.0%** of 240 photos (95% CI 98.5%-100.0%). Raters model_rater_a and model_rater_b agree on 99.6% of photos (Cohen's kappa 0.00); 1 disagreements were settled together. Model raters, not people: `model_rater_a`, `model_rater_b` (independent instances of one AI model; initial reviews did not use each other's answers. Model agreement does not establish human inter-rater reliability). File: `data/background_audit.csv`.
+**Plain background: 100.0%** of 240 photos (95% CI 98.5%-100.0%). Raters model_rater_a and model_rater_b agree on 99.6% of photos (Cohen's kappa 0.00; not informative here: both raters used one category for almost every photo); 1 disagreements were settled together. Model raters, not people: `model_rater_a`, `model_rater_b` (independent instances of one AI model; initial reviews did not use each other's answers. Model agreement does not establish human inter-rater reliability). File: `data/background_audit.csv`.
 
 | class | photos | plain | 95% CI |
 |---|---|---|---|

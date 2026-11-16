@@ -1,0 +1,36 @@
+[2026-11-16 00:08:33] [INFO] ============================================================
+[2026-11-16 00:08:33] [INFO] Run: stage5_efficientnetv2s_224_lr0.003_r2
+[2026-11-16 00:08:33] [INFO] Folder: /home/aztrek/projects/ricetein/runs/stage5_efficientnetv2s_224_lr0.003_r2
+[2026-11-16 00:08:33] [INFO] Code version: b2a6ce9
+[2026-11-16 00:08:33] [INFO] GPU: NVIDIA GeForce RTX 4060 (7.68 GB)
+[2026-11-16 00:08:33] [INFO] ============================================================
+[2026-11-16 00:08:45] [INFO] Epoch 001 -> train_loss: 1.6318, val_macro_f1: 0.6244, val_balanced_accuracy: 0.6249, lr: 0.0015
+[2026-11-16 00:08:56] [INFO] Epoch 002 -> train_loss: 1.0287, val_macro_f1: 0.6109, val_balanced_accuracy: 0.6610, lr: 0.0030
+[2026-11-16 00:09:08] [INFO] Epoch 003 -> train_loss: 0.9619, val_macro_f1: 0.6074, val_balanced_accuracy: 0.6560, lr: 0.0030
+[2026-11-16 00:09:19] [INFO] Epoch 004 -> train_loss: 0.9249, val_macro_f1: 0.7235, val_balanced_accuracy: 0.7200, lr: 0.0030
+[2026-11-16 00:09:30] [INFO] Epoch 005 -> train_loss: 0.9134, val_macro_f1: 0.7353, val_balanced_accuracy: 0.7575, lr: 0.0030
+[2026-11-16 00:09:42] [INFO] Epoch 006 -> train_loss: 0.8576, val_macro_f1: 0.5557, val_balanced_accuracy: 0.6450, lr: 0.0029
+[2026-11-16 00:09:53] [INFO] Epoch 007 -> train_loss: 0.8650, val_macro_f1: 0.6222, val_balanced_accuracy: 0.6728, lr: 0.0029
+[2026-11-16 00:10:04] [INFO] Epoch 008 -> train_loss: 0.8324, val_macro_f1: 0.7289, val_balanced_accuracy: 0.7683, lr: 0.0028
+[2026-11-16 00:10:15] [INFO] Epoch 009 -> train_loss: 0.8365, val_macro_f1: 0.7785, val_balanced_accuracy: 0.7746, lr: 0.0028
+[2026-11-16 00:10:27] [INFO] Epoch 010 -> train_loss: 0.8317, val_macro_f1: 0.7582, val_balanced_accuracy: 0.7600, lr: 0.0027
+[2026-11-16 00:10:38] [INFO] Epoch 011 -> train_loss: 0.7897, val_macro_f1: 0.7856, val_balanced_accuracy: 0.7839, lr: 0.0026
+[2026-11-16 00:10:49] [INFO] Epoch 012 -> train_loss: 0.7915, val_macro_f1: 0.7454, val_balanced_accuracy: 0.7629, lr: 0.0025
+[2026-11-16 00:11:00] [INFO] Epoch 013 -> train_loss: 0.7735, val_macro_f1: 0.7993, val_balanced_accuracy: 0.7899, lr: 0.0024
+[2026-11-16 00:11:12] [INFO] Epoch 014 -> train_loss: 0.7905, val_macro_f1: 0.8050, val_balanced_accuracy: 0.7999, lr: 0.0023
+[2026-11-16 00:11:23] [INFO] Epoch 015 -> train_loss: 0.7793, val_macro_f1: 0.7535, val_balanced_accuracy: 0.7615, lr: 0.0022
+[2026-11-16 00:11:35] [INFO] Epoch 016 -> train_loss: 0.7496, val_macro_f1: 0.8162, val_balanced_accuracy: 0.8236, lr: 0.0021
+[2026-11-16 00:11:46] [INFO] Epoch 017 -> train_loss: 0.7371, val_macro_f1: 0.7894, val_balanced_accuracy: 0.8131, lr: 0.0020
+[2026-11-16 00:11:57] [INFO] Epoch 018 -> train_loss: 0.7374, val_macro_f1: 0.7606, val_balanced_accuracy: 0.7474, lr: 0.0019
+[2026-11-16 00:12:09] [INFO] Epoch 019 -> train_loss: 0.7171, val_macro_f1: 0.8291, val_balanced_accuracy: 0.8207, lr: 0.0017
+[2026-11-16 00:12:20] [INFO] Epoch 020 -> train_loss: 0.7079, val_macro_f1: 0.7446, val_balanced_accuracy: 0.7735, lr: 0.0016
+[2026-11-16 00:12:31] [INFO] Epoch 021 -> train_loss: 0.7042, val_macro_f1: 0.7968, val_balanced_accuracy: 0.8101, lr: 0.0015
+[2026-11-16 00:12:42] [INFO] Epoch 022 -> train_loss: 0.6839, val_macro_f1: 0.8262, val_balanced_accuracy: 0.8277, lr: 0.0014
+[2026-11-16 00:12:53] [INFO] Epoch 023 -> train_loss: 0.6534, val_macro_f1: 0.8149, val_balanced_accuracy: 0.8360, lr: 0.0013
+[2026-11-16 00:13:05] [INFO] Epoch 024 -> train_loss: 0.6563, val_macro_f1: 0.8220, val_balanced_accuracy: 0.8340, lr: 0.0011
+[2026-11-16 00:13:16] [INFO] Epoch 025 -> train_loss: 0.6599, val_macro_f1: 0.8211, val_balanced_accuracy: 0.8255, lr: 0.0010
+[2026-11-16 00:13:27] [INFO] Epoch 026 -> train_loss: 0.6228, val_macro_f1: 0.8210, val_balanced_accuracy: 0.8161, lr: 0.0009
+[2026-11-16 00:13:38] [INFO] Epoch 027 -> train_loss: 0.5944, val_macro_f1: 0.8016, val_balanced_accuracy: 0.8026, lr: 0.0008
+[2026-11-16 00:13:38] [INFO] Saved predictions.csv
+[2026-11-16 00:13:38] [INFO] Saved metrics.json
+[2026-11-16 00:13:38] [INFO] Run finished in 305.66s (status: completed); saved record.json
