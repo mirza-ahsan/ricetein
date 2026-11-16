@@ -47,6 +47,8 @@ def background_section(config: dict[str, Any]) -> str:
                           for f, rates in result["flag_rates"].items()])
     first, second = result["raters"]
     kappa = "n/a" if result["kappa"] is None else f"{result['kappa']:.2f}"
+    if result["kappa"] is not None and round(result["kappa"], 2) == 0 and result["agreement"] >= 0.99:
+        kappa += "; not informative here: both raters used one category for almost every photo"
     return text + (
         f"**Plain background: {pct(plain['share'])}** of {plain['n']} photos (95% CI "
         f"{pct(plain['low'])}-{pct(plain['high'])}). Raters {first} and {second} agree on "

@@ -244,6 +244,8 @@ Study plan: `manuals/followup_plan.md`. All scores are percentages.
 - Sections 4 and 5 are **test** scores of the **locked split** (`splits/folds.csv`).
 - Section 6 is **test** scores of the **session-blocked split** (`splits/session_blocked/folds.csv`).
 - Sections 1 and 2 show both splits side by side (test).
+- "mean ± SD" is over the five rounds. Both ranges are around the pooled score (every test photo once), so a
+  mean can sit slightly outside its range when the rounds differ a lot.
 - "photo range" is the declared 95% photo bootstrap. "block range" resamples whole capture blocks (photos
   shot without a pause of more than 60 s from one camera) and is wider when neighbouring photos are alike.
 
