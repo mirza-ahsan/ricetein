@@ -32,7 +32,7 @@ Course project at FAST School of Computing, FAST-NUCES Lahore, and the basis of 
 | Phase 3: Methodology and Experimental Setup | Final (`deliverables/phase3/`) |
 | Phase 4: Experiments and Results | Core-study PDF and notebook ready locally in `submission/phase4/`; not uploaded to the course portal |
 | Final paper | Broader experiments and Discussion/Conclusion deferred to the November 22 final |
-| Follow-up study (audit of 2026-11-14) | Run and reported (`docs/reports/followup_report.md`): session-blocked sensitivity split, time-neighbour and strict-background controls, extended searches, same-head whole-photo control, block-bootstrap ranges and stability seeds. The nine core configurations lose 6.2–11.0 points of test macro-F1 on the session-blocked split. The session-blocked split is the paper's headline split (decided 2026-11-16; the locked split is reported beside it); its tuning protocol is still to be declared (handbook §25) |
+| Follow-up study (audit of 2026-11-14) | Run and reported (`docs/reports/followup_report.md`): session-blocked sensitivity split, time-neighbour and strict-background controls, extended searches, same-head whole-photo control, block-bootstrap ranges and stability seeds. The nine core configurations lose 6.2–11.0 points of test macro-F1 on the session-blocked split. The session-blocked split is the paper's headline split (decided 2026-11-16; the locked split is reported beside it); its tuning protocol is declared (handbook §24) and its runs are the next step (`manuals/HANDOFF.md`) |
 | Environment (local machine + Kaggle GPUs) | Done and verified |
 | Experiments | Stages 0–4 and the scoped nine-method core study are complete (3,334 eligible primary photos). Best mean test macro-F1: Swin-T 83.7 ± 1.3%; attention MIL: 82.4 ± 2.0%. Five rounds and original tuning budgets retained. Other settings, ablations, stability seeds, partition-order and Paddy evaluation remain deferred. See `manuals/phase4_submission.md` and `docs/logbook.md`. |
 
@@ -56,7 +56,6 @@ docs/            project documents (start here)
   HANDBOOK.md       the full practical plan: stages 0–14, rules, decisions, file build order
   DELIVERABLES.md   coursework tracker: deliverables, marks, written commitments
   KAGGLE_WORKFLOW.md  one-time setup for running notebooks on Kaggle GPUs
-  WORKFLOW_GUIDE.md   day-to-day: running notebooks on the local machine and on Kaggle
   logbook.md        dated log of what was done, found and decided
 src/             project code (installed as a package, so `import src` works anywhere)
 scripts/         Kaggle helper scripts (sync code, push, pull, upload weights)
@@ -65,7 +64,7 @@ data/            DATASETS.md (raw data in data/raw/, not in git)
 runs/            one folder per experiment run (settings, scores, predictions, log)
 deliverables/    submitted documents (PDFs) with the LaTeX sources they were built from
 paper/           working LaTeX sources of the article (shared ref.bib, one file per chapter)
-manuals/         per-stage to-do guides
+manuals/         HANDOFF.md: where the project stands and what to do next (start here)
 ```
 
 More folders (`configs/`, `splits/`, `notebooks/`, `tests/`, `results/`) are added as the stages need them. The full planned tree is in `docs/HANDBOOK.md` §9.2.
@@ -124,7 +123,7 @@ Today's agreed scope is the core study, with original training/search budgets re
   ```
   Kaggle notebooks are thin launchers that run the project code in an isolated environment with the exact locked package versions.
 
-Setup details are in [`docs/KAGGLE_WORKFLOW.md`](docs/KAGGLE_WORKFLOW.md), daily use in [`docs/WORKFLOW_GUIDE.md`](docs/WORKFLOW_GUIDE.md). Step-by-step instructions to reproduce every table will be added here once the results exist.
+Setup and the everyday Kaggle loop are in [`docs/KAGGLE_WORKFLOW.md`](docs/KAGGLE_WORKFLOW.md); the current state and next steps are in [`manuals/HANDOFF.md`](manuals/HANDOFF.md). Step-by-step instructions to reproduce every table will be added here once the results exist.
 
 ---
 

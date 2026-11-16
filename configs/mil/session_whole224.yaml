@@ -1,0 +1,9 @@
+# whole224 tuned on the session-blocked split (session tuning protocol, declared 2026-11-16): the same
+# 40-trial study as whole224.yaml, scored on session-split validation photos. Not the same as
+# configs/session/, which refits the settings chosen on the locked split (D11).
+extends: whole224.yaml
+split_files:
+  folds: splits/session_blocked/folds.csv
+mil:
+  name: session_whole224
+  tuned_from: session_whole224

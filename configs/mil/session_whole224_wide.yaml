@@ -1,0 +1,8 @@
+# The second 40-trial study of whole224 on the session-blocked split, with the learning-rate range moved
+# one decade up (rule D7; session tuning protocol, declared 2026-11-16).
+extends: session_whole224.yaml
+search:
+  lr: [1.0e-4, 1.0e-2]
+mil:
+  name: session_whole224_wide
+  tuned_from: session_whole224_wide

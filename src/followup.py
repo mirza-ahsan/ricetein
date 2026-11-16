@@ -1,4 +1,4 @@
-"""The follow-up study declared on 2026-11-14 (handbook §24; manuals/followup_plan.md).
+"""The follow-up study declared on 2026-11-14 (handbook §24, rows of that date).
 
     uv run python -m src.followup <action>
 
@@ -76,6 +76,18 @@ def next_value(scores: dict[float, float], ladder: list[float], declared: list[f
     return None
 
 
+def edge_search(scores: dict[float, float], score, ladder: list[float], declared: list[float]) -> dict[float, float]:
+    """Add ``score(value)`` for every value the edge rule (D6) asks for, starting from the given scores."""
+    while (value := next_value(scores, ladder, declared)) is not None:
+        scores[value] = score(value)
+    return scores
+
+
+def keyed(scores: dict[float, float]) -> dict[str, float]:
+    """Scores by value, in increasing order, with text keys for a JSON file."""
+    return {f"{value:g}": score for value, score in sorted(scores.items())}
+
+
 def fit_rounds(config: dict[str, Any], params: dict[str, Any], seed: int) -> list[str]:
     """Five final fits of one MIL head with given settings. Same steps as train_mil.final, without its
     requirement that the tuning study used this config's split (the session runs reuse locked-split settings)."""
@@ -130,20 +142,24 @@ def session_heads() -> None:
         fit_rounds(config, params, config["seed"])
 
 
-def extend_cnn() -> None:
+def search_cnn(folder: str, output: str) -> None:
+    """The declared learning rates, then the edge rule, for the four 224 px configs in ``configs/<folder>/``.
+    Runs that already exist with the same settings, split and code are reused, not retrained."""
     searched = {}
     for model in MODELS:
-        config = load_config(f"configs/wholeimage/{model}_224.yaml")
+        config = load_config(f"configs/{folder}/{model}_224.yaml")
         declared = config["wholeimage"]["lrs"]
 
         def mean_score(lr: float) -> float:
             return float(np.mean([stage5.run_one(config, lr, r)[1] for r in ROUNDS]))
 
-        scores = {lr: mean_score(lr) for lr in declared}   # the 60 core runs are reused, not retrained
-        while (lr := next_value(scores, LR_LADDER, declared)) is not None:
-            scores[lr] = mean_score(lr)
-        searched[model] = {f"{lr:g}": score for lr, score in sorted(scores.items())}
-    write_json("followup_extend_cnn.json", searched)
+        scores = {lr: mean_score(lr) for lr in declared}
+        searched[model] = keyed(edge_search(scores, mean_score, LR_LADDER, declared))
+    write_json(output, searched)
+
+
+def extend_cnn() -> None:
+    search_cnn("wholeimage", "followup_extend_cnn.json")   # the 60 core runs are reused
 
 
 def extend_probes() -> None:
@@ -152,11 +168,12 @@ def extend_probes() -> None:
         declared = config["probe"]["l2_strengths"]
         core = read_json(get_default_runs_dir() / f"stage7a_selection_e1_{size}.json")
         scores = {trial["l2_strength"]: trial["mean_val_macro_f1"] for trial in core["trials"]}
-        while (strength := next_value(scores, L2_LADDER, declared)) is not None:
+
+        def mean_score(strength: float) -> float:
             extra = {**config, "probe": {**config["probe"], "name": f"e1_{size}_ext", "l2_strengths": [strength]}}
-            scores[strength] = linear_probe.run(extra)["trials"][0]["mean_val_macro_f1"]
-        write_json(f"followup_extend_probe_{size}.json",
-                   {f"{s:g}": score for s, score in sorted(scores.items())})
+            return linear_probe.run(extra)["trials"][0]["mean_val_macro_f1"]
+
+        write_json(f"followup_extend_probe_{size}.json", keyed(edge_search(scores, mean_score, L2_LADDER, declared)))
 
 
 def study(config_name: str) -> None:
@@ -175,6 +192,24 @@ def seeds() -> None:
 
 def completed(name: str, checkpoint: str) -> bool:
     return completed_run(name, ("metrics.json", "predictions.csv", checkpoint))
+
+
+def require_complete(names: list[str]) -> None:
+    for run in names:
+        if not completed(run, evaluate.checkpoint(get_default_runs_dir() / run).name):
+            raise RuntimeError(f"{run}: not complete; finish every training action before selecting")
+
+
+def better_study(stem: str) -> dict[str, Any]:
+    """Rule D7: of the declared and the wide study of one head, the one with the higher best mean
+    validation macro-F1; the declared study wins a tie."""
+    studies = {kind: read_json(get_default_runs_dir() / f"stage7_tune_{stem}{suffix}" / "metrics.json")
+               for kind, suffix in (("declared", ""), ("wide", "_wide"))}
+    scores = {kind: s["best_mean_val_macro_f1"] for kind, s in studies.items()}
+    kind = "wide" if scores["wide"] > scores["declared"] else "declared"
+    name = f"{stem}_wide" if kind == "wide" else stem
+    return {"searched": scores, "selected": kind, "study": name, "params": studies[kind]["best_params"],
+            "runs": [f"stage7_{name}_r{r}" for r in ROUNDS]}
 
 
 def select() -> dict[str, Any]:
@@ -198,13 +233,9 @@ def select() -> dict[str, Any]:
         methods[f"probe_{size}"] = {"searched": searched, "selected": f"{chosen:g}", "runs": names,
                                     "changed": names != core[f"probe_{size}"]}
     for name in AGGREGATORS:
-        studies = {kind: read_json(runs / f"stage7_tune_{name}{suffix}" / "metrics.json")
-                   for kind, suffix in (("declared", ""), ("wide", "_wide"))}
-        scores = {kind: s["best_mean_val_macro_f1"] for kind, s in studies.items()}
-        kind = "wide" if scores["wide"] > scores["declared"] else "declared"
-        stem = f"{name}_wide" if kind == "wide" else name
-        methods[name] = {"searched": scores, "selected": kind, "params": studies[kind]["best_params"],
-                         "runs": [f"stage7_{stem}_r{r}" for r in ROUNDS], "changed": kind == "wide"}
+        chosen = better_study(name)
+        del chosen["study"]   # keeps runs/followup_selection.json as first written
+        methods[name] = {**chosen, "changed": chosen["selected"] == "wide"}
     for size in SIZES:
         methods[f"whole{size}"] = {"runs": [f"stage7_whole{size}_r{r}" for r in ROUNDS], "changed": True}
     session = {}
@@ -217,27 +248,30 @@ def select() -> dict[str, Any]:
         session[f"probe_{size}"] = [f"stage7a_probe_e1_{size}_session_l2{strength:g}_r{r}" for r in ROUNDS]
     for name in AGGREGATORS:
         session[name] = [f"stage7_{name}_session_r{r}" for r in ROUNDS]
-    for names in [m["runs"] for m in methods.values()] + list(session.values()):
-        for run in names:
-            if not completed(run, evaluate.checkpoint(get_default_runs_dir() / run).name):
-                raise RuntimeError(f"{run}: not complete; finish every training action before selecting")
+    require_complete([run for names in [m["runs"] for m in methods.values()] + list(session.values())
+                      for run in names])
     selection = {"partition": "val", "code_version": require_clean_code(), "methods": methods, "session": session}
     write_json("followup_selection.json", selection)
     return selection
 
 
-def evaluate_new() -> None:
-    selection = read_json(get_default_runs_dir() / "followup_selection.json")
-    names = [run for runs in selection["session"].values() for run in runs]
-    names += [run for method in selection["methods"].values() if method["changed"] for run in method["runs"]]
-    plan = get_default_runs_dir() / "followup_evaluation_plan.json"
+def evaluate_once(names: list[str], plan_name: str) -> None:
+    """Freeze the plan for these runs, then test every run that has no test files yet."""
+    plan = get_default_runs_dir() / plan_name
     evaluate.freeze_plan(names, plan)
     for name in names:
         folder = get_default_runs_dir() / name
         if (folder / "test_metrics.json").exists() and (folder / "test_predictions.csv").exists():
             continue
         evaluate.evaluate(name, plan)
-        print(f"{name}: test evaluated", flush=True)   # scores are read by src.followup_report only
+        print(f"{name}: test evaluated", flush=True)   # scores are read by the report modules only
+
+
+def evaluate_new() -> None:
+    selection = read_json(get_default_runs_dir() / "followup_selection.json")
+    names = [run for runs in selection["session"].values() for run in runs]
+    names += [run for method in selection["methods"].values() if method["changed"] for run in method["runs"]]
+    evaluate_once(names, "followup_evaluation_plan.json")
 
 
 ACTIONS = {"baselines": baselines, "session-cnn": session_cnn, "session-heads": session_heads,
