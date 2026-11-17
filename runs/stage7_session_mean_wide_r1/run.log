@@ -1,0 +1,56 @@
+[2026-11-17 05:13:30] [INFO] ============================================================
+[2026-11-17 05:13:30] [INFO] Run: stage7_session_mean_wide_r1
+[2026-11-17 05:13:30] [INFO] Folder: /home/aztrek/projects/ricetein/runs/stage7_session_mean_wide_r1
+[2026-11-17 05:13:30] [INFO] Code version: fc78554
+[2026-11-17 05:13:30] [INFO] GPU: NVIDIA GeForce RTX 4060 (7.68 GB)
+[2026-11-17 05:13:30] [INFO] ============================================================
+[2026-11-17 05:13:31] [INFO] Epoch 001 -> train_loss: 1.4124, val_macro_f1: 0.3419
+[2026-11-17 05:13:31] [INFO] Epoch 002 -> train_loss: 1.1450, val_macro_f1: 0.3615
+[2026-11-17 05:13:32] [INFO] Epoch 003 -> train_loss: 1.0640, val_macro_f1: 0.4069
+[2026-11-17 05:13:32] [INFO] Epoch 004 -> train_loss: 1.0148, val_macro_f1: 0.4167
+[2026-11-17 05:13:33] [INFO] Epoch 005 -> train_loss: 0.9563, val_macro_f1: 0.4955
+[2026-11-17 05:13:34] [INFO] Epoch 006 -> train_loss: 0.9275, val_macro_f1: 0.4704
+[2026-11-17 05:13:34] [INFO] Epoch 007 -> train_loss: 0.9167, val_macro_f1: 0.4425
+[2026-11-17 05:13:35] [INFO] Epoch 008 -> train_loss: 0.8932, val_macro_f1: 0.4957
+[2026-11-17 05:13:35] [INFO] Epoch 009 -> train_loss: 0.8724, val_macro_f1: 0.5183
+[2026-11-17 05:13:36] [INFO] Epoch 010 -> train_loss: 0.8777, val_macro_f1: 0.4922
+[2026-11-17 05:13:36] [INFO] Epoch 011 -> train_loss: 0.8630, val_macro_f1: 0.5232
+[2026-11-17 05:13:37] [INFO] Epoch 012 -> train_loss: 0.8437, val_macro_f1: 0.5279
+[2026-11-17 05:13:37] [INFO] Epoch 013 -> train_loss: 0.8318, val_macro_f1: 0.4919
+[2026-11-17 05:13:38] [INFO] Epoch 014 -> train_loss: 0.8378, val_macro_f1: 0.5286
+[2026-11-17 05:13:38] [INFO] Epoch 015 -> train_loss: 0.8498, val_macro_f1: 0.5357
+[2026-11-17 05:13:39] [INFO] Epoch 016 -> train_loss: 0.8173, val_macro_f1: 0.5346
+[2026-11-17 05:13:39] [INFO] Epoch 017 -> train_loss: 0.8118, val_macro_f1: 0.5343
+[2026-11-17 05:13:40] [INFO] Epoch 018 -> train_loss: 0.8033, val_macro_f1: 0.5419
+[2026-11-17 05:13:40] [INFO] Epoch 019 -> train_loss: 0.8079, val_macro_f1: 0.5577
+[2026-11-17 05:13:41] [INFO] Epoch 020 -> train_loss: 0.8068, val_macro_f1: 0.5892
+[2026-11-17 05:13:41] [INFO] Epoch 021 -> train_loss: 0.7882, val_macro_f1: 0.5367
+[2026-11-17 05:13:42] [INFO] Epoch 022 -> train_loss: 0.7867, val_macro_f1: 0.5045
+[2026-11-17 05:13:42] [INFO] Epoch 023 -> train_loss: 0.7902, val_macro_f1: 0.5554
+[2026-11-17 05:13:43] [INFO] Epoch 024 -> train_loss: 0.7891, val_macro_f1: 0.5656
+[2026-11-17 05:13:43] [INFO] Epoch 025 -> train_loss: 0.7793, val_macro_f1: 0.5849
+[2026-11-17 05:13:44] [INFO] Epoch 026 -> train_loss: 0.7689, val_macro_f1: 0.5269
+[2026-11-17 05:13:45] [INFO] Epoch 027 -> train_loss: 0.7672, val_macro_f1: 0.5340
+[2026-11-17 05:13:45] [INFO] Epoch 028 -> train_loss: 0.7717, val_macro_f1: 0.5772
+[2026-11-17 05:13:46] [INFO] Epoch 029 -> train_loss: 0.7674, val_macro_f1: 0.5055
+[2026-11-17 05:13:46] [INFO] Epoch 030 -> train_loss: 0.7788, val_macro_f1: 0.5657
+[2026-11-17 05:13:47] [INFO] Epoch 031 -> train_loss: 0.7588, val_macro_f1: 0.5462
+[2026-11-17 05:13:47] [INFO] Epoch 032 -> train_loss: 0.7525, val_macro_f1: 0.6236
+[2026-11-17 05:13:48] [INFO] Epoch 033 -> train_loss: 0.7585, val_macro_f1: 0.5780
+[2026-11-17 05:13:48] [INFO] Epoch 034 -> train_loss: 0.7575, val_macro_f1: 0.5548
+[2026-11-17 05:13:49] [INFO] Epoch 035 -> train_loss: 0.7400, val_macro_f1: 0.5682
+[2026-11-17 05:13:49] [INFO] Epoch 036 -> train_loss: 0.7401, val_macro_f1: 0.5638
+[2026-11-17 05:13:50] [INFO] Epoch 037 -> train_loss: 0.7332, val_macro_f1: 0.5675
+[2026-11-17 05:13:50] [INFO] Epoch 038 -> train_loss: 0.7330, val_macro_f1: 0.5484
+[2026-11-17 05:13:51] [INFO] Epoch 039 -> train_loss: 0.7453, val_macro_f1: 0.5812
+[2026-11-17 05:13:51] [INFO] Epoch 040 -> train_loss: 0.7335, val_macro_f1: 0.5536
+[2026-11-17 05:13:52] [INFO] Epoch 041 -> train_loss: 0.7319, val_macro_f1: 0.5909
+[2026-11-17 05:13:52] [INFO] Epoch 042 -> train_loss: 0.7450, val_macro_f1: 0.5794
+[2026-11-17 05:13:53] [INFO] Epoch 043 -> train_loss: 0.7250, val_macro_f1: 0.5484
+[2026-11-17 05:13:53] [INFO] Epoch 044 -> train_loss: 0.7225, val_macro_f1: 0.5534
+[2026-11-17 05:13:54] [INFO] Epoch 045 -> train_loss: 0.7281, val_macro_f1: 0.5698
+[2026-11-17 05:13:54] [INFO] Epoch 046 -> train_loss: 0.7273, val_macro_f1: 0.5486
+[2026-11-17 05:13:55] [INFO] Epoch 047 -> train_loss: 0.7188, val_macro_f1: 0.5630
+[2026-11-17 05:13:55] [INFO] Saved predictions.csv
+[2026-11-17 05:13:55] [INFO] Saved metrics.json
+[2026-11-17 05:13:55] [INFO] Run finished in 24.62s (status: completed); saved record.json
