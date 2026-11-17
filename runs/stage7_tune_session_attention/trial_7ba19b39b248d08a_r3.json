@@ -1,0 +1,1 @@
+{"params": {"lr": 0.00030010509422378443, "weight_decay": 0.00025369890189981336, "width": 512, "dropout": 0.1, "tile_dropout": 0.3, "descriptor": "c"}, "round": 3, "val_macro_f1": 0.7185635285304629, "best_epoch": 34}

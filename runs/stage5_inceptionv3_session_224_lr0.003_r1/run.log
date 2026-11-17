@@ -1,0 +1,21 @@
+[2026-11-16 22:18:38] [INFO] ============================================================
+[2026-11-16 22:18:38] [INFO] Run: stage5_inceptionv3_session_224_lr0.003_r1
+[2026-11-16 22:18:38] [INFO] Folder: /home/aztrek/projects/ricetein/runs/stage5_inceptionv3_session_224_lr0.003_r1
+[2026-11-16 22:18:38] [INFO] Code version: fc78554
+[2026-11-16 22:18:38] [INFO] GPU: NVIDIA GeForce RTX 4060 (7.68 GB)
+[2026-11-16 22:18:38] [INFO] ============================================================
+[2026-11-16 22:18:49] [INFO] Epoch 001 -> train_loss: 1.4728, val_macro_f1: 0.5132, val_balanced_accuracy: 0.5679, lr: 0.0015
+[2026-11-16 22:18:58] [INFO] Epoch 002 -> train_loss: 1.1580, val_macro_f1: 0.1661, val_balanced_accuracy: 0.2917, lr: 0.0030
+[2026-11-16 22:19:06] [INFO] Epoch 003 -> train_loss: 1.1551, val_macro_f1: 0.5167, val_balanced_accuracy: 0.5660, lr: 0.0030
+[2026-11-16 22:19:14] [INFO] Epoch 004 -> train_loss: 1.0376, val_macro_f1: 0.5918, val_balanced_accuracy: 0.5884, lr: 0.0030
+[2026-11-16 22:19:22] [INFO] Epoch 005 -> train_loss: 0.9942, val_macro_f1: 0.5911, val_balanced_accuracy: 0.6106, lr: 0.0030
+[2026-11-16 22:19:30] [INFO] Epoch 006 -> train_loss: 1.0366, val_macro_f1: 0.4777, val_balanced_accuracy: 0.5402, lr: 0.0029
+[2026-11-16 22:19:38] [INFO] Epoch 007 -> train_loss: 0.9902, val_macro_f1: 0.4741, val_balanced_accuracy: 0.5420, lr: 0.0029
+[2026-11-16 22:19:46] [INFO] Epoch 008 -> train_loss: 0.9898, val_macro_f1: 0.5022, val_balanced_accuracy: 0.5319, lr: 0.0028
+[2026-11-16 22:19:54] [INFO] Epoch 009 -> train_loss: 1.0681, val_macro_f1: 0.5449, val_balanced_accuracy: 0.5820, lr: 0.0028
+[2026-11-16 22:20:02] [INFO] Epoch 010 -> train_loss: 1.0023, val_macro_f1: 0.5185, val_balanced_accuracy: 0.5245, lr: 0.0027
+[2026-11-16 22:20:10] [INFO] Epoch 011 -> train_loss: 1.0269, val_macro_f1: 0.4515, val_balanced_accuracy: 0.5036, lr: 0.0026
+[2026-11-16 22:20:17] [INFO] Epoch 012 -> train_loss: 0.9729, val_macro_f1: 0.5237, val_balanced_accuracy: 0.5402, lr: 0.0025
+[2026-11-16 22:20:17] [INFO] Saved predictions.csv
+[2026-11-16 22:20:17] [INFO] Saved metrics.json
+[2026-11-16 22:20:17] [INFO] Run finished in 99.64s (status: completed); saved record.json

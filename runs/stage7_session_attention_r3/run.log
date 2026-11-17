@@ -1,0 +1,50 @@
+[2026-11-17 03:44:53] [INFO] ============================================================
+[2026-11-17 03:44:53] [INFO] Run: stage7_session_attention_r3
+[2026-11-17 03:44:53] [INFO] Folder: /home/aztrek/projects/ricetein/runs/stage7_session_attention_r3
+[2026-11-17 03:44:53] [INFO] Code version: fc78554
+[2026-11-17 03:44:53] [INFO] GPU: NVIDIA GeForce RTX 4060 (7.68 GB)
+[2026-11-17 03:44:53] [INFO] ============================================================
+[2026-11-17 03:44:55] [INFO] Epoch 001 -> train_loss: 1.2658, val_macro_f1: 0.4445
+[2026-11-17 03:44:56] [INFO] Epoch 002 -> train_loss: 0.9920, val_macro_f1: 0.5676
+[2026-11-17 03:44:58] [INFO] Epoch 003 -> train_loss: 0.8903, val_macro_f1: 0.6593
+[2026-11-17 03:44:59] [INFO] Epoch 004 -> train_loss: 0.8231, val_macro_f1: 0.6465
+[2026-11-17 03:45:01] [INFO] Epoch 005 -> train_loss: 0.7983, val_macro_f1: 0.6184
+[2026-11-17 03:45:02] [INFO] Epoch 006 -> train_loss: 0.7851, val_macro_f1: 0.6540
+[2026-11-17 03:45:04] [INFO] Epoch 007 -> train_loss: 0.7593, val_macro_f1: 0.6402
+[2026-11-17 03:45:05] [INFO] Epoch 008 -> train_loss: 0.7655, val_macro_f1: 0.6849
+[2026-11-17 03:45:07] [INFO] Epoch 009 -> train_loss: 0.7361, val_macro_f1: 0.6437
+[2026-11-17 03:45:08] [INFO] Epoch 010 -> train_loss: 0.7254, val_macro_f1: 0.6495
+[2026-11-17 03:45:10] [INFO] Epoch 011 -> train_loss: 0.7158, val_macro_f1: 0.6804
+[2026-11-17 03:45:11] [INFO] Epoch 012 -> train_loss: 0.7097, val_macro_f1: 0.6704
+[2026-11-17 03:45:13] [INFO] Epoch 013 -> train_loss: 0.6899, val_macro_f1: 0.6509
+[2026-11-17 03:45:14] [INFO] Epoch 014 -> train_loss: 0.6903, val_macro_f1: 0.6951
+[2026-11-17 03:45:16] [INFO] Epoch 015 -> train_loss: 0.6903, val_macro_f1: 0.6771
+[2026-11-17 03:45:17] [INFO] Epoch 016 -> train_loss: 0.6746, val_macro_f1: 0.6303
+[2026-11-17 03:45:19] [INFO] Epoch 017 -> train_loss: 0.6777, val_macro_f1: 0.6780
+[2026-11-17 03:45:20] [INFO] Epoch 018 -> train_loss: 0.6698, val_macro_f1: 0.6900
+[2026-11-17 03:45:22] [INFO] Epoch 019 -> train_loss: 0.6509, val_macro_f1: 0.6762
+[2026-11-17 03:45:23] [INFO] Epoch 020 -> train_loss: 0.6475, val_macro_f1: 0.6768
+[2026-11-17 03:45:25] [INFO] Epoch 021 -> train_loss: 0.6453, val_macro_f1: 0.6824
+[2026-11-17 03:45:26] [INFO] Epoch 022 -> train_loss: 0.6419, val_macro_f1: 0.6877
+[2026-11-17 03:45:28] [INFO] Epoch 023 -> train_loss: 0.6369, val_macro_f1: 0.6304
+[2026-11-17 03:45:29] [INFO] Epoch 024 -> train_loss: 0.6287, val_macro_f1: 0.6758
+[2026-11-17 03:45:31] [INFO] Epoch 025 -> train_loss: 0.6262, val_macro_f1: 0.6739
+[2026-11-17 03:45:32] [INFO] Epoch 026 -> train_loss: 0.6200, val_macro_f1: 0.7263
+[2026-11-17 03:45:34] [INFO] Epoch 027 -> train_loss: 0.6162, val_macro_f1: 0.6808
+[2026-11-17 03:45:35] [INFO] Epoch 028 -> train_loss: 0.6215, val_macro_f1: 0.6849
+[2026-11-17 03:45:37] [INFO] Epoch 029 -> train_loss: 0.6069, val_macro_f1: 0.6630
+[2026-11-17 03:45:38] [INFO] Epoch 030 -> train_loss: 0.6070, val_macro_f1: 0.6758
+[2026-11-17 03:45:40] [INFO] Epoch 031 -> train_loss: 0.6002, val_macro_f1: 0.6916
+[2026-11-17 03:45:41] [INFO] Epoch 032 -> train_loss: 0.6082, val_macro_f1: 0.6648
+[2026-11-17 03:45:43] [INFO] Epoch 033 -> train_loss: 0.5985, val_macro_f1: 0.6723
+[2026-11-17 03:45:44] [INFO] Epoch 034 -> train_loss: 0.5962, val_macro_f1: 0.6949
+[2026-11-17 03:45:46] [INFO] Epoch 035 -> train_loss: 0.5872, val_macro_f1: 0.6824
+[2026-11-17 03:45:47] [INFO] Epoch 036 -> train_loss: 0.5905, val_macro_f1: 0.7129
+[2026-11-17 03:45:49] [INFO] Epoch 037 -> train_loss: 0.5795, val_macro_f1: 0.6947
+[2026-11-17 03:45:50] [INFO] Epoch 038 -> train_loss: 0.5671, val_macro_f1: 0.6974
+[2026-11-17 03:45:52] [INFO] Epoch 039 -> train_loss: 0.5886, val_macro_f1: 0.6874
+[2026-11-17 03:45:53] [INFO] Epoch 040 -> train_loss: 0.5653, val_macro_f1: 0.6840
+[2026-11-17 03:45:55] [INFO] Epoch 041 -> train_loss: 0.5798, val_macro_f1: 0.7119
+[2026-11-17 03:45:55] [INFO] Saved predictions.csv
+[2026-11-17 03:45:55] [INFO] Saved metrics.json
+[2026-11-17 03:45:55] [INFO] Run finished in 61.32s (status: completed); saved record.json

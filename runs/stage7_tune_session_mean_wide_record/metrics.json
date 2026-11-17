@@ -1,0 +1,13 @@
+{
+  "best_params": {
+    "lr": 0.00939565593334571,
+    "weight_decay": 0.0010221052744257201,
+    "width": 512,
+    "dropout": 0.0,
+    "tile_dropout": 0.15,
+    "descriptor": "c"
+  },
+  "best_mean_val_macro_f1": 0.7214006957778963,
+  "trials": 40,
+  "partition": "val"
+}
