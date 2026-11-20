@@ -1,7 +1,0 @@
-# inceptionv3 at 448 px (run only for the model that is best at 224 px on validation) on the session-blocked split, at the learning rate selected at 224 px on the
-# session-split validation photos (runs/session_selection.json; handbook §24, 2026-11-20). Everything else,
-# including the run name inceptionv3_session, comes from inceptionv3_224.yaml.
-extends: inceptionv3_224.yaml
-wholeimage:
-  size: 448
-  otsu: false

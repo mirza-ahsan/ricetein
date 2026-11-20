@@ -1,7 +1,0 @@
-# swin_tiny at 128 px on the session-blocked split, at the learning rate selected at 224 px on the
-# session-split validation photos (runs/session_selection.json; handbook §24, 2026-11-20). Everything else,
-# including the run name swin_tiny_session, comes from swin_tiny_224.yaml.
-extends: swin_tiny_224.yaml
-wholeimage:
-  size: 128
-  otsu: false

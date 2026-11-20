@@ -1,7 +1,0 @@
-# convnext_tiny at 224 px with Otsu background removal on the session-blocked split, at the learning rate selected at 224 px on the
-# session-split validation photos (runs/session_selection.json; handbook §24, 2026-11-20). Everything else,
-# including the run name convnext_tiny_session, comes from convnext_tiny_224.yaml.
-extends: convnext_tiny_224.yaml
-wholeimage:
-  size: 224
-  otsu: true
