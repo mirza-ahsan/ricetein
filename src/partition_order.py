@@ -24,6 +24,7 @@ import argparse
 import copy
 import json
 import math
+import os
 import zlib
 from pathlib import Path
 from typing import Any, Callable
@@ -33,35 +34,55 @@ import pandas as pd
 import torch
 from torch import nn
 
-from src import augment, evaluate, metrics
+from src import augment, metrics
 from src import train_mil as tm
 from src import train_wholeimage as tw
 from src.config import REPO_ROOT, load_config, output_root
 from src.embed import completed_cache
 from src.mil_models import MILModel
-from src.partition_splits import BOTH, FILENAMES, condition_tables, lock_tables, read_condition
+from src.partition_splits import BOTH, FILENAMES, SPLIT_DIR, condition_tables, lock_tables, read_condition
 from src.photo_dataset import PhotoDataset, photo_cache, photo_ids
 from src.records import RunRecorder, completed_run, get_default_runs_dir, require_clean_code, reusable_run
 from src.seeding import seed_everything
-from src.split import round_column
+from src.split import read_folds, round_column, sha256
 
 ROUNDS = range(1, 6)
 DECLARED, PLAN = "stage9_declared.json", "stage9_evaluation_plan.json"
-ARTIFACTS = {"B": ("model.pt", "metrics.json", "predictions.csv"), "C": ("model.pt", "metrics.json", "predictions.csv"),
-             "D": ("model.pt", "metrics.json")}   # D has no validation photos: it trains for A's best epoch
+FULL = ("model.pt", "metrics.json", "predictions.csv")
+ARTIFACTS = {"B": FULL, "C": FULL, "D": FULL[:2]}   # D has no validation photos: it trains for A's best epoch
+TRAINING_KEYS = ("versions", "split_seed_offset", "d_seeds", "copy_cache")   # the settings that shape a run
+
+
 def read_json(path: Path) -> Any:
     return json.loads(path.read_text())
 
 
 def write_once(path: Path, data: Any) -> None:
-    """Create the file with ``data``; an existing file must hold the same data."""
+    """Create the file with ``data``, all or nothing; an existing file must hold the same data."""
     text = json.dumps(data, indent=2, sort_keys=True) + "\n"
-    if path.exists():
-        if read_json(path) != json.loads(text):
-            raise ValueError(f"{path} exists with other content; it is frozen")
-        return
-    with path.open("x") as out:
-        out.write(text)
+    if not path.exists():
+        temporary = path.with_name(path.name + ".tmp")
+        temporary.write_text(text)
+        try:
+            os.link(temporary, path)          # fails if another call created the file first
+        except FileExistsError:
+            pass
+        finally:
+            temporary.unlink()
+    if read_json(path) != json.loads(text):
+        raise ValueError(f"{path} exists with other content; it is frozen")
+
+
+def int_size_keys(config: dict[str, Any]) -> dict[str, Any]:
+    """A copy of a recorded whole-image config whose size tables are keyed by integers again (JSON turns them
+    into text; a Swin-style ``size_kwargs`` lookup by integer would silently find nothing)."""
+    config = copy.deepcopy(config)
+    whole = config["wholeimage"]
+    whole["batch_size"] = {int(size): batch for size, batch in whole["batch_size"].items()}
+    for spec in whole["models"].values():
+        if "size_kwargs" in spec:
+            spec["size_kwargs"] = {int(size): kwargs for size, kwargs in spec["size_kwargs"].items()}
+    return config
 
 
 def run_name(model: str, condition: str, r: int) -> str:
@@ -76,16 +97,17 @@ def reference_runs(config: dict[str, Any], model: str, which: str) -> list[str]:
 
 
 def with_role(units: pd.DataFrame, r: int, role: str) -> pd.DataFrame:
-    """Condition D's ``train_and_test`` rows act as ``role``; the other conditions are unchanged."""
+    """Condition D's ``train_and_test`` rows act as ``role`` (train or test only); the others are unchanged."""
     column = round_column(r)
+    if role not in ("train", "test") and (units[column] == BOTH).any():
+        raise ValueError(f"condition D has no {role} photos")
     return units.assign(**{column: units[column].replace(BOTH, role)})
 
 
 # ---------------------------------------------------------------- declaration
 
 def split_hashes(config: dict[str, Any]) -> dict[str, str]:
-    folder = REPO_ROOT / config["partition_order"]["split_dir"]
-    return {c: evaluate.digest(folder / f) for c, f in FILENAMES.items()}
+    return {c: sha256(REPO_ROOT / SPLIT_DIR / f) for c, f in FILENAMES.items()}
 
 
 def protocol(config: dict[str, Any]) -> dict[str, Any]:
@@ -94,10 +116,10 @@ def protocol(config: dict[str, Any]) -> dict[str, Any]:
     for which in ("a", "l"):
         for model in config["partition_order"]["models"]:
             for name in reference_runs(config, model, which):
-                runs[name] = {"record_sha256": evaluate.digest(root / name / "record.json"),
-                              "test_predictions_sha256": evaluate.digest(root / name / "test_predictions.csv")}
+                runs[name] = {"record_sha256": sha256(root / name / "record.json"),
+                              "test_predictions_sha256": sha256(root / name / "test_predictions.csv")}
     return {"partition_order": config["partition_order"], "split_files": split_hashes(config),
-            "session_folds_sha256": evaluate.digest(REPO_ROOT / config["split_files"]["folds"]),
+            "session_folds_sha256": read_folds(config)[1],
             "seed": config["seed"], "evaluation": config["evaluation"], "reference_runs": runs}
 
 
@@ -117,11 +139,10 @@ def require_declared(config: dict[str, Any]) -> None:
 def build_copies(images: np.ndarray, ids: list[str], folder: Path, config: dict[str, Any]) -> np.memmap:
     """Version 0 (clean) and 7 augmented copies of every photo at 224 px, made with the augmentation of the main
     protocol (``src.augment``), frozen before any split is drawn. Built once; a different identity refuses."""
-    po = config["partition_order"]
-    shape = (po["versions"], len(ids), 224, 224, 3)
+    shape = (config["partition_order"]["versions"], len(ids), 224, 224, 3)
     identity = {"ids": ids, "shape": list(shape), "seed": config["seed"],
-                "augment_sha256": evaluate.digest(REPO_ROOT / "src/augment.py"),
-                "photos": evaluate.digest(REPO_ROOT / "src/photo_dataset.py")}
+                "augment_sha256": sha256(REPO_ROOT / "src/augment.py"),
+                "photos": sha256(REPO_ROOT / "src/photo_dataset.py")}
     folder.mkdir(parents=True, exist_ok=True)
     write_once(folder / "spec.json", identity)
     data = folder / "copies.u8"
@@ -139,7 +160,7 @@ def build_copies(images: np.ndarray, ids: list[str], folder: Path, config: dict[
         del out
         temporary.replace(data)
         write_once(folder / "complete.json", identity)
-    if read_json(folder / "complete.json") != json.loads(json.dumps(identity)) or data.stat().st_size != math.prod(shape):
+    if data.stat().st_size != math.prod(shape):
         raise ValueError(f"{folder}: damaged or incompatible copy cache")
     return np.memmap(data, np.uint8, "r", shape=shape)
 
@@ -172,7 +193,8 @@ class Images:
         self.photos, self.ids = photo_cache(config, 224, False, config["wholeimage"]["workers"]), photo_ids(config)
         self.copies = None
         if copies:
-            self.copies = build_copies(self.photos, self.ids, output_root() / config["partition_order"]["copy_cache"], config)
+            folder = output_root() / config["partition_order"]["copy_cache"]
+            self.copies = build_copies(self.photos, self.ids, folder, config)
 
 
 def photo_data(config: dict[str, Any], units: pd.DataFrame, r: int, role: str, condition: str,
@@ -190,14 +212,15 @@ def snapshot(model: nn.Module) -> dict[str, torch.Tensor]:
 
 
 class CopyStore:
-    """Condition B's bags are named by sample id ('photo|vK'); the version Bags asks for is ignored."""
+    """Condition B's bags are named by sample id; Bags asks for ``bag(sample_id, 0)`` and gets that copy's bag."""
 
-    def __init__(self, store: Any) -> None:
+    def __init__(self, store: Any, units: pd.DataFrame) -> None:
         self.store, self.dim = store, store.dim
+        self.copy_of = dict(zip(units["sample_id"], zip(units["photo_id"], units["version"].astype(int))))
 
     def bag(self, sample: str, version: int) -> np.ndarray:
-        photo, _, copy_ = sample.rpartition("|v")
-        return self.store.bag(photo, int(copy_))
+        assert version == 0, "condition B reads one fixed copy per sample id"
+        return self.store.bag(*self.copy_of[sample])
 
 
 def mil_bags(store: Any, units: pd.DataFrame, r: int, role: str, condition: str, config: dict[str, Any],
@@ -207,7 +230,7 @@ def mil_bags(store: Any, units: pd.DataFrame, r: int, role: str, condition: str,
     mil, train = config["mil"], role == "train"
     units = with_role(units, r, role)
     if condition == "B":
-        store, units = CopyStore(store), units.assign(photo_id=units["sample_id"])
+        store, units = CopyStore(store, units), units.assign(photo_id=units["sample_id"])
     versions = mil["versions"] if train and condition != "B" else 1
     return tm.Bags(store, units, r, role, config["classes"], versions, params["tile_dropout"] if train else 0.0,
                    mil["batch"], seed)
@@ -232,7 +255,8 @@ def fit_mil(store: Any, units: pd.DataFrame, r: int, condition: str, config: dic
         label_smoothing=config["loss"]["label_smoothing"])
     optimiser = torch.optim.AdamW(model.parameters(), lr=params["lr"], weight_decay=params["weight_decay"],
                                   eps=mil["adam_eps"])
-    schedule = torch.optim.lr_scheduler.LambdaLR(optimiser, lambda e: 0.5 * (1 + math.cos(math.pi * e / mil["max_epochs"])))
+    schedule = torch.optim.lr_scheduler.LambdaLR(
+        optimiser, lambda e: 0.5 * (1 + math.cos(math.pi * e / mil["max_epochs"])))
     best: dict[str, Any] = {"f1": -1.0, "epoch": 0}
     for epoch in range(1, (fixed_epochs or mil["max_epochs"]) + 1):
         if epoch_size:
@@ -247,32 +271,36 @@ def fit_mil(store: Any, units: pd.DataFrame, r: int, condition: str, config: dic
             optimiser.step()
             losses.append(loss.item())
         schedule.step()
-        if val is None:
+        entry = {"train_loss": float(np.mean(losses))}
+        if fixed_epochs:
             if log:
-                log(epoch, {"train_loss": float(np.mean(losses))})
-            best = {"f1": None, "epoch": epoch, "state": snapshot(model)}
+                log(epoch, entry)
             continue
         rows, probs, _ = tm.predict(model, val, device)
         f1 = metrics.scores(train.labels[rows], probs.argmax(1), list(range(len(classes))))["macro_f1"]
         if log:
-            log(epoch, {"train_loss": float(np.mean(losses)), "val_macro_f1": f1})
+            log(epoch, {**entry, "val_macro_f1": f1})
         if f1 > best["f1"]:
             best = {"f1": f1, "epoch": epoch, "state": snapshot(model), "rows": rows, "probs": probs}
         elif epoch - best["epoch"] >= mil["patience"]:
             break
+    if fixed_epochs:
+        best = {"f1": None, "epoch": fixed_epochs, "state": snapshot(model)}
     del model
     if device.type == "cuda":
         torch.cuda.empty_cache()
     return best
 
 
-def loader(data: torch.utils.data.Dataset, config: dict[str, Any], train: bool, epoch_size: int | None) -> Any:
+def loader(data: torch.utils.data.Dataset, config: dict[str, Any], train: bool, epoch_size: int | None,
+           persistent: bool = True) -> Any:
+    """One pass per epoch for training and validation (workers stay alive); scoring passes ``persistent=False``."""
     w = config["wholeimage"]
     sampler = torch.utils.data.RandomSampler(data, num_samples=epoch_size) if train and epoch_size else None
     return torch.utils.data.DataLoader(
         data, batch_size=w["batch_size"][224], shuffle=train and sampler is None, sampler=sampler,
         num_workers=w["workers"], pin_memory=torch.cuda.is_available(), drop_last=train,
-        persistent_workers=w["workers"] > 0)
+        persistent_workers=persistent and w["workers"] > 0)
 
 
 def fit_whole(config: dict[str, Any], units: pd.DataFrame, r: int, condition: str, images: Images, seed: int,
@@ -295,7 +323,8 @@ def fit_whole(config: dict[str, Any], units: pd.DataFrame, r: int, condition: st
     steps, warmup = len(data["train"]), len(data["train"]) * w["warmup_epochs"]
     total = w["max_epochs"] * steps
     schedule = torch.optim.lr_scheduler.LambdaLR(
-        optimiser, lambda s: (s + 1) / warmup if s < warmup else 0.5 * (1 + math.cos(math.pi * (s - warmup) / max(1, total - warmup))))
+        optimiser, lambda s: (s + 1) / warmup if s < warmup
+        else 0.5 * (1 + math.cos(math.pi * (s - warmup) / max(1, total - warmup))))
     scaler = torch.amp.GradScaler(enabled=device.type == "cuda")
     mean = torch.tensor(config["normalisation"]["mean"], device=device).view(1, 3, 1, 1)
     std = torch.tensor(config["normalisation"]["std"], device=device).view(1, 3, 1, 1)
@@ -313,19 +342,22 @@ def fit_whole(config: dict[str, Any], units: pd.DataFrame, r: int, condition: st
             scaler.update()
             schedule.step()
             losses.append(loss.item())
-        if not fixed_epochs:
-            rows, probs = tw.predict(model, data["val"], config, device)
-            f1 = metrics.scores(units["class"].to_numpy()[rows], np.array(classes)[probs.argmax(1)], classes)["macro_f1"]
+        entry = {"train_loss": float(np.mean(losses))}
+        if fixed_epochs:
             if log:
-                log(epoch, {"train_loss": float(np.mean(losses)), "val_macro_f1": f1})
-            if f1 > best["f1"]:
-                best = {"f1": f1, "epoch": epoch, "state": snapshot(model), "rows": rows, "probs": probs}
-            elif epoch - best["epoch"] >= w["patience"]:
-                break
-        else:
-            if log:
-                log(epoch, {"train_loss": float(np.mean(losses))})
-            best = {"f1": None, "epoch": epoch, "state": snapshot(model)}
+                log(epoch, entry)
+            continue
+        rows, probs = tw.predict(model, data["val"], config, device)
+        true = units["class"].to_numpy()[rows]
+        f1 = metrics.scores(true, np.array(classes)[probs.argmax(1)], classes)["macro_f1"]
+        if log:
+            log(epoch, {**entry, "val_macro_f1": f1})
+        if f1 > best["f1"]:
+            best = {"f1": f1, "epoch": epoch, "state": snapshot(model), "rows": rows, "probs": probs}
+        elif epoch - best["epoch"] >= w["patience"]:
+            break
+    if fixed_epochs:
+        best = {"f1": None, "epoch": fixed_epochs, "state": snapshot(model)}
     del model, data
     if device.type == "cuda":
         torch.cuda.empty_cache()
@@ -345,10 +377,10 @@ def predictions(units: pd.DataFrame, rows: np.ndarray, probs: np.ndarray, r: int
 def run_config(config: dict[str, Any], a_record: dict[str, Any], model: str, condition: str, r: int) -> dict[str, Any]:
     """A's recorded settings with the condition's split file and seed: nothing is tuned."""
     po = config["partition_order"]
-    c = evaluate.restore_size_keys(a_record["config"]) if model == "efficientnetv2s" else copy.deepcopy(a_record["config"])
-    c.update(condition=condition, round=r, partition_order=po,
+    c = int_size_keys(a_record["config"]) if model == "efficientnetv2s" else copy.deepcopy(a_record["config"])
+    c.update(condition=condition, round=r, partition_order={k: po[k] for k in TRAINING_KEYS},
              run_seed=po["d_seeds"][r - 1] if condition == "D" else config["seed"],
-             split_files={**c["split_files"], "folds": f"{po['split_dir']}/{FILENAMES[condition]}"})
+             split_files={**c["split_files"], "folds": f"{SPLIT_DIR}/{FILENAMES[condition]}"})
     return c
 
 
@@ -364,28 +396,29 @@ def archive_partial(name: str) -> None:
 def fit_all(config: dict[str, Any]) -> None:
     require_declared(config)
     require_clean_code()
-    root = get_default_runs_dir()
+    root, po = get_default_runs_dir(), config["partition_order"]
     if (root / PLAN).exists():
         raise RuntimeError(f"runs/{PLAN} is frozen: no run may be trained after scoring was declared")
-    session_folds = pd.read_csv(REPO_ROOT / config["split_files"]["folds"], dtype=str)
-    for model in config["partition_order"]["models"]:
+    session_folds, session_sha = read_folds(config)
+    for model in po["models"]:
         a_runs = reference_runs(config, model, "a")
         a_records = [read_json(root / name / "record.json") for name in a_runs]
+        for r, record in enumerate(a_records, start=1):
+            if record["config"]["round"] != r or record["split_checksum"] != session_sha:
+                raise ValueError(f"{a_runs[r - 1]} is not round {r} of the declared session split")
+        if model == "attention" and a_records[0]["config"]["mil"]["versions"] != po["versions"]:
+            raise ValueError("partition_order.versions must equal the number of cached versions")
         store = images = None
-        for condition in config["partition_order"]["conditions"]:
+        for condition in po["conditions"]:
             units = read_condition(condition)
-            split_sha = evaluate.digest(REPO_ROOT / config["partition_order"]["split_dir"] / FILENAMES[condition])
+            split_sha = sha256(REPO_ROOT / SPLIT_DIR / FILENAMES[condition])
             for r in ROUNDS:
                 name, record = run_name(model, condition, r), a_records[r - 1]
-                if record["config"]["round"] != r:
-                    raise ValueError(f"{a_runs[r - 1]} is not round {r}; the selection lists the runs out of order")
                 c = run_config(config, record, model, condition, r)
                 fixed = read_json(root / a_runs[r - 1] / "metrics.json")["best_epoch"] if condition == "D" else None
-                epoch = int((session_folds[round_column(r)] == "train").sum()) if condition == "B" else None
-                c.update(fixed_epochs=fixed, epoch_size=epoch)
+                epoch_size = int((session_folds[round_column(r)] == "train").sum()) if condition == "B" else None
+                c.update(fixed_epochs=fixed, epoch_size=epoch_size)
                 if model == "attention":
-                    if c["mil"]["versions"] != config["partition_order"]["versions"]:
-                        raise ValueError("partition_order.versions must equal the number of cached versions")
                     c["cache_spec_sha256"] = completed_cache(c, c["mil"]["cache"])["spec_sha256"]
                     if c["cache_spec_sha256"] != record["config"]["cache_spec_sha256"]:
                         raise ValueError(f"{name}: the tile cache differs from the one A was trained on")
@@ -397,10 +430,11 @@ def fit_all(config: dict[str, Any]) -> None:
                 if model == "attention":
                     store = store or tm.BagStore(c["mil"]["cache"], c["params"]["descriptor"],
                                                  sorted(session_folds.photo_id), c["mil"]["versions"])
-                    best = fit_mil(store, units, r, condition, c, c["run_seed"], fixed, epoch, recorder.log_epoch)
+                    best = fit_mil(store, units, r, condition, c, c["run_seed"], fixed, epoch_size, recorder.log_epoch)
                 else:
-                    images = images or Images(c, "B" in config["partition_order"]["conditions"])
-                    best = fit_whole(c, units, r, condition, images, c["run_seed"], fixed, epoch, recorder.log_epoch)
+                    images = images or Images(c, "B" in po["conditions"])
+                    best = fit_whole(c, units, r, condition, images, c["run_seed"], fixed, epoch_size,
+                                     recorder.log_epoch)
                 torch.save(best["state"], recorder.run_dir / "model.pt")
                 if "rows" in best:
                     recorder.save_predictions(predictions(units, best["rows"], best["probs"], r, "val", c["classes"]))
@@ -421,8 +455,6 @@ def score_run(name: str, model: str, condition: str, r: int) -> Callable[[], pd.
     written; the returned function only runs the model on the scored photos."""
     folder = get_default_runs_dir() / name
     c = read_json(folder / "record.json")["config"]
-    if model == "efficientnetv2s":
-        c = evaluate.restore_size_keys(c)
     units = read_condition(condition)
     state = torch.load(folder / "model.pt", map_location="cpu", weights_only=True)
     if model == "attention":
@@ -433,19 +465,23 @@ def score_run(name: str, model: str, condition: str, r: int) -> Callable[[], pd.
         net.load_state_dict(state)
         device = torch.device(mil.get("device", "cuda"))
         net, bags = net.to(device), mil_bags(store, units, r, "test", condition, c, params, c["seed"])
-        predict = lambda: tm.predict(net, bags, device)[:2]   # noqa: E731
+
+        def run() -> pd.DataFrame:
+            rows, probs, _ = tm.predict(net, bags, device)
+            return predictions(units, rows, probs, r, "scored", c["classes"])
     else:
+        c = int_size_keys(c)
         w = c["wholeimage"]
         seed_everything(c["run_seed"], w["determinism"])
         net, device = tw.build_model(c, 224), torch.device(w.get("device", "cuda"))
         net.load_state_dict(state)
         net = net.to(device)
-        data = loader(photo_data(c, units, r, "test", condition, Images(c, condition == "B")), c, False, None)
-        predict = lambda: tw.predict(net, data, c, device)   # noqa: E731
+        data = loader(photo_data(c, units, r, "test", condition, Images(c, condition == "B")), c, False, None,
+                      persistent=False)
 
-    def run() -> pd.DataFrame:
-        rows, probs = predict()
-        return predictions(units, rows, probs, r, "scored", c["classes"])
+        def run() -> pd.DataFrame:
+            rows, probs = tw.predict(net, data, c, device)
+            return predictions(units, rows, probs, r, "scored", c["classes"])
     return run
 
 
@@ -462,11 +498,12 @@ def score_all(config: dict[str, Any]) -> None:
         if read_json(root / n / "record.json")["split_checksum"] != splits[condition]:
             raise ValueError(f"{n}: trained on another split file than the declared one")
     frozen = {"split_files": splits,
-              "runs": {n: {"record_sha256": evaluate.digest(root / n / "record.json"),
-                           "checkpoint_sha256": evaluate.digest(root / n / "model.pt")} for n, *_ in runs}}
+              "runs": {n: {"record_sha256": sha256(root / n / "record.json"),
+                           "checkpoint_sha256": sha256(root / n / "model.pt")} for n, *_ in runs}}
     if (root / PLAN).exists() and read_json(root / PLAN) != frozen:
         raise ValueError("a run or a split file changed after the evaluation plan was frozen; stop and report to Ahsan")
     write_once(root / PLAN, frozen)
+    plan_sha = sha256(root / PLAN)
     for name, model, condition, r in runs:
         folder = root / name
         if (folder / "score_metrics.json").exists():
@@ -475,8 +512,9 @@ def score_all(config: dict[str, Any]) -> None:
             raise RuntimeError(f"{name}: scoring started earlier and did not finish; stop and report to Ahsan")
         run = score_run(name, model, condition, r)
         with (folder / "score_started.json").open("x") as out:
-            json.dump({"scoring_code": version, "plan_sha256": evaluate.digest(root / PLAN)}, out)
+            json.dump({"scoring_code": version, "plan_sha256": plan_sha}, out)
         table = run()
+        del run                      # frees the model and its loader before the next run is prepared
         table.to_csv(folder / "score_predictions.csv", index=False)
         (folder / "score_metrics.json").write_text(json.dumps(
             {"partition": "scored", "deliberately_flawed_protocol": True,
@@ -484,20 +522,25 @@ def score_all(config: dict[str, Any]) -> None:
         print(f"{name}: scored", flush=True)   # scores are read by `partition_report` only
 
 
+def make_splits(config: dict[str, Any]) -> None:
+    session, _ = read_folds(config)
+    lock_tables(condition_tables(session, config), REPO_ROOT / SPLIT_DIR)
+    print("written:", split_hashes(config), flush=True)   # the leak counter: python -m src.partition_report leaks
+
+
+def build_cache(config: dict[str, Any]) -> None:
+    Images(config, copies=True)
+
+
+ACTIONS = {"splits": make_splits, "declare": declare, "cache": build_cache, "fit": fit_all, "score": score_all}
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    parser.add_argument("action", choices=["splits", "declare", "cache", "fit", "score"])
+    parser.add_argument("action", choices=ACTIONS)
     parser.add_argument("--config", default="configs/partition_order.yaml")
     args = parser.parse_args()
-    config = load_config(args.config)
-    if args.action == "splits":
-        session = pd.read_csv(REPO_ROOT / config["split_files"]["folds"], dtype=str)
-        lock_tables(condition_tables(session, config), REPO_ROOT / config["partition_order"]["split_dir"])
-        print("written:", split_hashes(config), flush=True)   # leak counter: python -m src.partition_report leaks
-    elif args.action == "cache":
-        Images(config, copies=True)
-    else:
-        {"declare": declare, "fit": fit_all, "score": score_all}[args.action](config)
+    ACTIONS[args.action](load_config(args.config))
     print(f"STAGE9 {args.action} DONE", flush=True)
 
 

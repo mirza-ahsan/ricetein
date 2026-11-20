@@ -14,12 +14,10 @@ extends: session/split.yaml
 partition_order:
   models: [efficientnetv2s, attention]
   conditions: [B, C, D]
-  repeats: 5                       # rounds for B and C; seeds 0-4 on the same data for D
   versions: 8                      # copies per photo in B: 1 clean + 7 augmented (the same 8 versions as the E1 cache)
-  split_dir: splits/partition_order
+                                   # B takes as many training copies per epoch as A has training photos (step-matched)
   split_seed_offset: {B: 1000, C: 2000}   # split seed = split_seed + offset (+ round for the validation draw)
   d_seeds: [0, 1, 2, 3, 4]         # D: one training seed per repeat; D stops at A's best epoch of the same round
-  b_epoch: step_matched            # B draws as many training copies per epoch as A has training photos
   copy_cache: cache/partition_order/copies_224
   # Condition A: runs of runs/session_selection.json (the headline selection). Reference row L: the locked-split
   # headline runs of runs/followup_selection.json (their own selected settings, not A's).

@@ -19,16 +19,13 @@ from src import metrics, stats
 from src.config import REPO_ROOT, load_config
 from src.inventory import read_inventory
 from src.inventory_report import md_table
-from src.partition_order import (
-    ROUNDS,
-    all_runs,
-    get_default_runs_dir,
-    reference_runs,
-    require_declared,
-    run_name,
-)
-from src.partition_splits import leak_counter, photo_keys, read_condition
+from src.partition_order import ROUNDS, all_runs, reference_runs, require_declared, run_name
+from src.partition_splits import BOTH, read_condition
+from src.records import get_default_runs_dir
+from src.session_split import capture_seconds, nearest_in_sorted
+from src.split import read_folds, round_column
 
+EXPOSURE_SECONDS = 10
 TABLE, REPORT = "results/tables/partition_order_inflation.csv", "docs/reports/partition_order_report.md"
 
 
@@ -61,16 +58,12 @@ def scores_from_confusion(counts: np.ndarray, k: int) -> tuple[np.ndarray, np.nd
 
 
 def inflation_ranges(counts: dict[str, np.ndarray], photo_class: np.ndarray, settings: dict[str, Any], seed: int,
-                     k: int, reference: str = "A") -> dict[str, dict[str, dict[str, float]]]:
-    """Per label and metric: the pooled value with its range, and the difference to ``reference`` with its range.
-    The ranges come from one set of bootstrap draws over source photos (resampled within class, all copies and
-    repeats of a photo kept together), so every difference is paired."""
-    rng = np.random.default_rng(seed)
-    groups = [np.flatnonzero(photo_class == c) for c in np.unique(photo_class)]
-    draws = np.zeros((settings["resamples"], len(photo_class)))
-    for i in range(settings["resamples"]):
-        draws[i] = np.bincount(np.concatenate([g[rng.integers(0, len(g), len(g))] for g in groups]),
-                               minlength=len(photo_class))
+                     k: int) -> dict[str, dict[str, dict[str, float]]]:
+    """Per label and metric: the pooled value with its range, and the difference to A with its range. The ranges
+    come from one set of bootstrap draws over source photos (resampled within class, all copies and repeats of a
+    photo kept together), so every difference is paired."""
+    draws = np.stack([np.bincount(i, minlength=len(photo_class)) for i in
+                      stats.resample_indices(photo_class, settings["resamples"], settings["stratified"], seed)])
     point = {label: scores_from_confusion(c.sum(0), k) for label, c in counts.items()}
     boot = {label: scores_from_confusion(draws @ c, k) for label, c in counts.items()}
     result: dict[str, dict[str, dict[str, float]]] = {}
@@ -78,18 +71,17 @@ def inflation_ranges(counts: dict[str, np.ndarray], photo_class: np.ndarray, set
         result[label] = {}
         for m, metric in enumerate(("macro_f1", "balanced_accuracy")):
             low, high = stats.interval(boot[label][m], settings["confidence"])
-            d_low, d_high = stats.interval(boot[label][m] - boot[reference][m], settings["confidence"])
+            d_low, d_high = stats.interval(boot[label][m] - boot["A"][m], settings["confidence"])
             result[label][metric] = {"value": float(point[label][m]), "low": low, "high": high,
-                                     "difference": float(point[label][m] - point[reference][m]),
+                                     "difference": float(point[label][m] - point["A"][m]),
                                      "difference_low": d_low, "difference_high": d_high}
     return result
 
 
 def round_scores(table: pd.DataFrame, classes: list[str]) -> pd.DataFrame:
     """Macro-F1 and balanced accuracy of each round (or repeat), indexed by round."""
-    return pd.DataFrame({int(r): {m: s[m] for m in ("macro_f1", "balanced_accuracy")}
-                         for r, g in table.groupby("round")
-                         for s in [metrics.scores(g["true_class"], g["pred_class"], classes)]}).T
+    return pd.DataFrame({int(r): metrics.scores(g["true_class"], g["pred_class"], classes)
+                         for r, g in table.groupby("round")}).T[["macro_f1", "balanced_accuracy"]]
 
 
 def reading(difference_low: float, difference_high: float, above: int, below: int, minimum: int) -> str:
@@ -102,11 +94,54 @@ def reading(difference_low: float, difference_high: float, above: int, below: in
     return "no clear difference"
 
 
+def photo_keys(session_folds: pd.DataFrame, locked_folds: pd.DataFrame, inventory: pd.DataFrame) -> pd.DataFrame:
+    """Per photo (index ``photo_id``): its near-duplicate group (locked split file), its capture block
+    (session split file), camera and capture time in seconds (inventory)."""
+    info = inventory.set_index("photo_id")
+    keys = pd.DataFrame({"group": locked_folds.set_index("photo_id")["group_id"],
+                         "block": session_folds.set_index("photo_id")["group_id"],
+                         "camera": info["camera"].fillna("unknown"),
+                         "seconds": capture_seconds(info["taken_at"])})
+    return keys.loc[session_folds["photo_id"]]
+
+
+def leak_counter(units: pd.DataFrame, round_: int, keys: pd.DataFrame,
+                 scored_where: np.ndarray | None = None) -> dict[str, float]:
+    """Leak shares of one round. ``units`` has ``photo_id`` and the role columns; ``keys`` is ``photo_keys``.
+
+    A scored unit is a ``test`` unit (condition D: every unit). Each share is the fraction of scored units
+    whose source photo / near-duplicate group / capture block has a training unit, and the fraction with a
+    same-camera training photo taken within ``EXPOSURE_SECONDS`` (a photo without capture time counts as none).
+    ``scored_where`` (a boolean per unit) narrows the scored units, e.g. to the clean copies of condition B.
+    """
+    role = units[round_column(round_)].to_numpy()
+    train, scored = np.isin(role, ("train", BOTH)), np.isin(role, ("test", BOTH))
+    if scored_where is not None:
+        scored &= scored_where
+    info = keys.loc[units["photo_id"]]
+    shares = {"scored_units": int(scored.sum())}
+    for name, values in (("source_photo", units["photo_id"].to_numpy()),
+                         ("near_duplicate_group", info["group"].to_numpy()),
+                         ("capture_block", info["block"].to_numpy())):
+        shares[name] = float(np.isin(values[scored], values[train]).mean())
+    near = np.zeros(len(units), bool)
+    camera, seconds = info["camera"].to_numpy(), info["seconds"].to_numpy(float)
+    for cam in np.unique(camera[scored]):
+        times = np.sort(seconds[train & (camera == cam) & ~np.isnan(seconds)])
+        pick = np.flatnonzero(scored & (camera == cam))
+        if len(times) and len(pick):
+            gap = nearest_in_sorted(times, pd.Series(seconds[pick]))[1]
+            near[pick] = np.nan_to_num(gap, nan=np.inf) <= EXPOSURE_SECONDS
+    shares[f"same_camera_within_{EXPOSURE_SECONDS}s"] = float(near[scored].mean())
+    return shares
+
+
 def leak_shares(units: pd.DataFrame, keys: pd.DataFrame, scored_where: np.ndarray | None = None) -> dict[str, float]:
     """The leak counter averaged over the five rounds, weighted by the number of scored units."""
     rows = [leak_counter(units, r, keys, scored_where) for r in ROUNDS]
     weight = np.array([row["scored_units"] for row in rows], float)
-    return {key: float(np.average([row[key] for row in rows], weights=weight)) for key in rows[0] if key != "scored_units"}
+    return {key: float(np.average([row[key] for row in rows], weights=weight))
+            for key in rows[0] if key != "scored_units"}
 
 
 def read_scored(names: list[str], filename: str) -> pd.DataFrame:
@@ -123,7 +158,7 @@ def inflation_table(config: dict[str, Any], tables: dict[str, pd.DataFrame], lea
     counts = {label: confusion_by_photo(t, photos, classes) for label, t in tables.items()}
     for label, c in counts.items():
         if (c.sum(1) == 0).any():
-            raise ValueError(f"{label}: some photos have no scored row; the table needs every photo in every condition")
+            raise ValueError(f"{label}: some photos have no scored row; every condition must cover every photo")
     photo_class = tables["A"].drop_duplicates("photo_id").set_index("photo_id").loc[photos, "true_class"]
     ranges = inflation_ranges(counts, photo_class.map({c: i for i, c in enumerate(classes)}).to_numpy(), boot,
                               config["seed"], len(classes))
@@ -133,8 +168,9 @@ def inflation_table(config: dict[str, Any], tables: dict[str, pd.DataFrame], lea
         row: dict[str, Any] = {"model": model, "condition": label, "meaning": MEANING[label], "scored_rows": len(t),
                                "photos": t["photo_id"].nunique(), "rounds": t["round"].nunique()}
         for metric in ("macro_f1", "balanced_accuracy"):
-            mine, ref = per_round[label][metric], per_round["A"][metric]
-            above, below = int((mine > ref.reindex(mine.index)).sum()), int((mine < ref.reindex(mine.index)).sum())
+            mine = per_round[label][metric]
+            ref = per_round["A"][metric].reindex(mine.index)
+            above, below = int((mine > ref).sum()), int((mine < ref).sum())
             r = ranges[label][metric]
             row.update({f"{metric}_pooled": r["value"], f"{metric}_low": r["low"], f"{metric}_high": r["high"],
                         f"{metric}_round_mean": mine.mean(), f"{metric}_round_sd": mine.std(ddof=1),
@@ -172,6 +208,18 @@ def pct(x: float) -> str:
     return f"{100 * x:.1f}"
 
 
+def span(value: float, low: float, high: float, signed: bool = False) -> str:
+    """'75.9 [74.4, 77.3]' in percent, with signs for an inflation (points)."""
+    f = (lambda x: f"{100 * x:+.1f}") if signed else pct
+    return f"{f(value)} [{f(low)}, {f(high)}]"
+
+
+def inflation_cells(part: pd.DataFrame, metric: str) -> list[str]:
+    return ["–" if c == "A" else span(d, lo, hi, signed=True)
+            for c, d, lo, hi in zip(part.condition, part[f"{metric}_inflation"], part[f"{metric}_inflation_low"],
+                                    part[f"{metric}_inflation_high"])]
+
+
 def report_text(table: pd.DataFrame) -> str:
     """The neutral report, built from the table only."""
     sections = []
@@ -181,13 +229,13 @@ def report_text(table: pd.DataFrame) -> str:
         shown = pd.DataFrame({
             "condition": part["condition"], "what it does": part["meaning"],
             "scored rows": part["scored_rows"].map("{:,}".format),
-            "macro-F1, pooled [95% range]": [f"{pct(v)} [{pct(lo)}, {pct(hi)}]" for v, lo, hi in
+            "macro-F1, pooled [95% range]": [span(v, lo, hi) for v, lo, hi in
                                              zip(part.macro_f1_pooled, part.macro_f1_low, part.macro_f1_high)],
-            "mean ± SD over rounds": [f"{pct(m)} ± {pct(s)}" for m, s in zip(part.macro_f1_round_mean, part.macro_f1_round_sd)],
-            "inflation vs A (points) [95% range]": ["–" if c == "A" else f"{100 * d:+.1f} [{100 * lo:+.1f}, {100 * hi:+.1f}]"
-                                                    for c, d, lo, hi in zip(part.condition, part.macro_f1_inflation,
-                                                                            part.macro_f1_inflation_low, part.macro_f1_inflation_high)],
-            "rounds above A": ["–" if c == "A" else f"{n}/{r}" for c, n, r in zip(part.condition, part.macro_f1_rounds_above_A, part.rounds)],
+            "mean ± SD over rounds": [f"{pct(m)} ± {pct(s)}"
+                                      for m, s in zip(part.macro_f1_round_mean, part.macro_f1_round_sd)],
+            "inflation vs A (points) [95% range]": inflation_cells(part, "macro_f1"),
+            "rounds above A": ["–" if c == "A" else f"{n}/{r}"
+                               for c, n, r in zip(part.condition, part.macro_f1_rounds_above_A, part.rounds)],
             "reading": part["macro_f1_reading"]})
         leak = pd.DataFrame({
             "condition": part["condition"], "same source photo": part["leak_source_photo"].map(pct),
@@ -196,43 +244,44 @@ def report_text(table: pd.DataFrame) -> str:
             "same camera within 10 s": part["leak_same_camera_within_10s"].map(pct)})
         balanced = pd.DataFrame({
             "condition": part["condition"], "balanced accuracy, pooled": part["balanced_accuracy_pooled"].map(pct),
-            "inflation vs A (points) [95% range]": ["–" if c == "A" else f"{100 * d:+.1f} [{100 * lo:+.1f}, {100 * hi:+.1f}]"
-                                                    for c, d, lo, hi in zip(part.condition, part.balanced_accuracy_inflation,
-                                                                            part.balanced_accuracy_inflation_low, part.balanced_accuracy_inflation_high)],
+            "inflation vs A (points) [95% range]": inflation_cells(part, "balanced_accuracy"),
             "reading": part["balanced_accuracy_reading"]})
         sections += [f"## {title}", "", "Macro-F1 (percent, test photos of each condition):", "", md_table(shown), "",
                      "Balanced accuracy:", "", md_table(balanced), "",
-                     "Leak counter: share of the scored rows (all five rounds) whose photo, group, block or neighbour in time "
-                     "is also in training (percent):", "", md_table(leak), ""]
+                     "Leak counter: share of the scored rows (all five rounds) whose photo, group, block or neighbour "
+                     "in time is also in training (percent):", "", md_table(leak), ""]
     return "\n".join([
         "# Partition-order experiment", "",
-        "Built by `src/partition_order.py` from `runs/`; do not edit by hand. Declared on 2026-11-20 (handbook §24).", "",
+        "Built by `src/partition_report.py` from `runs/`; do not edit by hand. Declared on 2026-11-20 "
+        "(handbook §24).", "",
         "**What this is.** A general lesson about testing practice. Testing mistakes are common across plant-disease "
         "recognition work (Xu et al., 2024). Here we repeat three of them on our own photos and models and measure how "
         "much each raises the score, compared with the correct protocol. No published study is assessed.", "",
-        "**Conditions.** A is the correct protocol: the session-blocked split, augmentation on training photos only (the "
-        "five headline runs of each model, reused as they are). B makes eight copies of every photo with the same "
+        "**Conditions.** A is the correct protocol: the session-blocked split, augmentation on training photos only "
+        "(the five headline runs of each model, reused as they are). B makes eight copies of every photo with the same "
         "augmentation, then splits the copies at random, so copies of one photo land on both sides. C splits photos at "
-        "random and ignores near-duplicate groups and capture blocks. D trains on every photo and scores on every photo. "
-        "L is a reference row: the locked split, which groups pixel-level copies but not capture sessions, with the "
-        "settings selected on it (not A's).", "",
+        "random and ignores near-duplicate groups and capture blocks. D trains on every photo and scores on every "
+        "photo. L is a reference row: the locked split, which groups pixel-level copies but not capture sessions, "
+        "with the settings selected on it (not A's).", "",
         "**How to read it.** B, C and D are deliberately wrong. Their scores are not estimates of how the models "
         "perform on new photos, and they are used nowhere else. All of them reuse A's selected settings: nothing is "
-        "tuned. B takes as many training steps per epoch as A. B is scored on its test copies, which include augmented "
-        "copies; `B_clean` keeps only the clean copy of each photo. D stops at A's best epoch and its five repeats use "
-        "five seeds on the same photos. Inflation is the pooled score of a condition minus the pooled score of A. Its "
-        "range is a bootstrap over source photos (resampled within class; all copies and repeats of a photo stay "
-        "together). A condition is called higher (or lower) than A only when the range excludes 0 and at least 4 of 5 "
-        "rounds agree. \"Rounds above A\" pairs round r of a condition with round r of A; for D (every repeat scores all "
-        "photos) and for L (another split) this is a convention, not a comparison on identical photos. The "
-        "same-camera-within-10-s share counts a photo's own training copy, so it is about 100% by construction for B and D.",
+        "tuned. B takes as many training steps per epoch as A. B is scored on its test copies, which include "
+        "augmented copies; `B_clean` keeps only the clean copy of each photo. D stops at A's best epoch and its five "
+        "repeats use five seeds on the same photos. Inflation is the pooled score of a condition minus the pooled "
+        "score of A. Its range is a bootstrap over source photos (resampled within class; all copies and repeats of "
+        "a photo stay together). A condition is called higher (or lower) than A only when the range excludes 0 and at "
+        "least 4 of 5 rounds agree. \"Rounds above A\" pairs round r of a condition with round r of A; for D (every "
+        "repeat scores all photos) and for L (another split) this is a convention, not a comparison on identical "
+        "photos. The "
+        "same-camera-within-10-s share counts a photo's own training copy, so it is about 100% by construction for B "
+        "and D.",
         "One training seed per round and condition; the rounds are the repeats.", ""] + sections)
 
 
 def leak_tables(config: dict[str, Any]) -> dict[str, dict[str, float]]:
     """The leak counter of A, the locked-split reference L and B, B_clean, C and D, from the split files alone."""
-    session = pd.read_csv(REPO_ROOT / config["split_files"]["folds"], dtype=str)
-    locked = pd.read_csv(REPO_ROOT / "splits/folds.csv", dtype=str)
+    session = read_folds(config)[0]
+    locked = pd.read_csv(REPO_ROOT / config["session"]["source_folds"], dtype=str)
     keys = photo_keys(session, locked, read_inventory(config["inventory"]["files"]["primary"]))
     b = read_condition("B")
     return {"A": leak_shares(session, keys), "L": leak_shares(locked, keys), "B": leak_shares(b, keys),

@@ -71,34 +71,34 @@ def test_every_condition_tests_each_unit_exactly_once(world):
 def test_b_puts_the_same_source_photo_on_both_sides_and_the_counter_sees_it(world):
     b = world.tables["B"]
     in_both = b.groupby("photo_id")[round_column(1)].agg(lambda roles: {"train", "test"} <= set(roles))
-    assert in_both.mean() > 0.3        # with 3 copies a photo often has none in test; the 8-copy files are checked below
-    assert ps.leak_counter(b, 1, world.keys)["source_photo"] > 0.9
-    clean = ps.leak_counter(b, 1, world.keys, (b["version"] == 0).to_numpy())
+    assert in_both.mean() > 0.3        # with 3 copies a photo often has none in test (8-copy files: see below)
+    assert pr.leak_counter(b, 1, world.keys)["source_photo"] > 0.9
+    clean = pr.leak_counter(b, 1, world.keys, (b["version"] == 0).to_numpy())
     assert clean["scored_units"] == (world.tables["B"].query("version == 0")[round_column(1)] == "test").sum()
 
 
 def test_the_correct_splits_leak_nothing_and_the_locked_split_leaks_only_sessions(world):
     for r in range(1, 6):
-        a = ps.leak_counter(world.session, r, world.keys)
+        a = pr.leak_counter(world.session, r, world.keys)
         assert a["source_photo"] == a["near_duplicate_group"] == a["capture_block"] == 0
         assert a["same_camera_within_10s"] == 0
-        locked = ps.leak_counter(world.locked, r, world.keys)
+        locked = pr.leak_counter(world.locked, r, world.keys)
         assert locked["source_photo"] == locked["near_duplicate_group"] == 0
-    assert np.mean([ps.leak_counter(world.locked, r, world.keys)["capture_block"] for r in range(1, 6)]) > 0.3
+    assert np.mean([pr.leak_counter(world.locked, r, world.keys)["capture_block"] for r in range(1, 6)]) > 0.3
 
 
 def test_c_ignores_groups_and_blocks(world):
     c = world.tables["C"].merge(world.keys, left_on="photo_id", right_index=True)
     roles = c.groupby("group")[round_column(1)].agg(set)
     assert (roles.map(lambda s: len(s & {"train", "test"}) == 2)).any()      # a pair split over both sides
-    shares = ps.leak_counter(world.tables["C"], 1, world.keys)
+    shares = pr.leak_counter(world.tables["C"], 1, world.keys)
     assert shares["source_photo"] == 0 and shares["near_duplicate_group"] > 0 and shares["capture_block"] > 0.9
 
 
 def test_d_scores_on_its_training_photos_and_no_standard_loader_accepts_the_file(world):
     d = world.tables["D"]
     assert (d[[round_column(r) for r in range(1, 6)]] == ps.BOTH).all().all()
-    assert set(ps.leak_counter(d, 1, world.keys).values()) == {1.0, float(N)}
+    assert set(pr.leak_counter(d, 1, world.keys).values()) == {1.0, float(N)}
     assert (po.with_role(d, 1, "test")[round_column(1)] == "test").all()
     with pytest.raises(ValueError, match="no train photos"):
         tm.Bags(Store(), d, 1, "train", CLASSES, 1, 0.0, 4, 0)
@@ -111,14 +111,13 @@ def test_split_files_are_written_once_apart_from_the_locked_splits(world, tmp_pa
     ps.lock_tables(world.tables, tmp_path / "partition_order")                     # the same content: fine
     with pytest.raises(ValueError, match="never regenerated"):
         ps.lock_tables({**world.tables, "C": world.tables["C"].iloc[::-1]}, tmp_path / "partition_order")
-    assert not {"folds.csv"} & set(ps.FILENAMES.values())
-    assert load_config("configs/partition_order.yaml")["partition_order"]["split_dir"] == "splits/partition_order"
+    assert ps.SPLIT_DIR == "splits/partition_order"
 
 
 def test_the_committed_split_files_are_a_fresh_build_of_the_declared_settings():
     config = load_config("configs/partition_order.yaml")
     session = pd.read_csv(REPO_ROOT / config["split_files"]["folds"], dtype=str)
-    folder = REPO_ROOT / config["partition_order"]["split_dir"]
+    folder = REPO_ROOT / ps.SPLIT_DIR
     for condition, table in ps.condition_tables(session, config).items():
         assert (folder / ps.FILENAMES[condition]).read_text() == table.to_csv(index=False)
     b = ps.read_condition("B")
@@ -214,7 +213,8 @@ def test_the_whole_image_loop_runs_each_condition(pictures, condition, options):
     assert ("rows" in best) == (condition != "D")
     if condition == "B":                                   # step-matched: 8 copies a pass at batch 4
         data = po.photo_data(whole_config(), pictures.units["B"], 1, "train", "B", pictures.images)
-        assert len(po.loader(data, whole_config(), True, 8)) == 2 and len(po.loader(data, whole_config(), True, None)) > 2
+        assert len(po.loader(data, whole_config(), True, 8)) == 2
+        assert len(po.loader(data, whole_config(), True, None)) > 2
 
 
 def test_b_copies_are_fixed_and_the_clean_copy_is_the_main_protocols_evaluation_view(tmp_path):
@@ -238,7 +238,8 @@ def test_b_copies_are_fixed_and_the_clean_copy_is_the_main_protocols_evaluation_
 
 def test_runs_reuse_a_settings_with_the_conditions_own_split_and_a_fenced_name(config):
     record = {"config": {"lr": 0.001, "seed": 0, "split_files": {"folds": "splits/session_blocked/folds.csv"},
-                         "wholeimage": {"batch_size": {"224": 32}, "models": {"m": {"size_kwargs": {"224": {"a": 1}}}}}}}
+                         "wholeimage": {"batch_size": {"224": 32},
+                                        "models": {"m": {"size_kwargs": {"224": {"a": 1}}}}}}}
     names = [n for n, *_ in po.all_runs(config)]
     assert len(names) == len(set(names)) == 30 and all(n.startswith("stage9_") for n in names)
     d = po.run_config(config, record, "efficientnetv2s", "D", 3)
@@ -283,7 +284,6 @@ def test_every_run_is_scored_once_after_the_plan_is_frozen(runs_dir, config, mon
     (runs_dir / first / "score_metrics.json").unlink()                     # a scoring that did not finish
     with pytest.raises(RuntimeError, match="started earlier"):
         po.score_all(config)
-    monkeypatch.setattr(po, "require_declared", lambda config: None)
     with pytest.raises(RuntimeError, match="frozen"):
         po.fit_all(config)
 
@@ -313,6 +313,7 @@ def test_stage9_runs_stay_reusable_while_only_their_own_code_is_unchanged():
     assert "src/partition_order.py" in paths and "src/partition_splits.py" in paths and "src/train_mil.py" in paths
     assert "src/records.py" not in paths and "src/explain.py" not in paths and "configs" not in paths
     assert "src/partition_report.py" not in paths          # a report fix must not make a finished run look changed
+    assert "src/evaluate.py" not in paths and "src/session_split.py" not in paths   # nor an edit to shared reporting
 
 
 def test_a_declaration_is_frozen_and_checked_before_training(tmp_path, monkeypatch, config):
@@ -355,7 +356,7 @@ def test_inflation_is_the_difference_to_a_and_its_range_is_paired_over_photos(co
     counts = {"A": pr.confusion_by_photo(a, photos, CLASSES), "B": pr.confusion_by_photo(b, photos, CLASSES),
               "A2": pr.confusion_by_photo(a, photos, CLASSES)}
     photo_class = np.arange(120) % 4
-    ranges = pr.inflation_ranges(counts, photo_class, {"resamples": 300, "confidence": 0.95}, 0, 4)
+    ranges = pr.inflation_ranges(counts, photo_class, {"resamples": 300, "confidence": 0.95, "stratified": True}, 0, 4)
     assert ranges["A"]["macro_f1"]["difference"] == 0 and ranges["A2"]["macro_f1"]["difference_low"] == 0
     r = ranges["B"]["macro_f1"]
     assert r["difference"] == pytest.approx(r["value"] - ranges["A"]["macro_f1"]["value"]) and r["difference_low"] > 0
@@ -379,7 +380,8 @@ def test_the_inflation_table_and_the_report_carry_the_leak_counter(config, world
         t["round"] = t["round"].clip(1, 5)
     leaks = {k: {"source_photo": 1.0 if k in ("B", "B_clean", "D") else 0.0, "near_duplicate_group": 0.1,
                  "capture_block": 0.9, "same_camera_within_10s": 0.5} for k in tables}
-    config = {**config, "evaluation": {**config["evaluation"], "bootstrap": {"resamples": 100, "confidence": 0.95}}}
+    boot = {"resamples": 100, "confidence": 0.95, "stratified": True}
+    config = {**config, "evaluation": {**config["evaluation"], "bootstrap": boot}}
     table = pr.inflation_table(config, tables, leaks, "attention")
     assert list(table["condition"]) == list(tables) and table.loc[0, "macro_f1_reading"] == "reference"
     assert table.loc[table["condition"] == "B", "leak_source_photo"].item() == 1.0
@@ -416,8 +418,8 @@ def test_the_declaration_freezes_settings_split_files_and_reference_runs(runs_di
     (runs_dir / "splits/session_blocked").mkdir(parents=True)
     (runs_dir / config["split_files"]["folds"]).write_text("session")
     for which, stem in (("a", "session_selection"), ("l", "followup_selection")):
-        methods = {config["partition_order"][f"{which}_methods"][m]: {"runs": [f"{which}_{m}_r{r}" for r in range(1, 6)]}
-                   for m in config["partition_order"]["models"]}
+        methods = {config["partition_order"][f"{which}_methods"][m]:
+                   {"runs": [f"{which}_{m}_r{r}" for r in range(1, 6)]} for m in config["partition_order"]["models"]}
         (runs_dir / f"{stem}.json").write_text(json.dumps({"methods": methods}))
         for m in config["partition_order"]["models"]:
             for r in range(1, 6):
@@ -427,7 +429,8 @@ def test_the_declaration_freezes_settings_split_files_and_reference_runs(runs_di
                 (folder / "test_predictions.csv").write_text("x")
     first = po.protocol(config)
     assert first == po.protocol(config)                                    # the same on every call
-    assert {"seed", "evaluation", "session_folds_sha256", "split_files"} <= set(first) and len(first["reference_runs"]) == 20
+    assert {"seed", "evaluation", "session_folds_sha256", "split_files"} <= set(first)
+    assert len(first["reference_runs"]) == 20
     (runs_dir / "a_attention_r3" / "test_predictions.csv").write_text("changed")
     assert po.protocol(config) != first
 
@@ -442,9 +445,30 @@ def test_an_interrupted_run_is_moved_aside_not_deleted(runs_dir):
 
 
 def test_the_same_camera_exposure_is_measured(world):
-    assert ps.leak_counter(world.tables["C"], 1, world.keys)["same_camera_within_10s"] > 0.3
-    assert ps.leak_counter(world.tables["B"], 1, world.keys)["same_camera_within_10s"] > 0.9
+    assert pr.leak_counter(world.tables["C"], 1, world.keys)["same_camera_within_10s"] > 0.3
+    assert pr.leak_counter(world.tables["B"], 1, world.keys)["same_camera_within_10s"] > 0.9
     far = world.keys.assign(seconds=world.keys["seconds"] * 1000)          # 5 s apart becomes 5,000 s apart
-    assert ps.leak_counter(world.tables["C"], 1, far)["same_camera_within_10s"] == 0
+    assert pr.leak_counter(world.tables["C"], 1, far)["same_camera_within_10s"] == 0
     unknown = world.keys.assign(seconds=np.nan)                            # no capture time: no exposure claimed
-    assert ps.leak_counter(world.tables["C"], 1, unknown)["same_camera_within_10s"] == 0
+    assert pr.leak_counter(world.tables["C"], 1, unknown)["same_camera_within_10s"] == 0
+
+
+def test_condition_d_cannot_be_asked_for_validation_photos_and_the_freeze_file_is_written_whole(world, tmp_path):
+    with pytest.raises(ValueError, match="no val photos"):
+        po.with_role(world.tables["D"], 1, "val")
+    po.with_role(world.tables["C"], 1, "val")                              # the other conditions have real val rows
+    po.write_once(tmp_path / "x.json", {"a": 1})
+    assert [p.name for p in tmp_path.iterdir()] == ["x.json"]               # the temporary file is gone
+    po.write_once(tmp_path / "x.json", {"a": 1})
+    with pytest.raises(ValueError, match="frozen"):
+        po.write_once(tmp_path / "x.json", {"a": 2})
+
+
+def test_condition_b_bags_are_looked_up_by_sample_id(world):
+    store = Store()
+    b = world.tables["B"]
+    copy_store = po.CopyStore(store, b)
+    copy_store.bag(b["sample_id"].iloc[5], 0)
+    assert store.calls == [(b["photo_id"].iloc[5], int(b["version"].iloc[5]))]
+    with pytest.raises(AssertionError):
+        copy_store.bag(b["sample_id"].iloc[5], 3)
