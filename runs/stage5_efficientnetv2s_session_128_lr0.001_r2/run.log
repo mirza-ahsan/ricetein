@@ -1,0 +1,23 @@
+[2026-11-20 23:26:25] [INFO] ============================================================
+[2026-11-20 23:26:25] [INFO] Run: stage5_efficientnetv2s_session_128_lr0.001_r2
+[2026-11-20 23:26:25] [INFO] Folder: /home/aztrek/projects/ricetein/runs/stage5_efficientnetv2s_session_128_lr0.001_r2
+[2026-11-20 23:26:25] [INFO] Code version: f4493f2
+[2026-11-20 23:26:25] [INFO] GPU: NVIDIA GeForce RTX 4060 (7.68 GB)
+[2026-11-20 23:26:25] [INFO] ============================================================
+[2026-11-20 23:26:38] [INFO] Epoch 001 -> train_loss: 2.4542, val_macro_f1: 0.3406, val_balanced_accuracy: 0.3619, lr: 0.0005
+[2026-11-20 23:26:43] [INFO] Epoch 002 -> train_loss: 1.2962, val_macro_f1: 0.4523, val_balanced_accuracy: 0.4834, lr: 0.0010
+[2026-11-20 23:26:47] [INFO] Epoch 003 -> train_loss: 1.1781, val_macro_f1: 0.3725, val_balanced_accuracy: 0.4537, lr: 0.0010
+[2026-11-20 23:26:52] [INFO] Epoch 004 -> train_loss: 1.0736, val_macro_f1: 0.4055, val_balanced_accuracy: 0.4492, lr: 0.0010
+[2026-11-20 23:26:56] [INFO] Epoch 005 -> train_loss: 1.0102, val_macro_f1: 0.6201, val_balanced_accuracy: 0.6151, lr: 0.0010
+[2026-11-20 23:26:59] [INFO] Epoch 006 -> train_loss: 0.9812, val_macro_f1: 0.6715, val_balanced_accuracy: 0.6867, lr: 0.0010
+[2026-11-20 23:27:03] [INFO] Epoch 007 -> train_loss: 0.9400, val_macro_f1: 0.5725, val_balanced_accuracy: 0.5788, lr: 0.0010
+[2026-11-20 23:27:06] [INFO] Epoch 008 -> train_loss: 0.9193, val_macro_f1: 0.5945, val_balanced_accuracy: 0.6075, lr: 0.0009
+[2026-11-20 23:27:10] [INFO] Epoch 009 -> train_loss: 0.9160, val_macro_f1: 0.6567, val_balanced_accuracy: 0.6461, lr: 0.0009
+[2026-11-20 23:27:13] [INFO] Epoch 010 -> train_loss: 0.8781, val_macro_f1: 0.6172, val_balanced_accuracy: 0.6327, lr: 0.0009
+[2026-11-20 23:27:17] [INFO] Epoch 011 -> train_loss: 0.8542, val_macro_f1: 0.6108, val_balanced_accuracy: 0.6234, lr: 0.0009
+[2026-11-20 23:27:21] [INFO] Epoch 012 -> train_loss: 0.8542, val_macro_f1: 0.5330, val_balanced_accuracy: 0.6040, lr: 0.0008
+[2026-11-20 23:27:24] [INFO] Epoch 013 -> train_loss: 0.8255, val_macro_f1: 0.6507, val_balanced_accuracy: 0.6782, lr: 0.0008
+[2026-11-20 23:27:27] [INFO] Epoch 014 -> train_loss: 0.8335, val_macro_f1: 0.5920, val_balanced_accuracy: 0.6579, lr: 0.0008
+[2026-11-20 23:27:27] [INFO] Saved predictions.csv
+[2026-11-20 23:27:27] [INFO] Saved metrics.json
+[2026-11-20 23:27:27] [INFO] Run finished in 62.04s (status: completed); saved record.json

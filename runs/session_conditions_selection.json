@@ -1,0 +1,77 @@
+{
+  "partition": "val",
+  "split": "splits/session_blocked/folds.csv",
+  "code_version": "f4493f2",
+  "best_448_model": "convnext_tiny",
+  "learning_rates": {
+    "inceptionv3": 0.001,
+    "efficientnetv2s": 0.001,
+    "convnext_tiny": 0.0003,
+    "swin_tiny": 0.0001
+  },
+  "configurations": {
+    "inceptionv3_128": [
+      "stage5_inceptionv3_session_128_lr0.001_r1",
+      "stage5_inceptionv3_session_128_lr0.001_r2",
+      "stage5_inceptionv3_session_128_lr0.001_r3",
+      "stage5_inceptionv3_session_128_lr0.001_r4",
+      "stage5_inceptionv3_session_128_lr0.001_r5"
+    ],
+    "inceptionv3_224_otsu": [
+      "stage5_inceptionv3_session_224_otsu_lr0.001_r1",
+      "stage5_inceptionv3_session_224_otsu_lr0.001_r2",
+      "stage5_inceptionv3_session_224_otsu_lr0.001_r3",
+      "stage5_inceptionv3_session_224_otsu_lr0.001_r4",
+      "stage5_inceptionv3_session_224_otsu_lr0.001_r5"
+    ],
+    "efficientnetv2s_128": [
+      "stage5_efficientnetv2s_session_128_lr0.001_r1",
+      "stage5_efficientnetv2s_session_128_lr0.001_r2",
+      "stage5_efficientnetv2s_session_128_lr0.001_r3",
+      "stage5_efficientnetv2s_session_128_lr0.001_r4",
+      "stage5_efficientnetv2s_session_128_lr0.001_r5"
+    ],
+    "efficientnetv2s_224_otsu": [
+      "stage5_efficientnetv2s_session_224_otsu_lr0.001_r1",
+      "stage5_efficientnetv2s_session_224_otsu_lr0.001_r2",
+      "stage5_efficientnetv2s_session_224_otsu_lr0.001_r3",
+      "stage5_efficientnetv2s_session_224_otsu_lr0.001_r4",
+      "stage5_efficientnetv2s_session_224_otsu_lr0.001_r5"
+    ],
+    "convnext_tiny_128": [
+      "stage5_convnext_tiny_session_128_lr0.0003_r1",
+      "stage5_convnext_tiny_session_128_lr0.0003_r2",
+      "stage5_convnext_tiny_session_128_lr0.0003_r3",
+      "stage5_convnext_tiny_session_128_lr0.0003_r4",
+      "stage5_convnext_tiny_session_128_lr0.0003_r5"
+    ],
+    "convnext_tiny_224_otsu": [
+      "stage5_convnext_tiny_session_224_otsu_lr0.0003_r1",
+      "stage5_convnext_tiny_session_224_otsu_lr0.0003_r2",
+      "stage5_convnext_tiny_session_224_otsu_lr0.0003_r3",
+      "stage5_convnext_tiny_session_224_otsu_lr0.0003_r4",
+      "stage5_convnext_tiny_session_224_otsu_lr0.0003_r5"
+    ],
+    "swin_tiny_128": [
+      "stage5_swin_tiny_session_128_lr0.0001_r1",
+      "stage5_swin_tiny_session_128_lr0.0001_r2",
+      "stage5_swin_tiny_session_128_lr0.0001_r3",
+      "stage5_swin_tiny_session_128_lr0.0001_r4",
+      "stage5_swin_tiny_session_128_lr0.0001_r5"
+    ],
+    "swin_tiny_224_otsu": [
+      "stage5_swin_tiny_session_224_otsu_lr0.0001_r1",
+      "stage5_swin_tiny_session_224_otsu_lr0.0001_r2",
+      "stage5_swin_tiny_session_224_otsu_lr0.0001_r3",
+      "stage5_swin_tiny_session_224_otsu_lr0.0001_r4",
+      "stage5_swin_tiny_session_224_otsu_lr0.0001_r5"
+    ],
+    "convnext_tiny_448": [
+      "stage5_convnext_tiny_session_448_lr0.0003_r1",
+      "stage5_convnext_tiny_session_448_lr0.0003_r2",
+      "stage5_convnext_tiny_session_448_lr0.0003_r3",
+      "stage5_convnext_tiny_session_448_lr0.0003_r4",
+      "stage5_convnext_tiny_session_448_lr0.0003_r5"
+    ]
+  }
+}
