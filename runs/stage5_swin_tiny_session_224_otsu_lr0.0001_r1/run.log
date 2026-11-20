@@ -1,0 +1,37 @@
+[2026-11-21 00:11:56] [INFO] ============================================================
+[2026-11-21 00:11:56] [INFO] Run: stage5_swin_tiny_session_224_otsu_lr0.0001_r1
+[2026-11-21 00:11:56] [INFO] Folder: /home/aztrek/projects/ricetein/runs/stage5_swin_tiny_session_224_otsu_lr0.0001_r1
+[2026-11-21 00:11:56] [INFO] Code version: f4493f2
+[2026-11-21 00:11:56] [INFO] GPU: NVIDIA GeForce RTX 4060 (7.68 GB)
+[2026-11-21 00:11:56] [INFO] ============================================================
+[2026-11-21 00:12:06] [INFO] Epoch 001 -> train_loss: 1.3194, val_macro_f1: 0.5565, val_balanced_accuracy: 0.5588, lr: 0.0001
+[2026-11-21 00:12:16] [INFO] Epoch 002 -> train_loss: 1.0134, val_macro_f1: 0.5815, val_balanced_accuracy: 0.6107, lr: 0.0001
+[2026-11-21 00:12:26] [INFO] Epoch 003 -> train_loss: 0.9257, val_macro_f1: 0.6067, val_balanced_accuracy: 0.6735, lr: 0.0001
+[2026-11-21 00:12:36] [INFO] Epoch 004 -> train_loss: 0.8653, val_macro_f1: 0.5867, val_balanced_accuracy: 0.6342, lr: 0.0001
+[2026-11-21 00:12:46] [INFO] Epoch 005 -> train_loss: 0.8310, val_macro_f1: 0.6609, val_balanced_accuracy: 0.6793, lr: 0.0001
+[2026-11-21 00:12:55] [INFO] Epoch 006 -> train_loss: 0.7929, val_macro_f1: 0.6373, val_balanced_accuracy: 0.6887, lr: 0.0001
+[2026-11-21 00:13:05] [INFO] Epoch 007 -> train_loss: 0.7683, val_macro_f1: 0.6330, val_balanced_accuracy: 0.6898, lr: 0.0001
+[2026-11-21 00:13:15] [INFO] Epoch 008 -> train_loss: 0.7413, val_macro_f1: 0.6393, val_balanced_accuracy: 0.6649, lr: 0.0001
+[2026-11-21 00:13:24] [INFO] Epoch 009 -> train_loss: 0.7212, val_macro_f1: 0.5815, val_balanced_accuracy: 0.6333, lr: 0.0001
+[2026-11-21 00:13:34] [INFO] Epoch 010 -> train_loss: 0.7266, val_macro_f1: 0.6517, val_balanced_accuracy: 0.6776, lr: 0.0001
+[2026-11-21 00:13:44] [INFO] Epoch 011 -> train_loss: 0.6950, val_macro_f1: 0.6926, val_balanced_accuracy: 0.7094, lr: 0.0001
+[2026-11-21 00:13:54] [INFO] Epoch 012 -> train_loss: 0.6973, val_macro_f1: 0.6965, val_balanced_accuracy: 0.7029, lr: 0.0001
+[2026-11-21 00:14:03] [INFO] Epoch 013 -> train_loss: 0.6608, val_macro_f1: 0.6220, val_balanced_accuracy: 0.6607, lr: 0.0001
+[2026-11-21 00:14:13] [INFO] Epoch 014 -> train_loss: 0.6860, val_macro_f1: 0.6605, val_balanced_accuracy: 0.6997, lr: 0.0001
+[2026-11-21 00:14:23] [INFO] Epoch 015 -> train_loss: 0.6713, val_macro_f1: 0.6451, val_balanced_accuracy: 0.6689, lr: 0.0001
+[2026-11-21 00:14:33] [INFO] Epoch 016 -> train_loss: 0.6365, val_macro_f1: 0.6623, val_balanced_accuracy: 0.6716, lr: 0.0001
+[2026-11-21 00:14:42] [INFO] Epoch 017 -> train_loss: 0.6174, val_macro_f1: 0.6874, val_balanced_accuracy: 0.7015, lr: 0.0001
+[2026-11-21 00:14:52] [INFO] Epoch 018 -> train_loss: 0.6058, val_macro_f1: 0.6974, val_balanced_accuracy: 0.7099, lr: 0.0001
+[2026-11-21 00:15:02] [INFO] Epoch 019 -> train_loss: 0.5888, val_macro_f1: 0.6914, val_balanced_accuracy: 0.7211, lr: 0.0001
+[2026-11-21 00:15:12] [INFO] Epoch 020 -> train_loss: 0.5750, val_macro_f1: 0.7084, val_balanced_accuracy: 0.7396, lr: 0.0001
+[2026-11-21 00:15:21] [INFO] Epoch 021 -> train_loss: 0.5959, val_macro_f1: 0.6514, val_balanced_accuracy: 0.6731, lr: 0.0001
+[2026-11-21 00:15:31] [INFO] Epoch 022 -> train_loss: 0.5590, val_macro_f1: 0.6379, val_balanced_accuracy: 0.6980, lr: 0.0000
+[2026-11-21 00:15:41] [INFO] Epoch 023 -> train_loss: 0.5557, val_macro_f1: 0.6958, val_balanced_accuracy: 0.7214, lr: 0.0000
+[2026-11-21 00:15:50] [INFO] Epoch 024 -> train_loss: 0.5378, val_macro_f1: 0.6624, val_balanced_accuracy: 0.6859, lr: 0.0000
+[2026-11-21 00:16:00] [INFO] Epoch 025 -> train_loss: 0.5424, val_macro_f1: 0.6882, val_balanced_accuracy: 0.7205, lr: 0.0000
+[2026-11-21 00:16:10] [INFO] Epoch 026 -> train_loss: 0.5182, val_macro_f1: 0.6690, val_balanced_accuracy: 0.6929, lr: 0.0000
+[2026-11-21 00:16:20] [INFO] Epoch 027 -> train_loss: 0.5176, val_macro_f1: 0.6674, val_balanced_accuracy: 0.6873, lr: 0.0000
+[2026-11-21 00:16:29] [INFO] Epoch 028 -> train_loss: 0.5156, val_macro_f1: 0.6741, val_balanced_accuracy: 0.6919, lr: 0.0000
+[2026-11-21 00:16:29] [INFO] Saved predictions.csv
+[2026-11-21 00:16:29] [INFO] Saved metrics.json
+[2026-11-21 00:16:29] [INFO] Run finished in 273.48s (status: completed); saved record.json
