@@ -20,6 +20,7 @@ import argparse
 import json
 import os
 import time
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 import numpy as np
@@ -56,10 +57,10 @@ EXTRA_ITEMS = 14  # 4 classes x 3 categories x 3 = 36 rule examples, plus 14 ran
 SELECT_SEED = 0
 BACKGROUND_SHARE = 0.9  # a tile is background when more than this share of its pixels is
 CATEGORIES = ("correct", "wrong", "random")
-MASK_SANE = (
-    0.10,
-    0.98,
-)  # a leaf mask outside this share of the photo is flagged (side guess may be inverted)
+HEATMAP_LONG_SIDE = 900  # pixels of the longer side of a drawn heat map
+# A leaf mask covering a share of the photo outside this range is only flagged, never changed: a thin leaf
+# on a plain background can be a few per cent, but an inverted side guess gives a leaf share near 1 - real.
+MASK_SANE = (0.02, 0.60)
 
 
 def run_name(seed: int, round_: int) -> str:
@@ -83,18 +84,16 @@ def write_once(path: Path, content: dict) -> None:
         partial.unlink()
 
 
-def save_figure(figure, path: Path, **options) -> None:
+def atomic(path: Path, write) -> None:
+    """``write(partial_path)`` beside ``path``, then rename: a killed run never leaves a half-written file."""
     path.parent.mkdir(parents=True, exist_ok=True)
-    partial = path.with_name(path.name + ".tmp")
-    figure.savefig(partial, format=path.suffix.lstrip("."), **options)
+    partial = path.with_name(path.name + ".tmp" + path.suffix)
+    write(partial)
     os.replace(partial, path)
 
 
 def write_csv(frame: pd.DataFrame, path: Path) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    partial = path.with_name(path.name + ".tmp")
-    frame.to_csv(partial, index=False)
-    os.replace(partial, path)
+    atomic(path, lambda partial: frame.to_csv(partial, index=False))
 
 
 # ---------------------------------------------------------------- example selection (pure)
@@ -215,9 +214,7 @@ def delete_and_score(
             record("top", k, -1, ids, y, top_k_mask(weights, mask, k), tiles)
             for seed in RANDOM_SEEDS:
                 record("random", k, seed, ids, y, random_k_mask(mask, k, generators[seed]), tiles)
-    long = pd.concat(parts, ignore_index=True)
-    long["correct"] = long["pred"] == long["true"]
-    return long
+    return pd.concat(parts, ignore_index=True)
 
 
 def score_conditions(long: pd.DataFrame, classes: list[str]) -> pd.DataFrame:
@@ -243,14 +240,8 @@ def photo_table(long: pd.DataFrame, classes: list[str]) -> pd.DataFrame:
     """Per photo and k: true-class probability after top-k removal, and after random-k removal (seed mean)."""
     full = long[long["condition"] == "none"].set_index("photo_id")
     top = long[long["condition"] == "top"].set_index(["photo_id", "k"])
-    random = (
-        long[long["condition"] == "random"]
-        .groupby(["photo_id", "k"])
-        .agg(p_random=("p_true", "mean"), correct_random=("correct", "mean"))
-    )
-    out = (
-        top[["p_true", "correct"]].rename(columns={"p_true": "p_top", "correct": "correct_top"}).join(random)
-    )
+    random = long[long["condition"] == "random"].groupby(["photo_id", "k"])["p_true"].mean()
+    out = top[["p_true"]].rename(columns={"p_true": "p_top"}).join(random.rename("p_random"))
     out = out.reset_index()
     out["p_full"] = full.loc[out["photo_id"], "p_true"].to_numpy()
     out["true_class"] = np.array(classes)[full.loc[out["photo_id"], "true"].to_numpy()]
@@ -271,9 +262,9 @@ def tile_background_fraction(leaf: np.ndarray, boxes: np.ndarray, tile: int) -> 
     return (background + outside) / (tile * tile)
 
 
-def background_share(weights: np.ndarray, fraction: np.ndarray, threshold: float = BACKGROUND_SHARE) -> dict:
-    """Share of attention, and share of tiles, on tiles that are more than ``threshold`` background."""
-    is_background = fraction > threshold
+def background_share(weights: np.ndarray, fraction: np.ndarray) -> dict:
+    """Share of attention, and share of tiles, on tiles that are more than 90% background."""
+    is_background = fraction > BACKGROUND_SHARE
     return {
         "attention_share": float(weights[is_background].sum() / weights.sum()),
         "tile_share": float(is_background.mean()),
@@ -313,7 +304,6 @@ def draw_heatmap(
     tile: int,
     path: Path,
     title: str,
-    long_side: int = 900,
 ) -> None:
     """Photo and overlay side by side. Works for any photo, boxes and weights (primary or Paddy Doctor)."""
     import matplotlib
@@ -322,7 +312,7 @@ def draw_heatmap(
     import matplotlib.pyplot as plt
     from PIL import Image
 
-    scale = long_side / max(rgb.shape[:2])
+    scale = HEATMAP_LONG_SIDE / max(rgb.shape[:2])
     small = np.asarray(
         Image.fromarray(rgb).resize((round(rgb.shape[1] * scale), round(rgb.shape[0] * scale)))
     )
@@ -335,7 +325,7 @@ def draw_heatmap(
         axis.axis("off")
     figure.colorbar(image, ax=axes[1], fraction=0.04, label="attention (hottest = 1)")
     figure.suptitle(title, fontsize=9)
-    save_figure(figure, path, dpi=110, bbox_inches="tight")
+    atomic(path, lambda partial: figure.savefig(partial, dpi=110, bbox_inches="tight"))
     plt.close(figure)
 
 
@@ -447,6 +437,9 @@ def plan() -> None:
     base = load_config("configs/base.yaml")
     root = get_default_runs_dir()
     path = root / "explain_plan.json"
+    if path.exists():
+        print(f"{path} already declared; not changed")
+        return
     runs = {}
     for name in runs_for("val"):
         tested = (root / name / "test_predictions.csv").exists()
@@ -469,6 +462,7 @@ def plan() -> None:
         "background": {
             "threshold": BACKGROUND_SHARE,
             "mask": "Otsu leaf mask of the photo at the common leaf scale, a measuring tool only",
+            "mask_flag_outside": list(MASK_SANE),
             "partitions": ["test", "val"],
         },
         "verdict": {
@@ -483,9 +477,6 @@ def plan() -> None:
         "test_runs": [n for n, v in runs.items() if v["tested"]],
         "runs": runs,
     }
-    if path.exists():
-        print(f"{path} already declared; not changed")
-        return
     write_once(path, declaration)
     print(f"declared {path}")
 
@@ -496,14 +487,17 @@ def start_marker(partition: str, action: str) -> dict:
     declaration = json.loads(plan_path.read_text())
     version = require_clean_code()
     if partition == "test":
-        marker = get_default_runs_dir() / f"explain_{action}_started.json"
-        content = {"evaluation_code": version, "plan_sha256": digest(plan_path)}
-        if marker.exists():
-            if json.loads(marker.read_text())["plan_sha256"] != content["plan_sha256"]:
-                raise ValueError(f"{marker}: started under another plan")
-        else:
-            write_once(marker, content)
+        marker, plan_sha = get_default_runs_dir() / f"explain_{action}_started.json", digest(plan_path)
+        if not marker.exists():
+            write_once(marker, {"evaluation_code": version, "plan_sha256": plan_sha})
+        elif json.loads(marker.read_text())["plan_sha256"] != plan_sha:
+            raise ValueError(f"{marker}: started under another plan")
     return declaration
+
+
+def names_for(partition: str, declaration: dict) -> list[str]:
+    """Test photos: only the runs declared as tested. Validation photos: all three training seeds."""
+    return declaration["test_runs"] if partition == "test" else runs_for("val")
 
 
 def load_run(name: str, declaration: dict):
@@ -528,7 +522,7 @@ def load_run(name: str, declaration: dict):
 
 def deletion(partition: str) -> None:
     declaration = start_marker(partition, "deletion")
-    names = declaration["test_runs"] if partition == "test" else runs_for("val")
+    names = names_for(partition, declaration)
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     for name in names:
         scores_path, photos_path = (
@@ -547,45 +541,48 @@ def deletion(partition: str) -> None:
         print(f"{name}: deletion test on {partition} photos done", flush=True)
 
 
+def photo_background(photos: Photos, photo_id: str, folder: Path) -> tuple[np.ndarray, float]:
+    """Background share of every tile of one photo, and the leaf share of the photo; cached per photo."""
+    path = folder / f"{photo_key(photo_id)}.npz"
+    if not path.exists():
+        rgb, boxes = photos.rgb(photo_id), photos.boxes(photo_id)
+        check_grid(rgb, boxes, photos.tile)
+        leaf = otsu.leaf_mask(rgb)
+        fraction = tile_background_fraction(leaf, boxes, photos.tile).astype(np.float32)
+        atomic(path, lambda partial: np.savez(partial, fraction=fraction, leaf_share=leaf.mean()))
+    with np.load(path) as saved:
+        return saved["fraction"], float(saved["leaf_share"])
+
+
 def background(partition: str) -> None:
     declaration = start_marker(partition, "background")
-    names = declaration["test_runs"] if partition == "test" else runs_for("val")
-    photos, fractions = Photos(), OUT / "background_fraction"
-    folds, _ = read_folds(load_config(SPLIT_CONFIG))
-    folds = folds.set_index("photo_id")
+    names = names_for(partition, declaration)
+    photos, folder = Photos(), OUT / "background_fraction"
+    attention = {name: read_attention(name, partition) for name in names}
+    wanted = sorted({photo_id for weights in attention.values() for photo_id in weights})
+    with ThreadPoolExecutor(max_workers=8) as pool:  # decoding and the Otsu mask release the GIL
+        measured = dict(
+            zip(wanted, pool.map(lambda photo_id: photo_background(photos, photo_id, folder), wanted))
+        )
+    classes = read_folds(load_config(SPLIT_CONFIG))[0].set_index("photo_id")["class"]
     rows = []
     for name in names:
-        r = int(name.rsplit("_r", 1)[1])
-        for photo_id, weights in read_attention(name, partition).items():
-            path = fractions / f"{photo_key(photo_id)}.npz"
-            if not path.exists():
-                rgb, boxes = photos.rgb(photo_id), photos.boxes(photo_id)
-                check_grid(rgb, boxes, photos.tile)
-                leaf = otsu.leaf_mask(rgb)
-                fractions.mkdir(parents=True, exist_ok=True)
-                partial = path.with_name(path.name + ".tmp.npz")
-                np.savez(
-                    partial,
-                    fraction=tile_background_fraction(leaf, boxes, photos.tile).astype(np.float32),
-                    leaf_share=leaf.mean(),
-                )
-                os.replace(partial, path)
-            with np.load(path) as saved:
-                fraction, leaf_share = saved["fraction"], float(saved["leaf_share"])
+        for photo_id, weights in attention[name].items():
+            fraction, leaf_share = measured[photo_id]
             rows.append(
                 {
                     "run": name,
-                    "round": r,
+                    "round": int(name.rsplit("_r", 1)[1]),
                     "photo_id": photo_id,
-                    "true_class": folds.loc[photo_id, "class"],
+                    "true_class": classes[photo_id],
                     **background_share(weights, fraction),
                     "n_tiles": len(weights),
                     "leaf_share": leaf_share,
                     "mask_suspect": not MASK_SANE[0] < leaf_share < MASK_SANE[1],
                 }
             )
-        print(f"{name}: background score on {partition} photos done", flush=True)
     write_csv(pd.DataFrame(rows), OUT / f"background_{partition}.csv")
+    print(f"background score on {partition} photos done: {len(wanted)} photos, {len(names)} runs")
 
 
 # ---------------------------------------------------------------- report
@@ -601,6 +598,13 @@ def read_all(pattern: str) -> pd.DataFrame | None:
     return pd.concat([pd.read_csv(f) for f in files], ignore_index=True) if files else None
 
 
+def bootstrap_range(
+    values: np.ndarray, index_sets: list[np.ndarray], confidence: float
+) -> tuple[float, float]:
+    """Percentile range of the mean of ``values`` over the resampled index sets."""
+    return stats.interval(np.array([values[i].mean() for i in index_sets]), confidence)
+
+
 def deletion_summary(
     scores: pd.DataFrame, photos: pd.DataFrame, blocks: pd.Series, settings: dict, comparison: dict
 ) -> pd.DataFrame:
@@ -612,39 +616,28 @@ def deletion_summary(
     """
     if scores["round"].nunique() != len(ROUNDS):
         raise ValueError(f"deletion results of {scores['round'].nunique()} rounds, expected {len(ROUNDS)}")
-    random = (
-        scores[scores["condition"] == "random"]
-        .groupby(["run", "round", "k"], as_index=False)
-        .mean(numeric_only=True)
-    )
+    random = scores[scores["condition"] == "random"].groupby(["run", "round", "k"]).mean(numeric_only=True)
     top = scores[scores["condition"] == "top"].set_index(["run", "round", "k"])
-    random = random.set_index(["run", "round", "k"])
-    full = scores[scores["condition"] == "none"].set_index(["run", "round"])
+    full_f1 = scores[scores["condition"] == "none"]["macro_f1"].mean()
     rows = []
     for k in sorted(top.index.get_level_values("k").unique()):
         t, rnd = top.xs(k, level="k"), random.xs(k, level="k")
         p = photos[photos["k"] == k]
         gap = (p["p_random"] - p["p_top"]).to_numpy()
-        photo_draws = [
-            gap[i].mean()
-            for i in stats.resample_indices(
-                p["true_class"].to_numpy(), settings["resamples"], settings["stratified"], 0
-            )
-        ]
-        block_draws = [
-            gap[i].mean()
-            for i in followup_report.block_samples(
-                p["photo_id"].map(blocks).to_numpy(), settings["resamples"], 0
-            )
-        ]
-        low, high = stats.interval(np.array(photo_draws), settings["confidence"])
-        block_low, block_high = stats.interval(np.array(block_draws), settings["confidence"])
+        photo_sets = stats.resample_indices(
+            p["true_class"].to_numpy(), settings["resamples"], settings["stratified"], 0
+        )
+        block_sets = followup_report.block_samples(
+            p["photo_id"].map(blocks).to_numpy(), settings["resamples"], 0
+        )
+        low, high = bootstrap_range(gap, photo_sets, settings["confidence"])
+        block_low, block_high = bootstrap_range(gap, block_sets, settings["confidence"])
         wins = int((rnd["p_true"] > t["p_true"]).sum())
         better = min(low, block_low) > 0 and wins >= comparison["min_round_wins"]
         rows.append(
             {
                 "k": k,
-                "full_macro_f1": full["macro_f1"].mean(),
+                "full_macro_f1": full_f1,
                 "top_macro_f1": t["macro_f1"].mean(),
                 "random_macro_f1": rnd["macro_f1"].mean(),
                 "full_p_true": p["p_full"].mean(),
@@ -687,7 +680,7 @@ def deletion_figure(summary: pd.DataFrame, path: Path, partition: str) -> None:
         axis.set_xticks(list(summary["k"]), [str(k) for k in summary["k"]])
     axes[0].legend(fontsize=8)
     figure.tight_layout()
-    save_figure(figure, path, dpi=130)
+    atomic(path, lambda partial: figure.savefig(partial, dpi=130))
     plt.close(figure)
 
 

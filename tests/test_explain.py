@@ -8,6 +8,7 @@ import pytest
 import torch
 
 from src import explain as ex
+from src import tiling
 from src import train_mil as tm
 from src.mil_models import MILModel
 
@@ -35,17 +36,20 @@ def model(aggregator="attention", seed=0):
     return MILModel(Store.dim, 8, 0.0, aggregator, len(CLASSES)).eval()
 
 
+def bags_of(n=4):
+    return tm.Bags(Store(), folds(n), 1, "test", CLASSES, 1, 0.0, n, 0)
+
+
 def batch(n=4):
-    bags = tm.Bags(Store(), folds(n), 1, "test", CLASSES, 1, 0.0, n, 0)
-    tiles, mask, labels, rows = next(iter(bags))
-    return bags, tiles, mask, labels, rows
+    tiles, mask, _, _ = next(iter(bags_of(n)))
+    return tiles, mask
 
 
 # ------------------------------------------------------------------ attention and deletion
 
 
 def test_attention_sums_to_one_over_real_tiles_and_is_zero_on_padding():
-    _, tiles, mask, _, _ = batch()
+    tiles, mask = batch()
     assert not mask.all()  # the bags differ in size, so there is padding
     _, weights = model()(tiles, mask)
     assert torch.allclose(weights.sum(1), torch.ones(len(weights)), atol=1e-5)
@@ -54,7 +58,7 @@ def test_attention_sums_to_one_over_real_tiles_and_is_zero_on_padding():
 
 @pytest.mark.parametrize("k", ex.KS)
 def test_top_k_removes_exactly_k_real_tiles_and_the_highest_weights(k):
-    _, tiles, mask, _, _ = batch()
+    tiles, mask = batch()
     _, weights = model()(tiles, mask)
     kept = ex.top_k_mask(weights, mask, k)
     assert ((mask.sum(1) - kept.sum(1)) == k).all()
@@ -67,7 +71,7 @@ def test_top_k_removes_exactly_k_real_tiles_and_the_highest_weights(k):
 
 @pytest.mark.parametrize("k", ex.KS)
 def test_random_k_removes_exactly_k_real_tiles_and_never_touches_padding(k):
-    _, _, mask, _, _ = batch()
+    _, mask = batch()
     for seed in ex.RANDOM_SEEDS:
         kept = ex.random_k_mask(mask, k, torch.Generator().manual_seed(seed))
         assert ((mask.sum(1) - kept.sum(1)) == k).all()
@@ -75,7 +79,7 @@ def test_random_k_removes_exactly_k_real_tiles_and_never_touches_padding(k):
 
 
 def test_random_deletion_is_repeatable_and_depends_on_the_seed():
-    _, _, mask, _, _ = batch()
+    _, mask = batch()
     a = ex.random_k_mask(mask, 4, torch.Generator().manual_seed(1))
     b = ex.random_k_mask(mask, 4, torch.Generator().manual_seed(1))
     c = ex.random_k_mask(mask, 4, torch.Generator().manual_seed(2))
@@ -83,16 +87,16 @@ def test_random_deletion_is_repeatable_and_depends_on_the_seed():
 
 
 def test_cannot_remove_all_tiles():
-    _, _, mask, _, _ = batch()
+    _, mask = batch()
     with pytest.raises(ValueError, match="cannot remove"):
         ex.top_k_mask(torch.rand(mask.shape), mask, int(mask.sum(1).min()))
 
 
 @pytest.mark.parametrize("aggregator", ["attention", "mean", "max"])
 def test_masking_tiles_equals_removing_them_from_the_bag(aggregator):
-    _, tiles, mask, _, _ = batch()
+    tiles, mask = batch()
     head = model(aggregator)
-    _, weights = head(tiles, mask) if aggregator == "attention" else (None, torch.rand(mask.shape))
+    weights = head(tiles, mask)[1] if aggregator == "attention" else torch.rand(mask.shape)
     kept = ex.top_k_mask(weights, mask, 4)
     masked_logits = head(tiles, kept)[0]
     for i in range(len(tiles)):
@@ -102,7 +106,8 @@ def test_masking_tiles_equals_removing_them_from_the_bag(aggregator):
 
 
 def test_deletion_table_has_every_condition_and_matches_the_saved_attention():
-    bags, tiles, mask, _, rows = batch()
+    bags = bags_of()
+    tiles, mask, _, rows = next(iter(bags))
     head = model()
     with torch.no_grad():
         saved = head(tiles, mask)[1]
@@ -122,7 +127,7 @@ def test_deletion_table_has_every_condition_and_matches_the_saved_attention():
 
 
 def test_removing_many_tiles_changes_the_probabilities():
-    bags, _, _, _, _ = batch()
+    bags = bags_of()
     long = ex.delete_and_score(model(), bags, torch.device("cpu"))
     full = long[long["condition"] == "none"].set_index("photo_id")["p_true"]
     top = long[(long["condition"] == "top") & (long["k"] == 16)].set_index("photo_id")["p_true"]
@@ -185,10 +190,13 @@ def test_summary_refuses_incomplete_rounds():
         ex.deletion_summary(scores, photos, blocks, SETTINGS, RULE)
 
 
-def test_gap_by_class_and_the_seed_filter():
+def test_gap_by_class_has_one_row_per_class():
     _, photos, _ = synthetic_deletion([0.3] * 8, 5)
     table = ex.gap_by_class(photos)
     assert list(table["true_class"]) == sorted(CLASSES) and np.allclose(table[4], 0.3, atol=0.05)
+
+
+def test_stability_seeds_are_left_out_of_the_headline_rows():
     names = pd.DataFrame(
         {
             "run": [
@@ -247,7 +255,7 @@ def test_extras_complete_a_blind_fifty_item_sheet():
     assert sheet["item_id"].is_unique and set(sheet["item_id"]) == {
         f"H{i:02d}" for i in range(1, len(sheet) + 1)
     }
-    assert (sheet[sheet["category"] == "extra"].shape[0]) == 14
+    assert (sheet["category"] == "extra").sum() == 14
 
 
 # ------------------------------------------------------------------ background and heat maps
@@ -274,8 +282,6 @@ def test_background_share_is_a_share():
 
 
 def test_paint_puts_the_heat_on_the_attended_tile_and_grid_check_catches_a_wrong_scale():
-    from src import tiling
-
     boxes = tiling.boxes(448, 224, 224)
     heat = ex.paint(boxes, np.array([0.9, 0.1]), (224, 448), 224, 0.5)
     assert heat.shape == (112, 224) and heat.max() == 1.0
