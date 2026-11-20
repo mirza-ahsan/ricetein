@@ -8,12 +8,14 @@ numbers feed no tuning, selection or other table.
 
     uv run python -m src.partition_order <action>
 
-splits    write splits/partition_order/ once and print each condition's leak counter (no GPU)
+splits    write splits/partition_order/ once (no GPU; the leak counter is `python -m src.partition_report leaks`)
 declare   freeze runs/stage9_declared.json: the settings, the split files and the A runs (once; never deleted)
 cache     build the 8 fixed augmented copies of every photo that condition B needs (CPU)
 fit       train the 30 runs (2 models x B, C, D x 5); resumable; refuses once scoring has been frozen
 score     freeze runs/stage9_evaluation_plan.json, then score each run once (score_started.json is never deleted)
-report    results/tables/partition_order_inflation.csv and docs/reports/partition_order_report.md
+
+The inflation table and the report are built by ``python -m src.partition_report`` (a separate module, so that a fix to
+the report text never makes a finished run look changed; ``records.code_paths`` hashes this module and what it imports).
 """
 
 from __future__ import annotations
@@ -31,23 +33,13 @@ import pandas as pd
 import torch
 from torch import nn
 
-from src import augment, evaluate, metrics, stats
+from src import augment, evaluate, metrics
 from src import train_mil as tm
 from src import train_wholeimage as tw
 from src.config import REPO_ROOT, load_config, output_root
 from src.embed import completed_cache
-from src.inventory import read_inventory
-from src.inventory_report import md_table
 from src.mil_models import MILModel
-from src.partition_splits import (
-    BOTH,
-    FILENAMES,
-    condition_tables,
-    leak_counter,
-    lock_tables,
-    photo_keys,
-    read_condition,
-)
+from src.partition_splits import BOTH, FILENAMES, condition_tables, lock_tables, read_condition
 from src.photo_dataset import PhotoDataset, photo_cache, photo_ids
 from src.records import RunRecorder, completed_run, get_default_runs_dir, require_clean_code, reusable_run
 from src.seeding import seed_everything
@@ -55,16 +47,8 @@ from src.split import round_column
 
 ROUNDS = range(1, 6)
 DECLARED, PLAN = "stage9_declared.json", "stage9_evaluation_plan.json"
-TABLE, REPORT = "results/tables/partition_order_inflation.csv", "docs/reports/partition_order_report.md"
 ARTIFACTS = {"B": ("model.pt", "metrics.json", "predictions.csv"), "C": ("model.pt", "metrics.json", "predictions.csv"),
              "D": ("model.pt", "metrics.json")}   # D has no validation photos: it trains for A's best epoch
-MEANING = {"A": "correct: grouped by capture block, augmentation on training photos only",
-           "L": "reference: locked split (duplicates grouped, capture sessions not), its own selected settings",
-           "B": "augment first, then split the copies at random",
-           "B_clean": "as B, scored on the clean copy of each photo only",
-           "C": "no grouping: photos split at random", "D": "train on every photo, score on every photo"}
-
-
 def read_json(path: Path) -> Any:
     return json.loads(path.read_text())
 
@@ -113,7 +97,8 @@ def protocol(config: dict[str, Any]) -> dict[str, Any]:
                 runs[name] = {"record_sha256": evaluate.digest(root / name / "record.json"),
                               "test_predictions_sha256": evaluate.digest(root / name / "test_predictions.csv")}
     return {"partition_order": config["partition_order"], "split_files": split_hashes(config),
-            "reference_runs": runs}
+            "session_folds_sha256": evaluate.digest(REPO_ROOT / config["split_files"]["folds"]),
+            "seed": config["seed"], "evaluation": config["evaluation"], "reference_runs": runs}
 
 
 def declare(config: dict[str, Any]) -> None:
@@ -185,8 +170,9 @@ class Images:
 
     def __init__(self, config: dict[str, Any], copies: bool) -> None:
         self.photos, self.ids = photo_cache(config, 224, False, config["wholeimage"]["workers"]), photo_ids(config)
-        folder = output_root() / config["partition_order"]["copy_cache"]
-        self.copies = build_copies(self.photos, self.ids, folder, config) if copies else None
+        self.copies = None
+        if copies:
+            self.copies = build_copies(self.photos, self.ids, output_root() / config["partition_order"]["copy_cache"], config)
 
 
 def photo_data(config: dict[str, Any], units: pd.DataFrame, r: int, role: str, condition: str,
@@ -391,11 +377,15 @@ def fit_all(config: dict[str, Any]) -> None:
             split_sha = evaluate.digest(REPO_ROOT / config["partition_order"]["split_dir"] / FILENAMES[condition])
             for r in ROUNDS:
                 name, record = run_name(model, condition, r), a_records[r - 1]
+                if record["config"]["round"] != r:
+                    raise ValueError(f"{a_runs[r - 1]} is not round {r}; the selection lists the runs out of order")
                 c = run_config(config, record, model, condition, r)
                 fixed = read_json(root / a_runs[r - 1] / "metrics.json")["best_epoch"] if condition == "D" else None
                 epoch = int((session_folds[round_column(r)] == "train").sum()) if condition == "B" else None
                 c.update(fixed_epochs=fixed, epoch_size=epoch)
                 if model == "attention":
+                    if c["mil"]["versions"] != config["partition_order"]["versions"]:
+                        raise ValueError("partition_order.versions must equal the number of cached versions")
                     c["cache_spec_sha256"] = completed_cache(c, c["mil"]["cache"])["spec_sha256"]
                     if c["cache_spec_sha256"] != record["config"]["cache_spec_sha256"]:
                         raise ValueError(f"{name}: the tile cache differs from the one A was trained on")
@@ -426,7 +416,9 @@ def all_runs(config: dict[str, Any]) -> list[tuple[str, str, str, int]]:
     return [(run_name(m, c, r), m, c, r) for m in po["models"] for c in po["conditions"] for r in ROUNDS]
 
 
-def score_run(name: str, model: str, condition: str, r: int) -> pd.DataFrame:
+def score_run(name: str, model: str, condition: str, r: int) -> Callable[[], pd.DataFrame]:
+    """Everything that can fail for lack of a file, a cache or GPU memory happens here, before the started marker is
+    written; the returned function only runs the model on the scored photos."""
     folder = get_default_runs_dir() / name
     c = read_json(folder / "record.json")["config"]
     if model == "efficientnetv2s":
@@ -440,258 +432,72 @@ def score_run(name: str, model: str, condition: str, r: int) -> pd.DataFrame:
         net = MILModel(store.dim, params["width"], params["dropout"], mil["aggregator"], len(c["classes"]))
         net.load_state_dict(state)
         device = torch.device(mil.get("device", "cuda"))
-        bags = mil_bags(store, units, r, "test", condition, c, params, c["seed"])
-        rows, probs, _ = tm.predict(net.to(device), bags, device)
+        net, bags = net.to(device), mil_bags(store, units, r, "test", condition, c, params, c["seed"])
+        predict = lambda: tm.predict(net, bags, device)[:2]   # noqa: E731
     else:
         w = c["wholeimage"]
         seed_everything(c["run_seed"], w["determinism"])
         net, device = tw.build_model(c, 224), torch.device(w.get("device", "cuda"))
         net.load_state_dict(state)
+        net = net.to(device)
         data = loader(photo_data(c, units, r, "test", condition, Images(c, condition == "B")), c, False, None)
-        rows, probs = tw.predict(net.to(device), data, c, device)
-    return predictions(units, rows, probs, r, "scored", c["classes"])
+        predict = lambda: tw.predict(net, data, c, device)   # noqa: E731
+
+    def run() -> pd.DataFrame:
+        rows, probs = predict()
+        return predictions(units, rows, probs, r, "scored", c["classes"])
+    return run
 
 
 def score_all(config: dict[str, Any]) -> None:
-    """Freeze every checkpoint, then score each run once. Nothing is scored while any run is still missing."""
+    """Freeze every checkpoint and split file, then score each run once. Nothing is scored while any run is missing."""
+    require_declared(config)
     root, version = get_default_runs_dir(), require_clean_code()
     runs = all_runs(config)
     missing = [n for n, _, c, _ in runs if not completed_run(n, ARTIFACTS[c])]
     if missing:
         raise RuntimeError(f"{len(missing)} runs are not trained yet, e.g. {missing[0]}")
-    frozen = {n: {"record_sha256": evaluate.digest(root / n / "record.json"),
-                  "checkpoint_sha256": evaluate.digest(root / n / "model.pt")} for n, *_ in runs}
-    if (root / PLAN).exists() and read_json(root / PLAN)["runs"] != frozen:
-        raise ValueError("a run changed after the evaluation plan was frozen; stop and report to Ahsan")
-    write_once(root / PLAN, {"runs": frozen})
+    splits = split_hashes(config)
+    for n, _, condition, _ in runs:
+        if read_json(root / n / "record.json")["split_checksum"] != splits[condition]:
+            raise ValueError(f"{n}: trained on another split file than the declared one")
+    frozen = {"split_files": splits,
+              "runs": {n: {"record_sha256": evaluate.digest(root / n / "record.json"),
+                           "checkpoint_sha256": evaluate.digest(root / n / "model.pt")} for n, *_ in runs}}
+    if (root / PLAN).exists() and read_json(root / PLAN) != frozen:
+        raise ValueError("a run or a split file changed after the evaluation plan was frozen; stop and report to Ahsan")
+    write_once(root / PLAN, frozen)
     for name, model, condition, r in runs:
         folder = root / name
         if (folder / "score_metrics.json").exists():
             continue
         if (folder / "score_started.json").exists():
             raise RuntimeError(f"{name}: scoring started earlier and did not finish; stop and report to Ahsan")
+        run = score_run(name, model, condition, r)
         with (folder / "score_started.json").open("x") as out:
             json.dump({"scoring_code": version, "plan_sha256": evaluate.digest(root / PLAN)}, out)
-        table = score_run(name, model, condition, r)
+        table = run()
         table.to_csv(folder / "score_predictions.csv", index=False)
         (folder / "score_metrics.json").write_text(json.dumps(
             {"partition": "scored", "deliberately_flawed_protocol": True,
              **metrics.scores(table.true_class, table.pred_class, config["classes"])}, indent=2))
-        print(f"{name}: scored", flush=True)   # scores are read by `report` only
-
-
-# ---------------------------------------------------------------- inflation table
-
-def confusion_by_photo(table: pd.DataFrame, photos: pd.Index, classes: list[str]) -> np.ndarray:
-    """(photos, k*k) counts: for each photo, how many of its scored rows fall in each (true, predicted) cell."""
-    k, code = len(classes), {c: i for i, c in enumerate(classes)}
-    at = photos.get_indexer(table["photo_id"])
-    if (at < 0).any():
-        raise ValueError("scored rows of photos that are not in the reference set")
-    counts = np.zeros((len(photos), k * k))
-    np.add.at(counts, (at, table["true_class"].map(code).to_numpy() * k + table["pred_class"].map(code).to_numpy()), 1)
-    return counts
-
-
-def scores_from_confusion(counts: np.ndarray, k: int) -> tuple[np.ndarray, np.ndarray]:
-    """Macro-F1 (over all k classes, 0 where undefined) and balanced accuracy of confusion counts (..., k*k)."""
-    c = counts.reshape(*counts.shape[:-1], k, k)
-    tp, actual, predicted = np.diagonal(c, axis1=-2, axis2=-1), c.sum(-1), c.sum(-2)
-    f1 = np.divide(2 * tp, actual + predicted, out=np.zeros_like(tp), where=actual + predicted > 0)
-    recall = np.divide(tp, actual, out=np.zeros_like(tp), where=actual > 0)
-    present = actual > 0
-    return f1.mean(-1), (recall * present).sum(-1) / present.sum(-1)
-
-
-def inflation_ranges(counts: dict[str, np.ndarray], photo_class: np.ndarray, settings: dict[str, Any], seed: int,
-                     k: int, reference: str = "A") -> dict[str, dict[str, dict[str, float]]]:
-    """Per label and metric: the pooled value with its range, and the difference to ``reference`` with its range.
-    The ranges come from one set of bootstrap draws over source photos (resampled within class, all copies and
-    repeats of a photo kept together), so every difference is paired."""
-    rng = np.random.default_rng(seed)
-    groups = [np.flatnonzero(photo_class == c) for c in np.unique(photo_class)]
-    draws = np.zeros((settings["resamples"], len(photo_class)))
-    for i in range(settings["resamples"]):
-        draws[i] = np.bincount(np.concatenate([g[rng.integers(0, len(g), len(g))] for g in groups]),
-                               minlength=len(photo_class))
-    point = {label: scores_from_confusion(c.sum(0), k) for label, c in counts.items()}
-    boot = {label: scores_from_confusion(draws @ c, k) for label, c in counts.items()}
-    result: dict[str, dict[str, dict[str, float]]] = {}
-    for label in counts:
-        result[label] = {}
-        for m, metric in enumerate(("macro_f1", "balanced_accuracy")):
-            low, high = stats.interval(boot[label][m], settings["confidence"])
-            d_low, d_high = stats.interval(boot[label][m] - boot[reference][m], settings["confidence"])
-            result[label][metric] = {"value": float(point[label][m]), "low": low, "high": high,
-                                     "difference": float(point[label][m] - point[reference][m]),
-                                     "difference_low": d_low, "difference_high": d_high}
-    return result
-
-
-def round_scores(table: pd.DataFrame, classes: list[str]) -> pd.DataFrame:
-    """Macro-F1 and balanced accuracy of each round (or repeat), indexed by round."""
-    return pd.DataFrame({int(r): {m: s[m] for m in ("macro_f1", "balanced_accuracy")}
-                         for r, g in table.groupby("round")
-                         for s in [metrics.scores(g["true_class"], g["pred_class"], classes)]}).T
-
-
-def reading(difference_low: float, difference_high: float, above: int, below: int, minimum: int) -> str:
-    """The declared decision rule for 'higher than A': the range excludes 0 and at least
-    ``minimum`` rounds agree. Otherwise there is no clear difference."""
-    if difference_low > 0 and above >= minimum:
-        return "clearly above A"
-    if difference_high < 0 and below >= minimum:
-        return "clearly below A"
-    return "no clear difference"
-
-
-def leak_shares(units: pd.DataFrame, keys: pd.DataFrame, scored_where: np.ndarray | None = None) -> dict[str, float]:
-    """The leak counter averaged over the five rounds, weighted by the number of scored units."""
-    rows = [leak_counter(units, r, keys, scored_where) for r in ROUNDS]
-    weight = np.array([row["scored_units"] for row in rows], float)
-    return {key: float(np.average([row[key] for row in rows], weights=weight)) for key in rows[0] if key != "scored_units"}
-
-
-def read_scored(names: list[str], filename: str) -> pd.DataFrame:
-    root = get_default_runs_dir()
-    return pd.concat([pd.read_csv(root / n / filename) for n in names], ignore_index=True)
-
-
-def inflation_table(config: dict[str, Any], tables: dict[str, pd.DataFrame], leaks: dict[str, dict[str, float]],
-                    model: str) -> pd.DataFrame:
-    """One row per condition for one model; ``tables`` maps a label to its scored predictions (A first)."""
-    classes, boot = config["classes"], config["evaluation"]["bootstrap"]
-    minimum = config["evaluation"]["comparison"]["min_round_wins"]
-    photos = pd.Index(sorted(tables["A"]["photo_id"].unique()))
-    counts = {label: confusion_by_photo(t, photos, classes) for label, t in tables.items()}
-    for label, c in counts.items():
-        if (c.sum(1) == 0).any():
-            raise ValueError(f"{label}: some photos have no scored row; the table needs every photo in every condition")
-    photo_class = tables["A"].drop_duplicates("photo_id").set_index("photo_id").loc[photos, "true_class"]
-    ranges = inflation_ranges(counts, photo_class.map({c: i for i, c in enumerate(classes)}).to_numpy(), boot,
-                              config["seed"], len(classes))
-    per_round = {label: round_scores(t, classes) for label, t in tables.items()}
-    rows = []
-    for label, t in tables.items():
-        row: dict[str, Any] = {"model": model, "condition": label, "meaning": MEANING[label], "scored_rows": len(t),
-                               "photos": t["photo_id"].nunique(), "rounds": t["round"].nunique()}
-        for metric in ("macro_f1", "balanced_accuracy"):
-            mine, ref = per_round[label][metric], per_round["A"][metric]
-            above, below = int((mine > ref.reindex(mine.index)).sum()), int((mine < ref.reindex(mine.index)).sum())
-            r = ranges[label][metric]
-            row.update({f"{metric}_pooled": r["value"], f"{metric}_low": r["low"], f"{metric}_high": r["high"],
-                        f"{metric}_round_mean": mine.mean(), f"{metric}_round_sd": mine.std(ddof=1),
-                        f"{metric}_inflation": r["difference"], f"{metric}_inflation_low": r["difference_low"],
-                        f"{metric}_inflation_high": r["difference_high"], f"{metric}_rounds_above_A": above,
-                        f"{metric}_reading": "reference" if label == "A" else
-                        reading(r["difference_low"], r["difference_high"], above, below, minimum)})
-        rows.append({**row, **{f"leak_{k}": v for k, v in leaks[label].items()}})
-    return pd.DataFrame(rows)
-
-
-def report(config: dict[str, Any]) -> None:
-    root = get_default_runs_dir()
-    missing = [n for n, *_ in all_runs(config) if not (root / n / "score_metrics.json").exists()]
-    if missing:
-        raise RuntimeError(f"{len(missing)} runs are not scored yet, e.g. {missing[0]}")
-    session = pd.read_csv(REPO_ROOT / config["split_files"]["folds"], dtype=str)
-    locked = pd.read_csv(REPO_ROOT / "splits/folds.csv", dtype=str)
-    keys = photo_keys(session, locked, read_inventory(config["inventory"]["files"]["primary"]))
-    b = read_condition("B")
-    leaks = {"A": leak_shares(session, keys), "L": leak_shares(locked, keys), "B": leak_shares(b, keys),
-             "B_clean": leak_shares(b, keys, (b["version"] == 0).to_numpy()),
-             "C": leak_shares(read_condition("C"), keys), "D": leak_shares(read_condition("D"), keys)}
-    frames = []
-    for model in config["partition_order"]["models"]:
-        scored = {c: read_scored([run_name(model, c, r) for r in ROUNDS], "score_predictions.csv") for c in "BCD"}
-        tables = {"A": read_scored(reference_runs(config, model, "a"), "test_predictions.csv"),
-                  "L": read_scored(reference_runs(config, model, "l"), "test_predictions.csv"),
-                  "B": scored["B"], "B_clean": scored["B"][scored["B"]["version"] == 0],
-                  "C": scored["C"], "D": scored["D"]}
-        frames.append(inflation_table(config, tables, leaks, model))
-    table = pd.concat(frames, ignore_index=True)
-    (REPO_ROOT / TABLE).parent.mkdir(parents=True, exist_ok=True)
-    table.to_csv(REPO_ROOT / TABLE, index=False)
-    (REPO_ROOT / REPORT).write_text(report_text(table))
-    print(f"report: {len(table)} rows", flush=True)
-
-
-def pct(x: float) -> str:
-    return f"{100 * x:.1f}"
-
-
-def report_text(table: pd.DataFrame) -> str:
-    """The neutral report, built from the table only."""
-    sections = []
-    for model, title in (("efficientnetv2s", "EfficientNetV2-S, whole photo at 224 px"),
-                         ("attention", "Main tile model (E1 tiles + gated-attention head)")):
-        part = table[table["model"] == model]
-        shown = pd.DataFrame({
-            "condition": part["condition"], "what it does": part["meaning"],
-            "scored rows": part["scored_rows"].map("{:,}".format),
-            "macro-F1, pooled [95% range]": [f"{pct(v)} [{pct(lo)}, {pct(hi)}]" for v, lo, hi in
-                                             zip(part.macro_f1_pooled, part.macro_f1_low, part.macro_f1_high)],
-            "mean ± SD over rounds": [f"{pct(m)} ± {pct(s)}" for m, s in zip(part.macro_f1_round_mean, part.macro_f1_round_sd)],
-            "inflation vs A (points) [95% range]": ["–" if c == "A" else f"{100 * d:+.1f} [{100 * lo:+.1f}, {100 * hi:+.1f}]"
-                                                    for c, d, lo, hi in zip(part.condition, part.macro_f1_inflation,
-                                                                            part.macro_f1_inflation_low, part.macro_f1_inflation_high)],
-            "rounds above A": ["–" if c == "A" else f"{n}/{r}" for c, n, r in zip(part.condition, part.macro_f1_rounds_above_A, part.rounds)],
-            "reading": part["macro_f1_reading"]})
-        leak = pd.DataFrame({
-            "condition": part["condition"], "same source photo": part["leak_source_photo"].map(pct),
-            "same near-duplicate group": part["leak_near_duplicate_group"].map(pct),
-            "same capture block": part["leak_capture_block"].map(pct),
-            "same camera within 10 s": part["leak_same_camera_within_10s"].map(pct)})
-        balanced = pd.DataFrame({
-            "condition": part["condition"], "balanced accuracy, pooled": part["balanced_accuracy_pooled"].map(pct),
-            "inflation vs A (points) [95% range]": ["–" if c == "A" else f"{100 * d:+.1f} [{100 * lo:+.1f}, {100 * hi:+.1f}]"
-                                                    for c, d, lo, hi in zip(part.condition, part.balanced_accuracy_inflation,
-                                                                            part.balanced_accuracy_inflation_low, part.balanced_accuracy_inflation_high)],
-            "reading": part["balanced_accuracy_reading"]})
-        sections += [f"## {title}", "", "Macro-F1 (percent, test photos of each condition):", "", md_table(shown), "",
-                     "Balanced accuracy:", "", md_table(balanced), "",
-                     "Leak counter: share of the scored rows (all five rounds) whose photo, group, block or neighbour in time "
-                     "is also in training (percent):", "", md_table(leak), ""]
-    return "\n".join([
-        "# Partition-order experiment", "",
-        "Built by `src/partition_order.py` from `runs/`; do not edit by hand. Declared on 2026-11-20 (handbook §24).", "",
-        "**What this is.** A general lesson about testing practice. Testing mistakes are common across plant-disease "
-        "recognition work (Xu et al., 2024). Here we repeat three of them on our own photos and models and measure how "
-        "much each raises the score, compared with the correct protocol. No published study is assessed.", "",
-        "**Conditions.** A is the correct protocol: the session-blocked split, augmentation on training photos only (the "
-        "five headline runs of each model, reused as they are). B makes eight copies of every photo with the same "
-        "augmentation, then splits the copies at random, so copies of one photo land on both sides. C splits photos at "
-        "random and ignores near-duplicate groups and capture blocks. D trains on every photo and scores on every photo. "
-        "L is a reference row: the locked split, which groups pixel-level copies but not capture sessions, with the "
-        "settings selected on it (not A's).", "",
-        "**How to read it.** B, C and D are deliberately wrong. Their scores are not estimates of how the models "
-        "perform on new photos, and they are used nowhere else. All of them reuse A's selected settings: nothing is "
-        "tuned. B takes as many training steps per epoch as A. B is scored on its test copies, which include augmented "
-        "copies; `B_clean` keeps only the clean copy of each photo. D stops at A's best epoch and its five repeats use "
-        "five seeds on the same photos. Inflation is the pooled score of a condition minus the pooled score of A. Its "
-        "range is a bootstrap over source photos (resampled within class; all copies and repeats of a photo stay "
-        "together). A condition is called higher than A only when the range excludes 0 and at least 4 of 5 rounds agree.",
-        "One training seed per round and condition; the rounds are the repeats.", ""] + sections)
+        print(f"{name}: scored", flush=True)   # scores are read by `partition_report` only
 
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    parser.add_argument("action", choices=["splits", "declare", "cache", "fit", "score", "report"])
+    parser.add_argument("action", choices=["splits", "declare", "cache", "fit", "score"])
     parser.add_argument("--config", default="configs/partition_order.yaml")
     args = parser.parse_args()
     config = load_config(args.config)
     if args.action == "splits":
         session = pd.read_csv(REPO_ROOT / config["split_files"]["folds"], dtype=str)
         lock_tables(condition_tables(session, config), REPO_ROOT / config["partition_order"]["split_dir"])
-        keys = photo_keys(session, pd.read_csv(REPO_ROOT / "splits/folds.csv", dtype=str),
-                          read_inventory(config["inventory"]["files"]["primary"]))
-        for condition in "BCD":
-            print(condition, leak_shares(read_condition(condition), keys), flush=True)
-        print("A", leak_shares(session, keys), flush=True)
+        print("written:", split_hashes(config), flush=True)   # leak counter: python -m src.partition_report leaks
     elif args.action == "cache":
         Images(config, copies=True)
     else:
-        {"declare": declare, "fit": fit_all, "score": score_all, "report": report}[args.action](config)
+        {"declare": declare, "fit": fit_all, "score": score_all}[args.action](config)
     print(f"STAGE9 {args.action} DONE", flush=True)
 
 

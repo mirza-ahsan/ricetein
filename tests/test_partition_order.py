@@ -15,6 +15,7 @@ from torch import nn
 
 from src import augment, metrics
 from src import partition_order as po
+from src import partition_report as pr
 from src import partition_splits as ps
 from src import train_mil as tm
 from src.config import REPO_ROOT, load_config
@@ -250,10 +251,13 @@ def test_runs_reuse_a_settings_with_the_conditions_own_split_and_a_fenced_name(c
 def runs_dir(tmp_path, monkeypatch, config):
     monkeypatch.setattr(po, "get_default_runs_dir", lambda: tmp_path)
     monkeypatch.setattr(po, "require_clean_code", lambda: "abc1234")
+    monkeypatch.setattr(po, "require_declared", lambda config: None)
+    monkeypatch.setattr(po, "split_hashes", lambda config: {c: "sha-" + c for c in "BCD"})
     for name, _, condition, _ in po.all_runs(config):
         folder = tmp_path / name
         folder.mkdir()
-        (folder / "record.json").write_text(json.dumps({"status": "completed", "config": {}}))
+        (folder / "record.json").write_text(json.dumps({"status": "completed", "config": {},
+                                                        "split_checksum": "sha-" + condition}))
         for artifact in po.ARTIFACTS[condition]:
             (folder / artifact).write_text(name + artifact)
     monkeypatch.setattr(po, "completed_run", lambda name, artifacts: (tmp_path / name / "record.json").exists())
@@ -263,8 +267,10 @@ def runs_dir(tmp_path, monkeypatch, config):
 def stub_scores(monkeypatch, fail_on=None):
     def score(name, model, condition, r):
         if name == fail_on:
-            raise RuntimeError("crash")
-        return pd.DataFrame({"true_class": CLASSES, "pred_class": CLASSES})
+            def crash():
+                raise RuntimeError("crash")
+            return crash
+        return lambda: pd.DataFrame({"true_class": CLASSES, "pred_class": CLASSES})
     monkeypatch.setattr(po, "score_run", score)
 
 
@@ -306,6 +312,7 @@ def test_stage9_runs_stay_reusable_while_only_their_own_code_is_unchanged():
     paths = records.code_paths("stage9_attention_B_r1")
     assert "src/partition_order.py" in paths and "src/partition_splits.py" in paths and "src/train_mil.py" in paths
     assert "src/records.py" not in paths and "src/explain.py" not in paths and "configs" not in paths
+    assert "src/partition_report.py" not in paths          # a report fix must not make a finished run look changed
 
 
 def test_a_declaration_is_frozen_and_checked_before_training(tmp_path, monkeypatch, config):
@@ -337,7 +344,7 @@ def random_predictions(n_photos=60, rows_per_photo=1, accuracy=0.7, seed=0):
 def test_scores_from_confusion_equal_the_main_scoring_code():
     t = random_predictions(80, 3, 0.6)
     photos = pd.Index(sorted(t["photo_id"].unique()))
-    f1, balanced = po.scores_from_confusion(po.confusion_by_photo(t, photos, CLASSES).sum(0), 4)
+    f1, balanced = pr.scores_from_confusion(pr.confusion_by_photo(t, photos, CLASSES).sum(0), 4)
     expected = metrics.scores(t["true_class"], t["pred_class"], CLASSES)
     assert f1 == pytest.approx(expected["macro_f1"]) and balanced == pytest.approx(expected["balanced_accuracy"])
 
@@ -345,10 +352,10 @@ def test_scores_from_confusion_equal_the_main_scoring_code():
 def test_inflation_is_the_difference_to_a_and_its_range_is_paired_over_photos(config):
     a, b = random_predictions(120, 1, 0.55, seed=1), random_predictions(120, 4, 0.95, seed=2)
     photos = pd.Index(sorted(a["photo_id"]))
-    counts = {"A": po.confusion_by_photo(a, photos, CLASSES), "B": po.confusion_by_photo(b, photos, CLASSES),
-              "A2": po.confusion_by_photo(a, photos, CLASSES)}
+    counts = {"A": pr.confusion_by_photo(a, photos, CLASSES), "B": pr.confusion_by_photo(b, photos, CLASSES),
+              "A2": pr.confusion_by_photo(a, photos, CLASSES)}
     photo_class = np.arange(120) % 4
-    ranges = po.inflation_ranges(counts, photo_class, {"resamples": 300, "confidence": 0.95}, 0, 4)
+    ranges = pr.inflation_ranges(counts, photo_class, {"resamples": 300, "confidence": 0.95}, 0, 4)
     assert ranges["A"]["macro_f1"]["difference"] == 0 and ranges["A2"]["macro_f1"]["difference_low"] == 0
     r = ranges["B"]["macro_f1"]
     assert r["difference"] == pytest.approx(r["value"] - ranges["A"]["macro_f1"]["value"]) and r["difference_low"] > 0
@@ -356,10 +363,10 @@ def test_inflation_is_the_difference_to_a_and_its_range_is_paired_over_photos(co
 
 
 def test_a_difference_is_called_clear_only_when_the_range_and_the_rounds_agree():
-    assert po.reading(0.02, 0.1, 5, 0, 4) == "clearly above A"
-    assert po.reading(0.02, 0.1, 3, 2, 4) == "no clear difference"       # the range excludes 0, too few rounds
-    assert po.reading(-0.01, 0.1, 5, 0, 4) == "no clear difference"
-    assert po.reading(-0.1, -0.02, 0, 5, 4) == "clearly below A"
+    assert pr.reading(0.02, 0.1, 5, 0, 4) == "clearly above A"
+    assert pr.reading(0.02, 0.1, 3, 2, 4) == "no clear difference"       # the range excludes 0, too few rounds
+    assert pr.reading(-0.01, 0.1, 5, 0, 4) == "no clear difference"
+    assert pr.reading(-0.1, -0.02, 0, 5, 4) == "clearly below A"
 
 
 def test_the_inflation_table_and_the_report_carry_the_leak_counter(config, world):
@@ -373,9 +380,71 @@ def test_the_inflation_table_and_the_report_carry_the_leak_counter(config, world
     leaks = {k: {"source_photo": 1.0 if k in ("B", "B_clean", "D") else 0.0, "near_duplicate_group": 0.1,
                  "capture_block": 0.9, "same_camera_within_10s": 0.5} for k in tables}
     config = {**config, "evaluation": {**config["evaluation"], "bootstrap": {"resamples": 100, "confidence": 0.95}}}
-    table = po.inflation_table(config, tables, leaks, "attention")
+    table = pr.inflation_table(config, tables, leaks, "attention")
     assert list(table["condition"]) == list(tables) and table.loc[0, "macro_f1_reading"] == "reference"
     assert table.loc[table["condition"] == "B", "leak_source_photo"].item() == 1.0
     assert table.loc[table["condition"] == "A", "leak_source_photo"].item() == 0.0
-    text = po.report_text(pd.concat([table, table.assign(model="efficientnetv2s")], ignore_index=True))
+    text = pr.report_text(pd.concat([table, table.assign(model="efficientnetv2s")], ignore_index=True))
     assert "same source photo" in text and "Xu et al., 2024" in text and "inflation vs A" in text
+
+
+# ------------------------------------------------------------------ review follow-ups
+
+def test_a_failure_while_preparing_a_run_does_not_use_up_its_scoring(runs_dir, config, monkeypatch):
+    def broken(name, model, condition, r):
+        raise RuntimeError("no GPU memory")
+    monkeypatch.setattr(po, "score_run", broken)
+    with pytest.raises(RuntimeError, match="no GPU memory"):
+        po.score_all(config)
+    assert not list(runs_dir.glob("*/score_started.json"))
+    stub_scores(monkeypatch)
+    po.score_all(config)                                                   # the same plan, nothing lost
+    assert len(list(runs_dir.glob("*/score_metrics.json"))) == 30
+
+
+def test_a_run_trained_on_another_split_file_is_never_scored(runs_dir, config, monkeypatch):
+    stub_scores(monkeypatch)
+    monkeypatch.setattr(po, "split_hashes", lambda config: {c: "other-" + c for c in "BCD"})
+    with pytest.raises(ValueError, match="another split file"):
+        po.score_all(config)
+    assert not (runs_dir / po.PLAN).exists()
+
+
+def test_the_declaration_freezes_settings_split_files_and_reference_runs(runs_dir, config, monkeypatch):
+    monkeypatch.setattr(po, "split_hashes", lambda config: {"B": "b", "C": "c", "D": "d"})
+    monkeypatch.setattr(po, "REPO_ROOT", runs_dir)
+    (runs_dir / "splits/session_blocked").mkdir(parents=True)
+    (runs_dir / config["split_files"]["folds"]).write_text("session")
+    for which, stem in (("a", "session_selection"), ("l", "followup_selection")):
+        methods = {config["partition_order"][f"{which}_methods"][m]: {"runs": [f"{which}_{m}_r{r}" for r in range(1, 6)]}
+                   for m in config["partition_order"]["models"]}
+        (runs_dir / f"{stem}.json").write_text(json.dumps({"methods": methods}))
+        for m in config["partition_order"]["models"]:
+            for r in range(1, 6):
+                folder = runs_dir / f"{which}_{m}_r{r}"
+                folder.mkdir()
+                (folder / "record.json").write_text("{}")
+                (folder / "test_predictions.csv").write_text("x")
+    first = po.protocol(config)
+    assert first == po.protocol(config)                                    # the same on every call
+    assert {"seed", "evaluation", "session_folds_sha256", "split_files"} <= set(first) and len(first["reference_runs"]) == 20
+    (runs_dir / "a_attention_r3" / "test_predictions.csv").write_text("changed")
+    assert po.protocol(config) != first
+
+
+def test_an_interrupted_run_is_moved_aside_not_deleted(runs_dir):
+    folder = runs_dir / "stage9_x_B_r1"
+    folder.mkdir()
+    (folder / "history.csv").write_text("kept")
+    po.archive_partial("stage9_x_B_r1")
+    po.archive_partial("stage9_x_B_r1")                                    # nothing there now: no error
+    assert (runs_dir / "stage9_x_B_r1_interrupted1" / "history.csv").read_text() == "kept"
+
+
+def test_the_same_camera_exposure_is_measured(world):
+    assert ps.leak_counter(world.tables["C"], 1, world.keys)["same_camera_within_10s"] > 0.3
+    assert ps.leak_counter(world.tables["B"], 1, world.keys)["same_camera_within_10s"] > 0.9
+    far = world.keys.assign(seconds=world.keys["seconds"] * 1000)          # 5 s apart becomes 5,000 s apart
+    assert ps.leak_counter(world.tables["C"], 1, far)["same_camera_within_10s"] == 0
+    unknown = world.keys.assign(seconds=np.nan)                            # no capture time: no exposure claimed
+    assert ps.leak_counter(world.tables["C"], 1, unknown)["same_camera_within_10s"] == 0
