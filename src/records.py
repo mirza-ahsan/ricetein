@@ -38,7 +38,8 @@ CODE_PATHS = ("src", "configs", "splits", "pyproject.toml", "uv.lock")
 # The module whose code produces a run's numbers, by run-name prefix. A completed run stays reusable
 # while that module and everything it imports are unchanged (handbook §24, 2026-11-14).
 RUN_MODULES = {"stage4": "src.sanity_baselines", "stage4b": "src.shortcut_baselines",
-               "stage5": "src.train_wholeimage", "stage7a": "src.linear_probe", "stage7": "src.train_mil"}
+               "stage5": "src.train_wholeimage", "stage7a": "src.linear_probe", "stage7": "src.train_mil",
+               "stage9": "src.partition_order"}
 BOOKKEEPING = {"src/records.py"}  # writes records and decides reuse; computes no score
 
 # Package versions written into every record (missing ones are recorded as None).

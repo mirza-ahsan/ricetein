@@ -23,7 +23,7 @@ def test_code_paths_by_run_kind():
     assert {"pyproject.toml", "uv.lock"} <= set(paths)
     assert "src/linear_probe.py" in records.code_paths("stage7a_probe_e1_224_l2100_r1")
     assert "src/linear_probe.py" not in records.code_paths("stage7_attention_r1")
-    assert records.code_paths("stage9_anything") == records.CODE_PATHS  # unknown kinds stay strict
+    assert records.code_paths("stage99_anything") == records.CODE_PATHS  # unknown kinds stay strict
 
 
 @pytest.fixture
