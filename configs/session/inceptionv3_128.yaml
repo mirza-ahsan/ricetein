@@ -1,13 +1,7 @@
 # inceptionv3 at 128 px on the session-blocked split, at the learning rate selected at 224 px on the
-# session-split validation photos (runs/session_selection.json; handbook §24, 2026-11-20). `inceptionv3_session`
-# is the same pinned model as `inceptionv3`; the separate name keeps the run folders of the two splits apart
-# (stage5_inceptionv3_session_128_lr..._r...).
-extends: ../wholeimage/inceptionv3_128.yaml
-split_files:
-  folds: splits/session_blocked/folds.csv
+# session-split validation photos (runs/session_selection.json; handbook §24, 2026-11-20). Everything else,
+# including the run name inceptionv3_session, comes from inceptionv3_224.yaml.
+extends: inceptionv3_224.yaml
 wholeimage:
-  model: inceptionv3_session
-  models:
-    inceptionv3_session:
-      repo: timm/inception_v3.tv_in1k
-      revision: 393d84cc85c467d8fbc0dc81a65c04e87a32572c
+  size: 128
+  otsu: false

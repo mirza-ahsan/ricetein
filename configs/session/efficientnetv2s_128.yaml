@@ -1,13 +1,7 @@
 # efficientnetv2s at 128 px on the session-blocked split, at the learning rate selected at 224 px on the
-# session-split validation photos (runs/session_selection.json; handbook §24, 2026-11-20). `efficientnetv2s_session`
-# is the same pinned model as `efficientnetv2s`; the separate name keeps the run folders of the two splits apart
-# (stage5_efficientnetv2s_session_128_lr..._r...).
-extends: ../wholeimage/efficientnetv2s_128.yaml
-split_files:
-  folds: splits/session_blocked/folds.csv
+# session-split validation photos (runs/session_selection.json; handbook §24, 2026-11-20). Everything else,
+# including the run name efficientnetv2s_session, comes from efficientnetv2s_224.yaml.
+extends: efficientnetv2s_224.yaml
 wholeimage:
-  model: efficientnetv2s_session
-  models:
-    efficientnetv2s_session:
-      repo: timm/tf_efficientnetv2_s.in1k
-      revision: 3af791b42d7e895c9da9b5aa4ed4e6b648e4ac0b
+  size: 128
+  otsu: false

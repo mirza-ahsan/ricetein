@@ -1,23 +1,7 @@
 # swin_tiny at 128 px on the session-blocked split, at the learning rate selected at 224 px on the
-# session-split validation photos (runs/session_selection.json; handbook §24, 2026-11-20). `swin_tiny_session`
-# is the same pinned model as `swin_tiny`; the separate name keeps the run folders of the two splits apart
-# (stage5_swin_tiny_session_128_lr..._r...).
-extends: ../wholeimage/swin_tiny_128.yaml
-split_files:
-  folds: splits/session_blocked/folds.csv
+# session-split validation photos (runs/session_selection.json; handbook §24, 2026-11-20). Everything else,
+# including the run name swin_tiny_session, comes from swin_tiny_224.yaml.
+extends: swin_tiny_224.yaml
 wholeimage:
-  model: swin_tiny_session
-  models:
-    swin_tiny_session:
-      repo: timm/swin_tiny_patch4_window7_224.ms_in1k
-      revision: 4cc3a7275b50b53a7bec45f32c236ebe64227cff
-      size_kwargs:
-        128:
-          img_size: 128
-          window_size: 4
-        224:
-          img_size: 224
-        448:
-          img_size: 448
-        512:
-          img_size: 512
+  size: 128
+  otsu: false

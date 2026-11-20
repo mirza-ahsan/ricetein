@@ -47,11 +47,27 @@ def test_swin_knows_every_input_size():
     assert {224, 448} <= set(sizes)
 
 
-def test_only_runs_named_in_the_selection_are_tested(tmp_path, monkeypatch):
+def test_planned_runs_are_45_and_448_is_only_for_the_best_model():
+    pairs = session_conditions.planned("convnext_tiny")
+    assert len(pairs) * len(followup.ROUNDS) == 45
+    assert [m for m, c in pairs if c == "448"] == ["convnext_tiny"]
+
+
+def test_a_selection_that_is_not_the_declared_45_runs_is_refused(tmp_path, monkeypatch):
     monkeypatch.setattr(session_conditions, "get_default_runs_dir", lambda: tmp_path)
-    runs = [f"stage5_x_session_128_lr0.001_r{r}" for r in range(1, 6)]
-    (tmp_path / session_conditions.SELECTION).write_text(json.dumps({"configurations": {"x_128": runs}}))
+    (tmp_path / "session_selection.json").write_text(json.dumps(SELECTION))
+    pairs = session_conditions.planned("convnext_tiny")
+    full = {f"{m}_{c}": [f"run{r}" for r in followup.ROUNDS] for m, c in pairs}
     seen = {}
     monkeypatch.setattr(session_conditions, "evaluate_once", lambda names, plan: seen.update(names=names, plan=plan))
+    for broken in ({**full, "swin_tiny_128": ["run1"]}, {k: v for k, v in full.items() if k != "swin_tiny_128"}):
+        (tmp_path / session_conditions.SELECTION).write_text(
+            json.dumps({"best_448_model": "convnext_tiny", "configurations": broken}))
+        with pytest.raises(RuntimeError, match="45 runs"):
+            session_conditions.evaluate_selected()
+    (tmp_path / session_conditions.SELECTION).write_text(
+        json.dumps({"best_448_model": "convnext_tiny", "configurations": full}))
+    assert not seen
     session_conditions.evaluate_selected()
-    assert seen == {"names": runs, "plan": "session_conditions_plan.json"}
+    assert sorted(seen["names"]) == sorted(run for names in full.values() for run in names)
+    assert seen["plan"] == "session_conditions_plan.json"

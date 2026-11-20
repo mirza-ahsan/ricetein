@@ -41,15 +41,23 @@ def best_model(chosen: dict[str, tuple[float, float]]) -> str:
     return max(MODELS, key=lambda model: chosen[model][1])
 
 
+def planned(best: str) -> list[tuple[str, str]]:
+    """The (model, condition) pairs to fit and test: two conditions for every model, 448 px for the best one."""
+    return [(model, condition) for model in MODELS
+            for condition in (*CONDITIONS, *(["448"] if model == best else []))]
+
+
 def fit() -> None:
-    chosen = selected_at_224(read_json(get_default_runs_dir() / "session_selection.json"))
+    runs = get_default_runs_dir()
+    chosen = selected_at_224(read_json(runs / "session_selection.json"))
     best = best_model(chosen)
-    configurations: dict[str, list[str]] = {}
-    for model in MODELS:
-        lr = chosen[model][0]
-        for condition in (*CONDITIONS, *(["448"] if model == best else [])):
-            config = load_config(f"configs/session/{model}_{condition}.yaml")
-            configurations[f"{model}_{condition}"] = [stage5.run_one(config, lr, r)[0] for r in ROUNDS]
+    configurations = {}
+    for model, condition in planned(best):
+        config = load_config(f"configs/session/{model}_{condition}.yaml")
+        configurations[f"{model}_{condition}"] = [stage5.run_one(config, chosen[model][0], r)[0] for r in ROUNDS]
+    tested = [run for names in configurations.values() for run in names]
+    if (runs / PLAN).exists() and set(read_json(runs / PLAN)["runs"]) != set(tested):
+        raise RuntimeError(f"runs/{PLAN} is frozen with other runs: the selection cannot change after `evaluate`")
     write_json(SELECTION, {"partition": "val", "split": "splits/session_blocked/folds.csv",
                            "code_version": require_clean_code(), "best_448_model": best,
                            "learning_rates": {model: lr for model, (lr, _) in chosen.items()},
@@ -57,8 +65,14 @@ def fit() -> None:
 
 
 def evaluate_selected() -> None:
-    selection = read_json(get_default_runs_dir() / SELECTION)
-    evaluate_once([run for runs in selection["configurations"].values() for run in runs], PLAN)
+    runs = get_default_runs_dir()
+    selection = read_json(runs / SELECTION)
+    best = best_model(selected_at_224(read_json(runs / "session_selection.json")))
+    configurations = selection["configurations"]
+    if (selection["best_448_model"] != best or set(configurations) != {f"{m}_{c}" for m, c in planned(best)}
+            or any(len(names) != len(ROUNDS) for names in configurations.values())):
+        raise RuntimeError(f"runs/{SELECTION} does not hold the declared 45 runs; stop and report")
+    evaluate_once([run for names in configurations.values() for run in names], PLAN)
 
 
 ACTIONS = {"fit": fit, "evaluate": evaluate_selected}
