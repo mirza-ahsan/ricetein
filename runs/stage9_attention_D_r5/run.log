@@ -1,0 +1,37 @@
+[2026-11-21 03:22:05] [INFO] ============================================================
+[2026-11-21 03:22:05] [INFO] Run: stage9_attention_D_r5
+[2026-11-21 03:22:05] [INFO] Folder: /home/aztrek/projects/ricetein/runs/stage9_attention_D_r5
+[2026-11-21 03:22:05] [INFO] Code version: ef95788
+[2026-11-21 03:22:05] [INFO] GPU: NVIDIA GeForce RTX 4060 (7.68 GB)
+[2026-11-21 03:22:05] [INFO] ============================================================
+[2026-11-21 03:22:07] [INFO] Epoch 001 -> train_loss: 1.1948
+[2026-11-21 03:22:08] [INFO] Epoch 002 -> train_loss: 0.9161
+[2026-11-21 03:22:10] [INFO] Epoch 003 -> train_loss: 0.8414
+[2026-11-21 03:22:11] [INFO] Epoch 004 -> train_loss: 0.7977
+[2026-11-21 03:22:12] [INFO] Epoch 005 -> train_loss: 0.7642
+[2026-11-21 03:22:14] [INFO] Epoch 006 -> train_loss: 0.7515
+[2026-11-21 03:22:15] [INFO] Epoch 007 -> train_loss: 0.7466
+[2026-11-21 03:22:17] [INFO] Epoch 008 -> train_loss: 0.7315
+[2026-11-21 03:22:18] [INFO] Epoch 009 -> train_loss: 0.7207
+[2026-11-21 03:22:19] [INFO] Epoch 010 -> train_loss: 0.7198
+[2026-11-21 03:22:21] [INFO] Epoch 011 -> train_loss: 0.6965
+[2026-11-21 03:22:22] [INFO] Epoch 012 -> train_loss: 0.6843
+[2026-11-21 03:22:24] [INFO] Epoch 013 -> train_loss: 0.6878
+[2026-11-21 03:22:25] [INFO] Epoch 014 -> train_loss: 0.6804
+[2026-11-21 03:22:26] [INFO] Epoch 015 -> train_loss: 0.6745
+[2026-11-21 03:22:28] [INFO] Epoch 016 -> train_loss: 0.6674
+[2026-11-21 03:22:29] [INFO] Epoch 017 -> train_loss: 0.6673
+[2026-11-21 03:22:30] [INFO] Epoch 018 -> train_loss: 0.6649
+[2026-11-21 03:22:32] [INFO] Epoch 019 -> train_loss: 0.6633
+[2026-11-21 03:22:33] [INFO] Epoch 020 -> train_loss: 0.6506
+[2026-11-21 03:22:34] [INFO] Epoch 021 -> train_loss: 0.6507
+[2026-11-21 03:22:36] [INFO] Epoch 022 -> train_loss: 0.6448
+[2026-11-21 03:22:37] [INFO] Epoch 023 -> train_loss: 0.6429
+[2026-11-21 03:22:38] [INFO] Epoch 024 -> train_loss: 0.6294
+[2026-11-21 03:22:39] [INFO] Epoch 025 -> train_loss: 0.6330
+[2026-11-21 03:22:41] [INFO] Epoch 026 -> train_loss: 0.6239
+[2026-11-21 03:22:42] [INFO] Epoch 027 -> train_loss: 0.6300
+[2026-11-21 03:22:43] [INFO] Epoch 028 -> train_loss: 0.6242
+[2026-11-21 03:22:44] [INFO] Epoch 029 -> train_loss: 0.6082
+[2026-11-21 03:22:44] [INFO] Saved metrics.json
+[2026-11-21 03:22:44] [INFO] Run finished in 39.02s (status: completed); saved record.json

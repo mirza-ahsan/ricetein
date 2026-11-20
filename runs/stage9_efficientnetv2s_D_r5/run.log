@@ -1,0 +1,23 @@
+[2026-11-21 03:00:12] [INFO] ============================================================
+[2026-11-21 03:00:12] [INFO] Run: stage9_efficientnetv2s_D_r5
+[2026-11-21 03:00:12] [INFO] Folder: /home/aztrek/projects/ricetein/runs/stage9_efficientnetv2s_D_r5
+[2026-11-21 03:00:12] [INFO] Code version: ef95788
+[2026-11-21 03:00:12] [INFO] GPU: NVIDIA GeForce RTX 4060 (7.68 GB)
+[2026-11-21 03:00:12] [INFO] ============================================================
+[2026-11-21 03:00:24] [INFO] Epoch 001 -> train_loss: 1.7555
+[2026-11-21 03:00:35] [INFO] Epoch 002 -> train_loss: 0.9546
+[2026-11-21 03:00:46] [INFO] Epoch 003 -> train_loss: 0.8980
+[2026-11-21 03:00:57] [INFO] Epoch 004 -> train_loss: 0.8429
+[2026-11-21 03:01:08] [INFO] Epoch 005 -> train_loss: 0.8062
+[2026-11-21 03:01:19] [INFO] Epoch 006 -> train_loss: 0.7901
+[2026-11-21 03:01:30] [INFO] Epoch 007 -> train_loss: 0.7633
+[2026-11-21 03:01:41] [INFO] Epoch 008 -> train_loss: 0.7248
+[2026-11-21 03:01:52] [INFO] Epoch 009 -> train_loss: 0.7376
+[2026-11-21 03:02:03] [INFO] Epoch 010 -> train_loss: 0.7132
+[2026-11-21 03:02:14] [INFO] Epoch 011 -> train_loss: 0.7062
+[2026-11-21 03:02:25] [INFO] Epoch 012 -> train_loss: 0.6795
+[2026-11-21 03:02:36] [INFO] Epoch 013 -> train_loss: 0.6669
+[2026-11-21 03:02:47] [INFO] Epoch 014 -> train_loss: 0.6746
+[2026-11-21 03:02:58] [INFO] Epoch 015 -> train_loss: 0.6579
+[2026-11-21 03:02:59] [INFO] Saved metrics.json
+[2026-11-21 03:02:59] [INFO] Run finished in 166.24s (status: completed); saved record.json

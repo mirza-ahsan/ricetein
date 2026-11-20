@@ -1,0 +1,7 @@
+{
+  "best_epoch": 69,
+  "val_macro_f1": 0.9019655575899974,
+  "partition": "val",
+  "deliberately_flawed_protocol": true,
+  "checkpoint_selection": "validation"
+}

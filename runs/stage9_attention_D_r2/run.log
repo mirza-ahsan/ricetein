@@ -1,0 +1,33 @@
+[2026-11-21 03:20:18] [INFO] ============================================================
+[2026-11-21 03:20:18] [INFO] Run: stage9_attention_D_r2
+[2026-11-21 03:20:18] [INFO] Folder: /home/aztrek/projects/ricetein/runs/stage9_attention_D_r2
+[2026-11-21 03:20:18] [INFO] Code version: ef95788
+[2026-11-21 03:20:18] [INFO] GPU: NVIDIA GeForce RTX 4060 (7.68 GB)
+[2026-11-21 03:20:18] [INFO] ============================================================
+[2026-11-21 03:20:19] [INFO] Epoch 001 -> train_loss: 1.2164
+[2026-11-21 03:20:21] [INFO] Epoch 002 -> train_loss: 0.8888
+[2026-11-21 03:20:22] [INFO] Epoch 003 -> train_loss: 0.8207
+[2026-11-21 03:20:23] [INFO] Epoch 004 -> train_loss: 0.7873
+[2026-11-21 03:20:25] [INFO] Epoch 005 -> train_loss: 0.7651
+[2026-11-21 03:20:26] [INFO] Epoch 006 -> train_loss: 0.7566
+[2026-11-21 03:20:27] [INFO] Epoch 007 -> train_loss: 0.7403
+[2026-11-21 03:20:28] [INFO] Epoch 008 -> train_loss: 0.7276
+[2026-11-21 03:20:30] [INFO] Epoch 009 -> train_loss: 0.7226
+[2026-11-21 03:20:31] [INFO] Epoch 010 -> train_loss: 0.7082
+[2026-11-21 03:20:32] [INFO] Epoch 011 -> train_loss: 0.6987
+[2026-11-21 03:20:34] [INFO] Epoch 012 -> train_loss: 0.6893
+[2026-11-21 03:20:35] [INFO] Epoch 013 -> train_loss: 0.6908
+[2026-11-21 03:20:36] [INFO] Epoch 014 -> train_loss: 0.6925
+[2026-11-21 03:20:38] [INFO] Epoch 015 -> train_loss: 0.6924
+[2026-11-21 03:20:39] [INFO] Epoch 016 -> train_loss: 0.6741
+[2026-11-21 03:20:40] [INFO] Epoch 017 -> train_loss: 0.6720
+[2026-11-21 03:20:42] [INFO] Epoch 018 -> train_loss: 0.6691
+[2026-11-21 03:20:43] [INFO] Epoch 019 -> train_loss: 0.6579
+[2026-11-21 03:20:44] [INFO] Epoch 020 -> train_loss: 0.6619
+[2026-11-21 03:20:46] [INFO] Epoch 021 -> train_loss: 0.6492
+[2026-11-21 03:20:47] [INFO] Epoch 022 -> train_loss: 0.6526
+[2026-11-21 03:20:48] [INFO] Epoch 023 -> train_loss: 0.6448
+[2026-11-21 03:20:50] [INFO] Epoch 024 -> train_loss: 0.6421
+[2026-11-21 03:20:51] [INFO] Epoch 025 -> train_loss: 0.6343
+[2026-11-21 03:20:51] [INFO] Saved metrics.json
+[2026-11-21 03:20:51] [INFO] Run finished in 32.79s (status: completed); saved record.json
