@@ -1,0 +1,13 @@
+# inceptionv3 at 224 px with Otsu background removal on the session-blocked split, at the learning rate selected at 224 px on the
+# session-split validation photos (runs/session_selection.json; handbook §24, 2026-11-20). `inceptionv3_session`
+# is the same pinned model as `inceptionv3`; the separate name keeps the run folders of the two splits apart
+# (stage5_inceptionv3_session_224_otsu_lr..._r...).
+extends: ../wholeimage/inceptionv3_224_otsu.yaml
+split_files:
+  folds: splits/session_blocked/folds.csv
+wholeimage:
+  model: inceptionv3_session
+  models:
+    inceptionv3_session:
+      repo: timm/inception_v3.tv_in1k
+      revision: 393d84cc85c467d8fbc0dc81a65c04e87a32572c

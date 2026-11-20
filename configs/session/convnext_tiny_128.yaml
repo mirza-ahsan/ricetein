@@ -1,0 +1,13 @@
+# convnext_tiny at 128 px on the session-blocked split, at the learning rate selected at 224 px on the
+# session-split validation photos (runs/session_selection.json; handbook §24, 2026-11-20). `convnext_tiny_session`
+# is the same pinned model as `convnext_tiny`; the separate name keeps the run folders of the two splits apart
+# (stage5_convnext_tiny_session_128_lr..._r...).
+extends: ../wholeimage/convnext_tiny_128.yaml
+split_files:
+  folds: splits/session_blocked/folds.csv
+wholeimage:
+  model: convnext_tiny_session
+  models:
+    convnext_tiny_session:
+      repo: timm/convnext_tiny.fb_in1k
+      revision: b43a6303c9fcf176d2d707478a128c2c91e93528
