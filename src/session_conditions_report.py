@@ -16,7 +16,7 @@ import pandas as pd
 
 from src import followup_report as fr
 from src.config import REPO_ROOT, load_config
-from src.followup import read_json
+from src.followup import MODELS, read_json
 from src.inventory_report import md_table
 from src.records import get_default_runs_dir
 from src.session_conditions import PLAN, SELECTION
@@ -24,6 +24,7 @@ from src.session_conditions import PLAN, SELECTION
 TABLES = REPO_ROOT / "results/tables"
 REPORT = REPO_ROOT / "docs/reports/session_conditions_report.md"
 LABELS = {"224": "224 px", "128": "128 px", "224_otsu": "224 px + Otsu", "448": "448 px"}
+AHEAD, BEHIND = "condition beats 224 px", "224 px beats condition"
 
 
 def split_key(key: str) -> tuple[str, str]:
@@ -39,7 +40,7 @@ def paired_both_ways(model: str, condition: str, tables: dict[str, pd.DataFrame]
     """The condition against the same model at 224 px, and 224 px against the condition."""
     here, base = tables[f"{model}_{condition}"], tables[f"{model}_224"]
     rows = []
-    for direction, a, b in (("condition beats 224 px", here, base), ("224 px beats condition", base, here)):
+    for direction, a, b in ((AHEAD, here, base), (BEHIND, base, here)):
         frame = fr.paired_rows(a, {"other": b}, blocks, config).drop(columns="B")
         rows.append(frame.assign(model=model, condition=condition, direction=direction))
     return pd.concat(rows, ignore_index=True)
@@ -49,10 +50,12 @@ def build_report(tables: dict[str, pd.DataFrame], best_448: str) -> str:
     scores, paired = tables["scores"], tables["paired"]
     shown_scores = fr.final_text(scores.assign(method=scores["model"] + ", " + scores["condition"].map(LABELS)))
     shown = paired.assign(B=paired["model"] + ", " + paired["condition"].map(LABELS) + ": " + paired["direction"])
-    ahead = fr.paired_text(shown[shown["direction"] == "condition beats 224 px"])
-    behind = fr.paired_text(shown[shown["direction"] == "224 px beats condition"])
-    ahead = ahead.rename(columns={"A (attention) vs": "condition against 224 px of the same model"})
-    behind = behind.rename(columns={"A (attention) vs": "224 px against the condition"})
+
+    def section(direction: str, first_column: str) -> str:
+        part = shown[shown["direction"] == direction]
+        table = fr.paired_text(part).rename(columns={"A (attention) vs": first_column})
+        return f"{md_table(table)}\n\n{fr.changed_verdicts(part)}"
+
     return f"""# Stage 5 other conditions on the session-blocked split
 
 Declared on 2026-11-20 (handbook §24) before any of these runs. Each of the four whole-image models is trained at
@@ -62,9 +65,11 @@ photos, and the recipe and budget are those of the 224 px runs. Nothing was sear
 tested once, on the test photos of the 5 rounds. The 224 px rows are the runs of `docs/reports/session_report.md`.
 
 Scores are test macro-F1 and balanced accuracy: mean ± SD over the 5 rounds, then the declared 95% photo range
-and the 95% block range of the pooled test predictions (blocks of photos taken in one session are resampled
-together). "A beats B" needs the range above 0 **and** at least 4 of 5 round wins; a row that fails either is
-"no clear difference". Differences are in percentage points.
+and the 95% block range of the pooled test predictions (a block is a run of photos from one camera with no pause over
+60 s; blocks are resampled together). In each comparison A is the run named first in the row: "A beats B" needs the
+range above 0 **and** at least 4 of 5 round wins, and a row that fails either is "no clear difference". Differences are
+in percentage points (A minus B). There are 9 conditions, 2 scores and 2 directions, so read a single row with that
+number of comparisons in mind.
 
 ## Scores of every model and condition
 
@@ -72,15 +77,13 @@ together). "A beats B" needs the range above 0 **and** at least 4 of 5 round win
 
 ## Does the condition beat the same model at 224 px?
 
-{md_table(ahead)}
-
-{fr.changed_verdicts(shown[shown["direction"] == "condition beats 224 px"])}
+{section(AHEAD, "condition against 224 px of the same model")}
 
 ## Does 224 px beat the condition?
 
-{md_table(behind)}
+The same test with the two sides swapped (the ranges are mirrored; only the round wins can differ, through ties).
 
-{fr.changed_verdicts(shown[shown["direction"] == "224 px beats condition"])}
+{section(BEHIND, "224 px against the condition")}
 
 Tables: `results/tables/session_conditions_scores.csv` and `results/tables/session_conditions_paired.csv`.
 """
@@ -94,7 +97,7 @@ def main() -> None:
     if {run for names in configurations.values() for run in names} != set(read_json(root / PLAN)["runs"]):
         raise RuntimeError(f"runs/{SELECTION} and runs/{PLAN} name different runs")
     baseline = read_json(root / "session_selection.json")["methods"]
-    models = sorted({split_key(key)[0] for key in configurations})
+    models = [m for m in MODELS if any(split_key(key)[0] == m for key in configurations)]
     runs = {f"{m}_224": baseline[f"{m}_224"]["runs"] for m in models} | configurations
     predictions = {key: fr.read_predictions(names) for key, names in runs.items()}
     order = [f"{m}_{c}" for m in models for c in LABELS if f"{m}_{c}" in predictions]
