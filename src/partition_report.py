@@ -81,7 +81,7 @@ def inflation_ranges(counts: dict[str, np.ndarray], photo_class: np.ndarray, set
 def round_scores(table: pd.DataFrame, classes: list[str]) -> pd.DataFrame:
     """Macro-F1 and balanced accuracy of each round (or repeat), indexed by round."""
     return pd.DataFrame({int(r): metrics.scores(g["true_class"], g["pred_class"], classes)
-                         for r, g in table.groupby("round")}).T[["macro_f1", "balanced_accuracy"]]
+                         for r, g in table.groupby("round")}).T[["macro_f1", "balanced_accuracy"]].astype(float)
 
 
 def reading(difference_low: float, difference_high: float, above: int, below: int, minimum: int) -> str:

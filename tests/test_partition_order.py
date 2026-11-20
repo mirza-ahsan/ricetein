@@ -427,11 +427,16 @@ def test_the_declaration_freezes_settings_split_files_and_reference_runs(runs_di
                 folder.mkdir()
                 (folder / "record.json").write_text("{}")
                 (folder / "test_predictions.csv").write_text("x")
+                (folder / "metrics.json").write_text("{}")
     first = po.protocol(config)
     assert first == po.protocol(config)                                    # the same on every call
     assert {"seed", "evaluation", "session_folds_sha256", "split_files"} <= set(first)
     assert len(first["reference_runs"]) == 20
     (runs_dir / "a_attention_r3" / "test_predictions.csv").write_text("changed")
+    assert po.protocol(config) != first
+    (runs_dir / "a_attention_r3" / "test_predictions.csv").write_text("x")
+    assert po.protocol(config) == first
+    (runs_dir / "a_attention_r3" / "metrics.json").write_text('{"best_epoch": 9}')   # D's epoch count is frozen too
     assert po.protocol(config) != first
 
 

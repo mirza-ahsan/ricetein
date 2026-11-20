@@ -118,6 +118,8 @@ def protocol(config: dict[str, Any]) -> dict[str, Any]:
             for name in reference_runs(config, model, which):
                 runs[name] = {"record_sha256": sha256(root / name / "record.json"),
                               "test_predictions_sha256": sha256(root / name / "test_predictions.csv")}
+                if which == "a":   # condition D trains for A's best epoch, read from metrics.json
+                    runs[name]["metrics_sha256"] = sha256(root / name / "metrics.json")
     return {"partition_order": config["partition_order"], "split_files": split_hashes(config),
             "session_folds_sha256": read_folds(config)[1],
             "seed": config["seed"], "evaluation": config["evaluation"], "reference_runs": runs}
@@ -475,7 +477,9 @@ def score_run(name: str, model: str, condition: str, r: int) -> Callable[[], pd.
         seed_everything(c["run_seed"], w["determinism"])
         net, device = tw.build_model(c, 224), torch.device(w.get("device", "cuda"))
         net.load_state_dict(state)
-        net = net.to(device)
+        net = net.to(device).eval()
+        with torch.no_grad(), torch.autocast("cuda", dtype=torch.float16, enabled=device.type == "cuda"):
+            net(torch.zeros(w["batch_size"][224], 3, 224, 224, device=device))   # a full batch: out-of-memory shows here
         data = loader(photo_data(c, units, r, "test", condition, Images(c, condition == "B")), c, False, None,
                       persistent=False)
 
