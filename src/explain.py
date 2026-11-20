@@ -9,7 +9,8 @@
 
 Models: the five session-split attention runs (``stage7_session_attention_r1..r5``, tested once) and, on
 validation photos only, their two stability seeds. Every action is resumable and writes only under
-``results/``, ``docs/reports/`` and (the declaration and the run-once marker) ``runs/``. Test photos are read
+``results/``, ``docs/reports/``, ``data/heatmap_ratings.csv`` (header only, created once) and (the
+declaration and the run-once marker) ``runs/``. Test photos are read
 by ``deletion`` and ``background`` only, after ``plan`` froze what is measured.
 """
 
@@ -55,6 +56,10 @@ EXTRA_ITEMS = 14  # 4 classes x 3 categories x 3 = 36 rule examples, plus 14 ran
 SELECT_SEED = 0
 BACKGROUND_SHARE = 0.9  # a tile is background when more than this share of its pixels is
 CATEGORIES = ("correct", "wrong", "random")
+MASK_SANE = (
+    0.10,
+    0.98,
+)  # a leaf mask outside this share of the photo is flagged (side guess may be inverted)
 
 
 def run_name(seed: int, round_: int) -> str:
@@ -65,6 +70,24 @@ def runs_for(partition: str) -> list[str]:
     """Test: only the five runs that were tested. Validation: all three training seeds."""
     seeds = (0,) if partition == "test" else tuple(SEED_TAGS)
     return [run_name(s, r) for s in seeds for r in ROUNDS]
+
+
+def write_once(path: Path, content: dict) -> None:
+    """Create ``path`` whole or not at all; never replace an existing one (markers are never rewritten)."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    partial = path.with_name(path.name + ".tmp")
+    partial.write_text(json.dumps(content, indent=2))
+    try:
+        os.link(partial, path)  # fails if ``path`` exists
+    finally:
+        partial.unlink()
+
+
+def save_figure(figure, path: Path, **options) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    partial = path.with_name(path.name + ".tmp")
+    figure.savefig(partial, format=path.suffix.lstrip("."), **options)
+    os.replace(partial, path)
 
 
 def write_csv(frame: pd.DataFrame, path: Path) -> None:
@@ -153,7 +176,6 @@ def check_removable(mask: torch.Tensor, k: int) -> None:
 def delete_and_score(
     model: MILModel,
     bags,
-    classes: list[str],
     device: torch.device,
     stored: dict[str, np.ndarray] | None = None,
 ) -> pd.DataFrame:
@@ -186,7 +208,7 @@ def delete_and_score(
         if stored is not None:
             for i, photo_id in enumerate(ids):
                 n = int(mask[i].sum())
-                if not np.allclose(weights[i, :n].cpu().numpy(), stored[photo_id], atol=1e-3):
+                if not np.allclose(weights[i, :n].cpu().numpy(), stored[photo_id], atol=1e-4, rtol=1e-2):
                     raise ValueError(f"{photo_id}: recomputed attention differs from the saved attention")
         record("none", 0, -1, ids, y, mask, tiles)
         for k in KS:
@@ -313,8 +335,7 @@ def draw_heatmap(
         axis.axis("off")
     figure.colorbar(image, ax=axes[1], fraction=0.04, label="attention (hottest = 1)")
     figure.suptitle(title, fontsize=9)
-    path.parent.mkdir(parents=True, exist_ok=True)
-    figure.savefig(path, dpi=110, bbox_inches="tight")
+    save_figure(figure, path, dpi=110, bbox_inches="tight")
     plt.close(figure)
 
 
@@ -354,12 +375,9 @@ class Photos:
         inventory = read_inventory(self.config["inventory"]["files"]["primary"])
         self.factors = scale_factors(self.config, sorted(inventory.loc[inventory["opened_ok"], "photo_id"]))
 
-    def factor(self, photo_id: str) -> float:
-        return self.factors[photo_id]
-
     def rgb(self, photo_id: str) -> np.ndarray:
         change = version_settings({}, self.config["seed"], 0, photo_id)
-        return load_version(str(self.root / photo_id), self.factor(photo_id), change)
+        return load_version(str(self.root / photo_id), self.factors[photo_id], change)
 
     def boxes(self, photo_id: str) -> np.ndarray:
         with np.load(self.cache / "v0" / f"{photo_key(photo_id)}.npz") as saved:
@@ -385,10 +403,15 @@ def select(partition: str) -> None:
         write_csv(examples, path)
     if not RATINGS.exists():
         write_csv(pd.DataFrame(columns=RATING_COLUMNS), RATINGS)
+    wanted = len(classes) * len(CATEGORIES) * PER_CELL + EXTRA_ITEMS
+    if len(examples) != wanted:
+        print(f"WARNING: {len(examples)} items instead of {wanted} (a class has too few wrong photos?)")
     print(f"{len(examples)} examples ({len(examples) - EXTRA_ITEMS} by rule, {EXTRA_ITEMS} extra) -> {path}")
 
 
 def heatmaps(partition: str) -> None:
+    if partition == "test":
+        require_plan()
     examples = pd.read_csv(OUT / f"examples_{partition}.csv")
     photos = Photos()
     attention = {r: read_attention(run_name(0, r), partition) for r in ROUNDS}
@@ -421,6 +444,7 @@ def heatmaps(partition: str) -> None:
 
 def plan() -> None:
     version = require_clean_code()
+    base = load_config("configs/base.yaml")
     root = get_default_runs_dir()
     path = root / "explain_plan.json"
     runs = {}
@@ -447,15 +471,22 @@ def plan() -> None:
             "mask": "Otsu leaf mask of the photo at the common leaf scale, a measuring tool only",
             "partitions": ["test", "val"],
         },
+        "verdict": {
+            "rule": "top-k matters more than random-k only if the photo-bootstrap and the capture-block-"
+            "bootstrap ranges of the true-class-probability gap are both above 0 and the gap is positive "
+            "in at least min_round_wins rounds",
+            "bootstrap": base["evaluation"]["bootstrap"],
+            "comparison": base["evaluation"]["comparison"],
+        },
         "examples": {"per_cell": PER_CELL, "extra": EXTRA_ITEMS, "seed": SELECT_SEED},
+        "explain_sha256": digest(Path(__file__)),
         "test_runs": [n for n, v in runs.items() if v["tested"]],
         "runs": runs,
     }
     if path.exists():
         print(f"{path} already declared; not changed")
         return
-    with path.open("x") as out:
-        json.dump(declaration, out, indent=2)
+    write_once(path, declaration)
     print(f"declared {path}")
 
 
@@ -471,8 +502,7 @@ def start_marker(partition: str, action: str) -> dict:
             if json.loads(marker.read_text())["plan_sha256"] != content["plan_sha256"]:
                 raise ValueError(f"{marker}: started under another plan")
         else:
-            with marker.open("x") as out:
-                json.dump(content, out)
+            write_once(marker, content)
     return declaration
 
 
@@ -511,7 +541,7 @@ def deletion(partition: str) -> None:
         r, classes = config["round"], config["classes"]
         bags = tm.Bags(store, folds, r, partition, classes, 1, 0.0, config["mil"]["batch"], config["seed"])
         stored = read_attention(name, partition)
-        long = delete_and_score(model.to(device), bags, classes, device, stored)
+        long = delete_and_score(model.to(device), bags, device, stored)
         write_csv(photo_table(long, classes).assign(run=name, round=r), photos_path)
         write_csv(score_conditions(long, classes).assign(run=name, round=r), scores_path)
         print(f"{name}: deletion test on {partition} photos done", flush=True)
@@ -527,22 +557,31 @@ def background(partition: str) -> None:
     for name in names:
         r = int(name.rsplit("_r", 1)[1])
         for photo_id, weights in read_attention(name, partition).items():
-            path = fractions / f"{photo_key(photo_id)}.npy"
+            path = fractions / f"{photo_key(photo_id)}.npz"
             if not path.exists():
                 rgb, boxes = photos.rgb(photo_id), photos.boxes(photo_id)
                 check_grid(rgb, boxes, photos.tile)
+                leaf = otsu.leaf_mask(rgb)
                 fractions.mkdir(parents=True, exist_ok=True)
-                np.save(
-                    path, tile_background_fraction(otsu.leaf_mask(rgb), boxes, photos.tile).astype(np.float32)
+                partial = path.with_name(path.name + ".tmp.npz")
+                np.savez(
+                    partial,
+                    fraction=tile_background_fraction(leaf, boxes, photos.tile).astype(np.float32),
+                    leaf_share=leaf.mean(),
                 )
+                os.replace(partial, path)
+            with np.load(path) as saved:
+                fraction, leaf_share = saved["fraction"], float(saved["leaf_share"])
             rows.append(
                 {
                     "run": name,
                     "round": r,
                     "photo_id": photo_id,
                     "true_class": folds.loc[photo_id, "class"],
-                    **background_share(weights, np.load(path)),
+                    **background_share(weights, fraction),
                     "n_tiles": len(weights),
+                    "leaf_share": leaf_share,
+                    "mask_suspect": not MASK_SANE[0] < leaf_share < MASK_SANE[1],
                 }
             )
         print(f"{name}: background score on {partition} photos done", flush=True)
@@ -568,8 +607,11 @@ def deletion_summary(
     """Per k on the pooled photos of the runs given: top-k against random-k, and the verdict of rule 9.
 
     ``blocks`` maps photo_id to capture block. The range is given twice (decision D9): resampling photos
-    and resampling whole capture blocks; the verdict needs both above 0 and the round wins.
+    and resampling whole capture blocks; the verdict needs both above 0 and the round wins. All five
+    rounds must be present. Probabilities are means over photos, like the gap.
     """
+    if scores["round"].nunique() != len(ROUNDS):
+        raise ValueError(f"deletion results of {scores['round'].nunique()} rounds, expected {len(ROUNDS)}")
     random = (
         scores[scores["condition"] == "random"]
         .groupby(["run", "round", "k"], as_index=False)
@@ -605,9 +647,9 @@ def deletion_summary(
                 "full_macro_f1": full["macro_f1"].mean(),
                 "top_macro_f1": t["macro_f1"].mean(),
                 "random_macro_f1": rnd["macro_f1"].mean(),
-                "full_p_true": full["p_true"].mean(),
-                "top_p_true": t["p_true"].mean(),
-                "random_p_true": rnd["p_true"].mean(),
+                "full_p_true": p["p_full"].mean(),
+                "top_p_true": p["p_top"].mean(),
+                "random_p_true": p["p_random"].mean(),
                 "gap_p_true": gap.mean(),
                 "gap_low": low,
                 "gap_high": high,
@@ -621,14 +663,23 @@ def deletion_summary(
     return pd.DataFrame(rows)
 
 
-def deletion_figure(summary: pd.DataFrame, path: Path) -> None:
+def gap_by_class(photos: pd.DataFrame) -> pd.DataFrame:
+    """Mean true-class-probability gap (random-k minus top-k) per true class and k, in the photos' own units.
+    Healthy photos have no symptoms to find, so read their row apart from the disease classes."""
+    table = photos.assign(gap=photos["p_random"] - photos["p_top"])
+    return table.pivot_table(index="true_class", columns="k", values="gap", aggfunc="mean").reset_index()
+
+
+def deletion_figure(summary: pd.DataFrame, path: Path, partition: str) -> None:
     import matplotlib
 
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
 
     figure, axes = plt.subplots(1, 2, figsize=(9, 3.5))
-    for axis, key, label in zip(axes, ("macro_f1", "p_true"), ("test macro-F1", "true-class probability")):
+    for axis, key, label in zip(
+        axes, ("macro_f1", "p_true"), (f"{partition} macro-F1", f"{partition} true-class probability")
+    ):
         axis.plot(summary["k"], summary[f"top_{key}"], "o-", label="top-k attended removed")
         axis.plot(summary["k"], summary[f"random_{key}"], "s--", label="random k removed")
         axis.axhline(summary[f"full_{key}"].iloc[0], color="grey", lw=0.8, label="nothing removed")
@@ -636,15 +687,91 @@ def deletion_figure(summary: pd.DataFrame, path: Path) -> None:
         axis.set_xticks(list(summary["k"]), [str(k) for k in summary["k"]])
     axes[0].legend(fontsize=8)
     figure.tight_layout()
-    path.parent.mkdir(parents=True, exist_ok=True)
-    figure.savefig(path, dpi=130)
+    save_figure(figure, path, dpi=130)
     plt.close(figure)
 
 
+def deletion_section(partition: str, settings: dict, comparison: dict) -> list[str]:
+    scores = read_all(f"deletion_{partition}_*.csv")
+    photos = read_all(f"deletion_photos_{partition}_*.csv")
+    title = f"## Deletion test, {partition} photos (seed-0 models)"
+    if scores is None:
+        return [title, "", "Not run yet.", ""]
+    if seed0(scores)["round"].nunique() != len(ROUNDS):
+        return [
+            title,
+            "",
+            f"Incomplete: {seed0(scores)['run'].nunique()} of {len(ROUNDS)} runs finished.",
+            "",
+        ]
+    summary = deletion_summary(seed0(scores), seed0(photos), followup_report.block_of(), settings, comparison)
+    TABLES.mkdir(parents=True, exist_ok=True)
+    summary.to_csv(TABLES / f"explain_deletion_{partition}.csv", index=False)
+    scores.to_csv(TABLES / f"explain_deletion_rounds_{partition}.csv", index=False)
+    by_class = gap_by_class(seed0(photos))
+    by_class.to_csv(TABLES / f"explain_deletion_by_class_{partition}.csv", index=False)
+    deletion_figure(summary, FIGURES / f"explain_deletion_{partition}.png", partition)
+    percent = [c for c in summary.columns if c.startswith(("full_", "top_", "random_", "gap_"))]
+    by_class[[c for c in by_class.columns if c != "true_class"]] *= 100
+    return [
+        title,
+        "",
+        "Percentages. `gap` = true-class probability with random-k removed minus with top-k removed; "
+        "ranges = "
+        "95% paired bootstrap over photos and over whole capture blocks (decision D9). Rule: top-k matters "
+        "more than random-k only if both ranges are above 0 and the gap is positive in at least "
+        f"{comparison['min_round_wins']} of {len(ROUNDS)} rounds."
+        + (
+            " A validation photo can be in several rounds; each appearance counts."
+            if partition == "val"
+            else ""
+        ),
+        "",
+        md_table(summary.assign(**{c: (summary[c] * 100).round(1) for c in percent})),
+        "",
+        f"![deletion curves](../../results/figures/explain_deletion_{partition}.png)",
+        "",
+        "A big gap shows that the head's decision rests on the tiles it attends to. It does not by itself "
+        "show that those tiles are symptoms (that is the human check), and healthy photos have none. "
+        "Gap by true class (percentage points, per k):",
+        "",
+        md_table(by_class.round(1)),
+        "",
+    ]
+
+
+def background_section(partition: str) -> list[str]:
+    table = OUT / f"background_{partition}.csv"
+    title = f"## Attention on background tiles, {partition} photos (seed-0 models)"
+    if not table.exists():
+        return [title, "", "Not run yet.", ""]
+    data = seed0(pd.read_csv(table))
+    by_class = data.groupby("true_class")[["attention_share", "tile_share"]].mean()
+    by_class.loc["all"] = data[["attention_share", "tile_share"]].mean()
+    by_class["attention_per_tile_share"] = by_class["attention_share"] / by_class["tile_share"]
+    TABLES.mkdir(parents=True, exist_ok=True)
+    by_class.reset_index().to_csv(TABLES / f"explain_background_{partition}.csv", index=False)
+    shown = by_class.reset_index().assign(
+        attention_share=lambda t: (t["attention_share"] * 100).round(1),
+        tile_share=lambda t: (t["tile_share"] * 100).round(1),
+        attention_per_tile_share=lambda t: t["attention_per_tile_share"].round(2),
+    )
+    suspect = data.drop_duplicates("photo_id")["mask_suspect"].sum()
+    return [
+        title,
+        "",
+        f"A tile is background when more than {BACKGROUND_SHARE:.0%} of its pixels are outside the Otsu leaf "
+        "mask. `attention_per_tile_share` below 1 means background tiles get less than their share. "
+        f"Mask check: {suspect} photos have a leaf mask covering less than {MASK_SANE[0]:.0%} or more than "
+        f"{MASK_SANE[1]:.0%} of the photo (the side guess may be inverted there).",
+        "",
+        md_table(shown),
+        "",
+    ]
+
+
 def report() -> None:
-    config = load_config("configs/base.yaml")
-    settings, comparison = config["evaluation"]["bootstrap"], config["evaluation"]["comparison"]
-    pct = lambda frame, cols: frame.assign(**{c: (frame[c] * 100).round(1) for c in cols})  # noqa: E731
+    evaluation = load_config("configs/base.yaml")["evaluation"]
     text = [
         "# Stage 12: does the attention head look at real symptoms?",
         "",
@@ -653,74 +780,9 @@ def report() -> None:
         "",
     ]
     for partition in ("test", "val"):
-        scores, photos = (
-            read_all(f"deletion_{partition}_*.csv"),
-            read_all(f"deletion_photos_{partition}_*.csv"),
-        )
-        if scores is None:
-            text += [f"## Deletion test, {partition} photos", "", "Not run yet.", ""]
-            continue
-        summary = deletion_summary(
-            seed0(scores), seed0(photos), followup_report.block_of(), settings, comparison
-        )
-        summary.to_csv(TABLES / f"explain_deletion_{partition}.csv", index=False)
-        scores.to_csv(TABLES / f"explain_deletion_rounds_{partition}.csv", index=False)
-        deletion_figure(summary, FIGURES / f"explain_deletion_{partition}.png")
-        shown = pct(
-            summary,
-            [
-                "full_macro_f1",
-                "top_macro_f1",
-                "random_macro_f1",
-                "full_p_true",
-                "top_p_true",
-                "random_p_true",
-                "gap_p_true",
-                "gap_low",
-                "gap_high",
-                "gap_block_low",
-                "gap_block_high",
-            ],
-        )
-        text += [
-            f"## Deletion test, {partition} photos (seed-0 models)",
-            "",
-            "Percentages. `gap` = true-class probability with random-k removed minus with top-k removed; "
-            "ranges = 95% paired bootstrap over photos and over whole capture blocks (decision D9). Rule: "
-            "top-k matters more than random-k only if both ranges are above 0 and the gap is positive in at "
-            f"least {comparison['min_round_wins']} of 5 rounds. "
-            + (
-                "Validation photos can be in the validation set of several rounds; each appearance counts."
-                if partition == "val"
-                else ""
-            ),
-            "",
-            md_table(shown),
-            "",
-            f"![deletion curves](../../results/figures/explain_deletion_{partition}.png)",
-            "",
-        ]
+        text += deletion_section(partition, evaluation["bootstrap"], evaluation["comparison"])
     for partition in ("test", "val"):
-        table = OUT / f"background_{partition}.csv"
-        if not table.exists():
-            text += [f"## Attention on background tiles, {partition} photos", "", "Not run yet.", ""]
-            continue
-        data = pd.read_csv(table)
-        data = seed0(data)
-        by_class = data.groupby("true_class")[["attention_share", "tile_share"]].mean()
-        by_class.loc["all"] = data[["attention_share", "tile_share"]].mean()
-        by_class["attention_per_tile_share"] = by_class["attention_share"] / by_class["tile_share"]
-        by_class.reset_index().to_csv(TABLES / f"explain_background_{partition}.csv", index=False)
-        shown = pct(by_class.reset_index(), ["attention_share", "tile_share"]).round(2)
-        text += [
-            f"## Attention on background tiles, {partition} photos (seed-0 models)",
-            "",
-            f"A tile is background when more than {BACKGROUND_SHARE:.0%} of its pixels are outside the Otsu "
-            "leaf mask. `attention_per_tile_share` below 1 means background tiles get less than their share.",
-            "",
-            md_table(shown),
-            "",
-        ]
+        text += background_section(partition)
     for partition in ("val", "test"):
         path = OUT / f"examples_{partition}.csv"
         if path.exists():

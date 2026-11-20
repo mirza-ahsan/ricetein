@@ -107,7 +107,7 @@ def test_deletion_table_has_every_condition_and_matches_the_saved_attention():
     with torch.no_grad():
         saved = head(tiles, mask)[1]
     stored = {pid: w[:n].numpy() for pid, w, n in zip(bags.photo_ids[rows], saved, mask.sum(1))}
-    long = ex.delete_and_score(head, bags, CLASSES, torch.device("cpu"), stored)
+    long = ex.delete_and_score(head, bags, torch.device("cpu"), stored)
     per_photo = 1 + len(ex.KS) * (1 + len(ex.RANDOM_SEEDS))
     assert len(long) == 4 * per_photo
     assert set(long["condition"]) == {"none", "top", "random"}
@@ -118,60 +118,30 @@ def test_deletion_table_has_every_condition_and_matches_the_saved_attention():
     assert len(photos) == 4 * len(ex.KS) and {"p_top", "p_random", "p_full", "true_class"} <= set(photos)
     stored[next(iter(stored))] = stored[next(iter(stored))][::-1].copy()  # a wrong checkpoint/bag pairing
     with pytest.raises(ValueError, match="recomputed attention differs"):
-        ex.delete_and_score(head, bags, CLASSES, torch.device("cpu"), stored)
+        ex.delete_and_score(head, bags, torch.device("cpu"), stored)
 
 
-def test_removing_top_tiles_changes_the_answer_at_least_as_much_as_a_tiny_random_change():
+def test_removing_many_tiles_changes_the_probabilities():
     bags, _, _, _, _ = batch()
-    long = ex.delete_and_score(model(), bags, CLASSES, torch.device("cpu"))
+    long = ex.delete_and_score(model(), bags, torch.device("cpu"))
     full = long[long["condition"] == "none"].set_index("photo_id")["p_true"]
     top = long[(long["condition"] == "top") & (long["k"] == 16)].set_index("photo_id")["p_true"]
-    assert not np.allclose(full.loc[top.index], top)  # removing 16 tiles does change the probabilities
+    assert not np.allclose(full.loc[top.index], top)
 
 
-def test_deletion_summary_verdict_follows_rule_nine():
+def synthetic_deletion(gap_by_block, wins, n_runs=5):
+    """Scores and per-photo table with a chosen true-class-probability gap in each of 8 capture blocks."""
     rng = np.random.default_rng(0)
-    runs = [(f"run{r}", r) for r in range(1, 6)]
     rows, photo_rows = [], []
-    for run, r in runs:
-        rows.append(
-            {
-                "run": run,
-                "round": r,
-                "condition": "none",
-                "k": 0,
-                "seed": -1,
-                "macro_f1": 0.8,
-                "accuracy": 0.8,
-                "p_true": 0.7,
-            }
-        )
-        rows.append(
-            {
-                "run": run,
-                "round": r,
-                "condition": "top",
-                "k": 4,
-                "seed": -1,
-                "macro_f1": 0.4,
-                "accuracy": 0.4,
-                "p_true": 0.3,
-            }
-        )
-        for seed in (0, 1):
-            rows.append(
-                {
-                    "run": run,
-                    "round": r,
-                    "condition": "random",
-                    "k": 4,
-                    "seed": seed,
-                    "macro_f1": 0.78,
-                    "accuracy": 0.78,
-                    "p_true": 0.69,
-                }
-            )
+    for r in range(1, n_runs + 1):
+        run = f"run{r}"
+        good = r <= wins  # the gap is positive in this round
+        base = {"run": run, "round": r, "k": 4, "accuracy": 0.5, "macro_f1": 0.5}
+        rows.append({**base, "condition": "none", "k": 0, "seed": -1, "p_true": 0.7})
+        rows.append({**base, "condition": "top", "seed": -1, "p_true": 0.3 if good else 0.6})
+        rows.append({**base, "condition": "random", "seed": 0, "p_true": 0.5})
         for i in range(40):
+            gap = gap_by_block[i % 8] + rng.normal(0, 0.05)
             photo_rows.append(
                 {
                     "photo_id": f"{run}_{i}",
@@ -179,24 +149,56 @@ def test_deletion_summary_verdict_follows_rule_nine():
                     "round": r,
                     "k": 4,
                     "true_class": CLASSES[i % 4],
-                    "p_top": 0.3 + rng.normal(0, 0.02),
-                    "p_random": 0.69 + rng.normal(0, 0.02),
+                    "p_full": 0.7,
+                    "p_top": 0.5 - gap / 2,
+                    "p_random": 0.5 + gap / 2,
                 }
             )
-    settings = {"resamples": 100, "confidence": 0.95, "stratified": True}
-    blocks = pd.Series({f"{run}_{i}": f"b{i % 8}" for run, _ in runs for i in range(40)})
-    comparison = {"ci_excludes_zero": True, "min_round_wins": 4}
-    summary = ex.deletion_summary(pd.DataFrame(rows), pd.DataFrame(photo_rows), blocks, settings, comparison)
-    assert (
-        summary["verdict"].iloc[0] == "top-k matters more than random-k"
-        and summary["round_wins"].iloc[0] == 5
+    blocks = pd.Series({f"run{r}_{i}": f"b{i % 8}" for r in range(1, n_runs + 1) for i in range(40)})
+    return pd.DataFrame(rows), pd.DataFrame(photo_rows), blocks
+
+
+SETTINGS = {"resamples": 200, "confidence": 0.95, "stratified": True}
+RULE = {"ci_excludes_zero": True, "min_round_wins": 4}
+
+
+def verdict(gap_by_block, wins):
+    scores, photos, blocks = synthetic_deletion(gap_by_block, wins)
+    return ex.deletion_summary(scores, photos, blocks, SETTINGS, RULE).iloc[0]
+
+
+def test_verdict_needs_both_ranges_and_four_round_wins():
+    clear = verdict([0.3] * 8, 5)
+    assert clear["verdict"] == "top-k matters more than random-k" and clear["round_wins"] == 5
+    assert verdict([0.3] * 8, 3)["verdict"] == "no clear difference"  # ranges fine, too few round wins
+    assert verdict([0.3] * 8, 4)["verdict"] == "top-k matters more than random-k"
+    assert verdict([0.0] * 8, 5)["verdict"] == "no clear difference"  # no gap at all
+    # Three blocks with a big gap, five with a small negative one: photos agree on the sign, blocks do not.
+    mixed = verdict([0.3] * 3 + [-0.1] * 5, 5)
+    assert mixed["gap_low"] > 0 and mixed["gap_block_low"] < 0
+    assert mixed["verdict"] == "no clear difference"
+
+
+def test_summary_refuses_incomplete_rounds():
+    scores, photos, blocks = synthetic_deletion([0.3] * 8, 5, n_runs=3)
+    with pytest.raises(ValueError, match="expected 5"):
+        ex.deletion_summary(scores, photos, blocks, SETTINGS, RULE)
+
+
+def test_gap_by_class_and_the_seed_filter():
+    _, photos, _ = synthetic_deletion([0.3] * 8, 5)
+    table = ex.gap_by_class(photos)
+    assert list(table["true_class"]) == sorted(CLASSES) and np.allclose(table[4], 0.3, atol=0.05)
+    names = pd.DataFrame(
+        {
+            "run": [
+                "stage7_session_attention_r1",
+                "stage7_session_attention_s1_r1",
+                "stage7_session_attention_s2_r5",
+            ]
+        }
     )
-    same = pd.DataFrame(photo_rows).assign(p_top=lambda t: t["p_random"])
-    flat = pd.DataFrame(rows).assign(p_true=lambda t: np.where(t["condition"] == "top", 0.69, t["p_true"]))
-    assert (
-        ex.deletion_summary(flat, same, blocks, settings, comparison)["verdict"].iloc[0]
-        == "no clear difference"
-    )
+    assert list(ex.seed0(names)["run"]) == ["stage7_session_attention_r1"]
 
 
 # ------------------------------------------------------------------ example selection
@@ -306,3 +308,19 @@ def test_test_photos_need_the_declaration_and_the_marker_never_restarts_under_an
 def test_only_the_five_tested_runs_are_used_on_test_photos():
     assert ex.runs_for("test") == [f"stage7_session_attention_r{r}" for r in range(1, 6)]
     assert len(ex.runs_for("val")) == 15
+
+
+def test_markers_are_written_whole_and_never_replaced(tmp_path):
+    path = tmp_path / "marker.json"
+    ex.write_once(path, {"a": 1})
+    assert json.loads(path.read_text()) == {"a": 1} and not list(tmp_path.glob("*.tmp"))
+    with pytest.raises(FileExistsError):
+        ex.write_once(path, {"a": 2})
+    assert json.loads(path.read_text()) == {"a": 1} and not list(tmp_path.glob("*.tmp"))
+
+
+def test_example_list_survives_the_csv_round_trip_that_select_uses_to_check_itself(tmp_path):
+    table = predictions()
+    sheet = ex.add_extras(ex.rank_examples(table, CLASSES, 3, 0), table, 14, 0)  # extras have no confidence
+    ex.write_csv(sheet, tmp_path / "examples.csv")
+    pd.testing.assert_frame_equal(pd.read_csv(tmp_path / "examples.csv"), sheet, check_dtype=False, atol=1e-6)
