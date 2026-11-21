@@ -6,14 +6,14 @@ import json
 
 import nbformat
 
-from src import build_submission_notebook as bn
+from src import build_notebook as bn
 
 REPO = bn.ROOT
 
 
 def build(tmp_path):
     notebook = bn.build(REPO)
-    path = tmp_path / "ricetein_final.ipynb"
+    path = tmp_path / "ricetein.ipynb"
     nbformat.write(notebook, path)
     return notebook, path
 
@@ -31,7 +31,7 @@ def test_it_has_no_outputs_and_no_execution_counts(tmp_path):
     for cell in notebook.cells:
         if cell.cell_type == "code":
             assert cell.outputs == [] and cell.execution_count is None
-    assert path.stat().st_size < 3_000_000                         # nbstripout rule: no large embedded outputs
+    assert path.stat().st_size < 3_000_000                         # written without outputs; no large embedded outputs
 
 
 def test_every_code_cell_compiles(tmp_path):
@@ -79,7 +79,7 @@ def test_a_launcher_cell_with_a_multi_line_string_is_refused():
 
 
 def test_a_source_file_that_contains_a_code_fence_gets_a_longer_fence():
-    cell = bn.source_cell(REPO, "build_submission_notebook")
+    cell = bn.source_cell(REPO, "build_notebook")
     assert "````python" in cell.source and cell.source.rstrip().endswith("````")
 
 

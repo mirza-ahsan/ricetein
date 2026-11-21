@@ -1,4 +1,4 @@
-# Deadline core results
+# Core study results (locked split)
 
 Original tuning/epoch budgets and five rounds; seed-0 headline models only. Test was evaluated once after validation selection. Stability seeds, 128/Otsu/448 whole-image settings, ablations, partition-order and Paddy evaluation are deferred. Incomplete whole-image searches are excluded rather than selected from a reduced budget: []. Scores below are percentages; ECE is a proportion. Confidence intervals use class-stratified pooled out-of-fold bootstrap resampling. Paired differences are percentage points (pp).
 

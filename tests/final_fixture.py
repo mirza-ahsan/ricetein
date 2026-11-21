@@ -1,5 +1,5 @@
 """A small fake checkout for the Stage 14 tests: the same files, folders and column names the real stages write,
-with made-up values. Used by test_make_tables.py, test_make_figures.py and test_build_submission_notebook.py."""
+with made-up values. Used by test_make_tables.py, test_make_figures.py and test_build_notebook.py."""
 
 from __future__ import annotations
 

@@ -1,6 +1,6 @@
-"""Stage 14: assemble the final submission notebook from the real code of this checkout.
+"""Stage 14: assemble the project notebook from the real code of this checkout.
 
-    uv run python -m src.build_submission_notebook            # writes submission/final/ricetein_final.ipynb
+    uv run python -m src.build_notebook            # writes notebooks/ricetein.ipynb
 
 The notebook goes from data preparation to the final results, in stage order. It is built from
 
@@ -9,8 +9,8 @@ The notebook goes from data preparation to the final results, in stage order. It
 * the saved reports and the final tables and figures (``results/``), shown as they were saved, and
 * every module under ``src/`` (a source appendix with checksums), so the notebook always matches the real code.
 
-The notebook has no outputs (nbstripout rules) and nothing in its default cells trains, splits or evaluates.
-``submission/final/`` is git-ignored.
+The notebook is written without outputs, and nothing in its default cells trains, splits or evaluates. The
+committed copy is executed once with the defaults, and keeps its outputs (``.gitattributes`` exempts it from nbstripout).
 """
 
 from __future__ import annotations
@@ -30,7 +30,7 @@ from src.make_tables import PROMISED_FIGURES
 from src.make_tables import SPECS as TABLE_SPECS
 
 ROOT = REPO_ROOT
-OUTPUT = "submission/final/ricetein_final.ipynb"
+OUTPUT = "notebooks/ricetein.ipynb"
 
 # stage number -> (title, what it does, src modules, saved reports shown)
 STAGES = {
@@ -68,7 +68,7 @@ STAGES = {
     13: ("Cost and compression", "Size, speed and memory.", ["cost", "compress", "distill"],
          ["docs/reports/cost_report.md"]),
     14: ("Final tables, figures and this notebook", "Everything below is generated from `runs/`.",
-         ["make_tables", "make_figures", "build_submission_notebook"], []),
+         ["make_tables", "make_figures", "build_notebook"], []),
 }
 # stage number -> a note shown under the stage heading; the wording agrees with the paper
 NOTES = {
@@ -175,9 +175,9 @@ def build(root: Path = ROOT) -> nbformat.NotebookNode:
     revision, dirty = git("rev-parse", "--short=7", "HEAD", root=root), bool(git("status", "--porcelain", "--", "src", "configs", "splits", root=root))
     cells = [
         v4.new_markdown_cell(
-            "# Resolution-preserving weakly supervised rice leaf disease recognition: final notebook\n\n"
+            "# Resolution-preserving weakly supervised rice leaf disease recognition\n\n"
             "This notebook goes from data preparation to the final results, in stage order. It is assembled by "
-            "`src/build_submission_notebook.py` from the code in `src/`, the stage launcher notebooks and the final "
+            "`src/build_notebook.py` from the code in `src/`, the stage launcher notebooks and the final "
             "tables and figures in `results/`, so it matches the code of the commit it was built from.\n\n"
             "**By default nothing heavy runs.** Every launcher cell is guarded by `RUN_STAGES = False`, so the cells "
             "show the code of each step and then the saved results (reports, tables, figures), which were generated "
@@ -190,7 +190,7 @@ def build(root: Path = ROOT) -> nbformat.NotebookNode:
             "EfficientNetV2-S, ConvNeXt-T and Swin-T fine-tuned on whole photos. The headline split is the "
             "session-blocked split. All audits and heat-map ratings are disclosed AI model ratings, never human ratings. "
             "Comparisons declared after the means were seen are marked post-hoc. The photos themselves are not part of "
-            "this package; the only photo images are the two figures `final_samples` and `final_heatmaps` that the "
+            "this repository; the only photo images are the two figures `final_samples` and `final_heatmaps` that the "
             "paper also shows. The pipeline diagram (Fig. 1) is drawn in TikZ inside the paper."),
         v4.new_markdown_cell("## Setup and helpers"),
         v4.new_code_cell(SETUP),
@@ -233,7 +233,7 @@ def build(root: Path = ROOT) -> nbformat.NotebookNode:
     notebook.metadata = {
         "kernelspec": {"display_name": "ricetein (.venv)", "language": "python", "name": "python3"},
         "language_info": {"name": "python", "version": "3.12.13"},
-        "submission": {"source_revision": revision + ("-dirty" if dirty else ""), "built_by": "src/build_submission_notebook.py",
+        "build": {"source_revision": revision + ("-dirty" if dirty else ""), "built_by": "src/build_notebook.py",
                        "stages_with_code": [s for s, v in STAGES.items() if any(m in present for m in v[2])],
                        "final_tables_present": tables_listing(root)},
     }

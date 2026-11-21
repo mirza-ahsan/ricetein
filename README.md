@@ -3,7 +3,7 @@
 **Ahsan Baig, Harris Tabassum and Muhammad Umer**
 FAST School of Computing, National University of Computer and Emerging Sciences (FAST-NUCES), Lahore, Pakistan
 
-Paper: [`paper/ricetein_paper.pdf`](paper/ricetein_paper.pdf) · Executed notebook: [`notebooks/ricetein_final.ipynb`](notebooks/ricetein_final.ipynb)
+Paper: [`paper/ricetein_paper.pdf`](paper/ricetein_paper.pdf) · Notebook: [`notebooks/ricetein.ipynb`](notebooks/ricetein.ipynb)
 
 Rice leaf photos are taken at high resolution, but most recognition systems shrink them to a few hundred pixels, which throws away lesion-scale detail. We study a resolution-preserving alternative that needs only photo-level labels:
 
@@ -49,7 +49,7 @@ All numbers are from the final tables in `results/tables/`, which are built from
 - **Every method gets the same tuning budget** and is selected on validation macro-F1 averaged over the 5 rounds. **Test photos are evaluated once per frozen configuration.** Augmented or cached copies never reach validation or test; the code enforces this and `tests/test_leakage.py` and `tests/test_mil_leakage.py` check it.
 - **"A beats B"** only if the 95% paired-bootstrap range of the difference is above 0 (resampled by photo, and by capture block) **and** A wins at least 4 of the 5 rounds. Otherwise the result is "no clear difference". Negative results are reported.
 - **Paddy Doctor is never used for training, tuning or selection.** Its zero-shot plan was written and frozen before the run (`docs/reports/paddy_pre_declaration.md`).
-- Some judgements were made by **disclosed AI model raters, not by people**: the background audit, the duplicate review, the label check, the Otsu quality check, one of the two leaf-width measurers, and both sets of heat-map ratings. In the audit files these raters are `model_rater_a`, `model_rater_b` and `model_rater_c`; the heat-map raters are `model_rater_1..3` and, for the second set, `human_rater_1..3`, which is only the importer's label: no person rated the maps (`data/heatmap_ratings_provenance.txt`).
+- Some judgements were made by disclosed AI model raters: the background audit, the duplicate review, the label check, the Otsu quality check, one of the two leaf-width measurers, and both sets of heat-map ratings (`model_rater_*`; the second heat-map set is stored under the importer's label `human_rater_1..3`, see `data/heatmap_ratings_provenance.txt`).
 
 ## Repository layout
 
@@ -61,9 +61,9 @@ All numbers are from the final tables in `results/tables/`, which are built from
 | `data/` | Dataset records (`DATASETS.md`), the per-photo inventory, and the audit and review files. No photos |
 | `runs/` | One folder per run: config, commit, split checksum, data version, metrics and per-photo predictions (no checkpoints) |
 | `results/` | Final tables and figures built from `runs/`, with source checksums; deletion-test files |
-| `docs/` | `REPRODUCIBILITY.md`, `commitments.md`, `commit_map.csv`, and one report per stage in `reports/` |
+| `docs/` | `REPRODUCIBILITY.md`, `commit_map.csv`, and one report per stage in `reports/` |
 | `paper/` | The paper PDF and its LaTeX sources (`paper.tex`, `sections/`, `tables/`, `fig/`, `ref.bib`, `BUILD.md`) |
-| `notebooks/` | Thin launcher notebooks for each stage, and the executed final notebook |
+| `notebooks/` | Thin launcher notebooks for each stage, and the executed project notebook `ricetein.ipynb` |
 | `scripts/`, `kaggle/` | Helper scripts, and the settings for the Kaggle GPU runs |
 | `tests/` | The test suite, including the leakage checks |
 
@@ -103,7 +103,7 @@ Every table and figure is generated from the run records in `runs/`; nothing is 
 | Check that every promised table, figure and commitment is present | `uv run --locked python -m src.make_tables --check` |
 | Copy the tables and figures into the paper | `./scripts/sync_paper_assets.sh` |
 | The paper | see `paper/BUILD.md` (pdfLaTeX and biber; `paper.tex` is the main file) |
-| The final notebook | `uv run --locked python -m src.build_submission_notebook`, then execute it with `jupyter nbconvert --execute` |
+| The notebook (`notebooks/ricetein.ipynb`) | `uv run --locked python -m src.build_notebook`, then execute it with `jupyter nbconvert --execute` |
 
 Re-running the experiments themselves takes many GPU hours. It needs the photos, the encoder weights and the tile-description caches (about 104 GB, not included; the Stage 6 pipeline rebuilds them). The entry points of every stage, and what is not included and why, are in [`docs/REPRODUCIBILITY.md`](docs/REPRODUCIBILITY.md).
 

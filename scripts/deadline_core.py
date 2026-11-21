@@ -216,7 +216,7 @@ def report():
     report = REPO_ROOT / "docs/reports/deadline_core_report.md"
     report.parent.mkdir(parents=True, exist_ok=True)
     report.write_text(
-        "# Deadline core results\n\nOriginal tuning/epoch budgets and five rounds; "
+        "# Core study results (locked split)\n\nOriginal tuning/epoch budgets and five rounds; "
         "seed-0 headline models only. Test was evaluated once after validation selection. "
         "Stability seeds, 128/Otsu/448 whole-image settings, ablations, partition-order and Paddy "
         "evaluation are deferred. Incomplete whole-image searches are excluded rather than selected "

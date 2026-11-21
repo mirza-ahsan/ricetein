@@ -24,7 +24,7 @@ def mark(stage):
     temporary = target.with_suffix(".tmp")
     temporary.write_text(json.dumps(payload, indent=2) + "\n")
     temporary.replace(target)
-    print(f"Deadline finishing: {stage}", flush=True)
+    print(f"Core study finishing: {stage}", flush=True)
 
 
 def collect_cloud():

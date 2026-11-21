@@ -486,7 +486,7 @@ SPECS = [
          "over 5 rounds, session-blocked split.", conditions_table),
     Spec("per_class", "Stage 7 (session evaluation)",
          "Per-class recall (\\%) on the session-blocked test photos, pooled over the 5 rounds (every test photo "
-         "once). Hispa is the pre-declared diagnostic class (P1-10).", per_class_table, bold=("hispa (diagnostic)",)),
+         "once). Hispa is the pre-declared diagnostic class.", per_class_table, bold=("hispa (diagnostic)",)),
     Spec("confusion", "Stage 7 (session evaluation)",
          "Confusion matrices (photo counts) of the headline methods on the session-blocked test photos, pooled "
          "over the 5 rounds. Rows are the true class.", confusion_table, wide=True),

@@ -71,7 +71,7 @@ def test_recorded_stage5_config_gets_its_integer_size_keys_back():
 
     config = load_config("configs/wholeimage/swin_tiny_128.yaml")
     recorded = json.loads(json.dumps({**config, "lr": 3e-5, "round": 1}))
-    assert "224" in recorded["wholeimage"]["batch_size"]  # the failure of the first deadline evaluation
+    assert "224" in recorded["wholeimage"]["batch_size"]  # the failure of the first core-study evaluation
     restored = ev.restore_size_keys(recorded)
     whole = restored["wholeimage"]
     assert whole["batch_size"] == config["wholeimage"]["batch_size"]
