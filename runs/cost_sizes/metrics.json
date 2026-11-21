@@ -1,0 +1,117 @@
+{
+  "partition": "none",
+  "rows": [
+    {
+      "method": "attention",
+      "params_encoder": 85660416,
+      "params_decider": 230404,
+      "disk_bytes": 343586907,
+      "cache_bytes": 6518842027
+    },
+    {
+      "method": "mean",
+      "params_encoder": 85660416,
+      "params_decider": 395780,
+      "disk_bytes": 344247481,
+      "cache_bytes": 6518842027
+    },
+    {
+      "method": "max",
+      "params_encoder": 85660416,
+      "params_decider": 98948,
+      "disk_bytes": 343060153,
+      "cache_bytes": 6518842027
+    },
+    {
+      "method": "probe_224",
+      "params_encoder": 85660416,
+      "params_decider": 4612,
+      "disk_bytes": 342694094,
+      "cache_bytes": 185687619
+    },
+    {
+      "method": "probe_512",
+      "params_encoder": 85660416,
+      "params_decider": 4612,
+      "disk_bytes": 342694094,
+      "cache_bytes": 185687619
+    },
+    {
+      "method": "inceptionv3_224",
+      "params_encoder": 21785568,
+      "params_decider": 8196,
+      "disk_bytes": 87487899,
+      "cache_bytes": 659619840
+    },
+    {
+      "method": "efficientnetv2s_224",
+      "params_encoder": 20177488,
+      "params_decider": 5124,
+      "disk_bytes": 81578939,
+      "cache_bytes": 659619840
+    },
+    {
+      "method": "convnext_tiny_224",
+      "params_encoder": 27820128,
+      "params_decider": 3076,
+      "disk_bytes": 111351067,
+      "cache_bytes": 659619840
+    },
+    {
+      "method": "swin_tiny_224",
+      "params_encoder": 27519354,
+      "params_decider": 3076,
+      "disk_bytes": 110146623,
+      "cache_bytes": 659619840
+    },
+    {
+      "method": "convnext_tiny_448",
+      "params_encoder": 27820128,
+      "params_decider": 3076,
+      "disk_bytes": 111351067,
+      "cache_bytes": 2638479360
+    },
+    {
+      "method": "e1_top16",
+      "params_encoder": 85660416,
+      "params_decider": 230404,
+      "disk_bytes": 343586907,
+      "cache_bytes": 6518842027
+    },
+    {
+      "method": "e4",
+      "params_encoder": 21596544,
+      "params_decider": 132100,
+      "disk_bytes": 86937883,
+      "cache_bytes": 3286219413
+    },
+    {
+      "method": "e4_top16",
+      "params_encoder": 21596544,
+      "params_decider": 132100,
+      "disk_bytes": 86937883,
+      "cache_bytes": 3286219413
+    },
+    {
+      "method": "distilled_e4",
+      "params_encoder": 21596544,
+      "params_decider": 132100,
+      "disk_bytes": 86937883,
+      "cache_bytes": 3286219413
+    },
+    {
+      "method": "attention_int8",
+      "params_encoder": 85660416,
+      "params_decider": 230404,
+      "disk_bytes": 88890852,
+      "cache_bytes": 6518842027
+    },
+    {
+      "method": "final_onnx",
+      "params_encoder": 85660416,
+      "params_decider": 230404,
+      "disk_bytes": 343859061,
+      "cache_bytes": 6518842027
+    }
+  ]
+}

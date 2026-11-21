@@ -1,0 +1,32 @@
+{
+  "partition": "val",
+  "selected": "e1_top16",
+  "reason": "fastest on the CPU among those within the margin",
+  "code_version": "6067f94",
+  "reference": {
+    "val_macro_f1": 0.7848686376459739,
+    "cpu_seconds": 5.357751565003127
+  },
+  "candidates": {
+    "e1_top16": {
+      "val_macro_f1": 0.7651091784170134,
+      "cpu_seconds": 1.2115284419996897
+    },
+    "e4": {
+      "val_macro_f1": 0.7480345633630219,
+      "cpu_seconds": 1.6604082714984543
+    },
+    "e4_top16": {
+      "val_macro_f1": 0.737295714863329,
+      "cpu_seconds": 0.4108507940036361
+    },
+    "distilled_e4": {
+      "val_macro_f1": 0.7862987871472225,
+      "cpu_seconds": 1.6604082714984543
+    },
+    "distilled_e4_top16": {
+      "val_macro_f1": 0.7605659762507029,
+      "cpu_seconds": 0.4108507940036361
+    }
+  }
+}

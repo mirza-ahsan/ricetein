@@ -1,0 +1,215 @@
+{
+  "partition": "none",
+  "device": "cpu",
+  "methods": [
+    "attention",
+    "mean",
+    "max",
+    "probe_224",
+    "probe_512",
+    "inceptionv3_224",
+    "efficientnetv2s_224",
+    "convnext_tiny_224",
+    "swin_tiny_224",
+    "convnext_tiny_448",
+    "e1_top16",
+    "e4",
+    "e4_top16",
+    "attention_int8"
+  ],
+  "median_seconds_per_photo": {
+    "attention": 5.357751565003127,
+    "mean": 5.368866689997958,
+    "max": 5.418752745004895,
+    "probe_224": 0.14691719199618092,
+    "probe_512": 0.41992751849466003,
+    "inceptionv3_224": 0.06212946849700529,
+    "efficientnetv2s_224": 0.06229140749928774,
+    "convnext_tiny_224": 0.06545966200064868,
+    "swin_tiny_224": 0.06909660450037336,
+    "convnext_tiny_448": 0.11535229600121966,
+    "e1_top16": 1.2115284419996897,
+    "e4": 1.6604082714984543,
+    "e4_top16": 0.4108507940036361,
+    "attention_int8": 3.552866729500238
+  },
+  "summary": {
+    "attention": {
+      "n": 100,
+      "median": 5.357751565003127,
+      "q1": 4.275423777497053,
+      "q3": 6.623681792007119,
+      "median_prepare": 0.07674189699901035,
+      "median_describe": 5.275918218991137,
+      "median_decide": 0.0003206469991710037
+    },
+    "mean": {
+      "n": 100,
+      "median": 5.368866689997958,
+      "q1": 4.353878622994671,
+      "q3": 6.61616135100121,
+      "median_prepare": 0.07822087650129106,
+      "median_describe": 5.270057503003045,
+      "median_decide": 0.0003582865101634525
+    },
+    "max": {
+      "n": 100,
+      "median": 5.418752745004895,
+      "q1": 4.4081817969999975,
+      "q3": 6.634843153755355,
+      "median_prepare": 0.07998783849325264,
+      "median_describe": 5.340894262502843,
+      "median_decide": 0.00025364800967508927
+    },
+    "probe_224": {
+      "n": 100,
+      "median": 0.14691719199618092,
+      "q1": 0.12568314950476633,
+      "q3": 0.24374822699610377,
+      "median_prepare": 0.09052743649954209,
+      "median_describe": 0.05599012049060548,
+      "median_decide": 0.0004001954948762432
+    },
+    "probe_512": {
+      "n": 100,
+      "median": 0.41992751849466003,
+      "q1": 0.3941114997542172,
+      "q3": 0.5084950577438576,
+      "median_prepare": 0.08933632749540266,
+      "median_describe": 0.32558382199931657,
+      "median_decide": 0.0004209714970784262
+    },
+    "inceptionv3_224": {
+      "n": 100,
+      "median": 0.06212946849700529,
+      "q1": 0.05255691249840311,
+      "q3": 0.07307894249970559,
+      "median_prepare": 0.042310578501201235,
+      "median_decide": 0.019889463001163676
+    },
+    "efficientnetv2s_224": {
+      "n": 100,
+      "median": 0.06229140749928774,
+      "q1": 0.05217800649552373,
+      "q3": 0.07159398348812829,
+      "median_prepare": 0.0426543470020988,
+      "median_decide": 0.019703484504134394
+    },
+    "convnext_tiny_224": {
+      "n": 100,
+      "median": 0.06545966200064868,
+      "q1": 0.053143485747568775,
+      "q3": 0.07403560200691572,
+      "median_prepare": 0.046772780500759836,
+      "median_decide": 0.01824415499868337
+    },
+    "swin_tiny_224": {
+      "n": 100,
+      "median": 0.06909660450037336,
+      "q1": 0.056579542251711246,
+      "q3": 0.07790671849943465,
+      "median_prepare": 0.047591212001862004,
+      "median_decide": 0.020962235998013057
+    },
+    "convnext_tiny_448": {
+      "n": 100,
+      "median": 0.11535229600121966,
+      "q1": 0.10490709474106552,
+      "q3": 0.12454346975937369,
+      "median_prepare": 0.04188434450770728,
+      "median_decide": 0.07320947250991594
+    },
+    "e1_top16": {
+      "n": 100,
+      "median": 1.2115284419996897,
+      "q1": 1.1911380120036483,
+      "q3": 1.3046933910045482,
+      "median_prepare": 0.10182936349883676,
+      "median_describe": 1.1107159555103863,
+      "median_decide": 0.0003160109990858473
+    },
+    "e4": {
+      "n": 100,
+      "median": 1.6604082714984543,
+      "q1": 1.3275300079912995,
+      "q3": 2.0592499872509507,
+      "median_prepare": 0.08812718850094825,
+      "median_describe": 1.571024059499905,
+      "median_decide": 0.0002822919996106066
+    },
+    "e4_top16": {
+      "n": 100,
+      "median": 0.4108507940036361,
+      "q1": 0.38970989900190034,
+      "q3": 0.5005749965093855,
+      "median_prepare": 0.09939971499989042,
+      "median_describe": 0.3108306979993358,
+      "median_decide": 0.00024672300060046837
+    },
+    "attention_int8": {
+      "n": 100,
+      "median": 3.552866729500238,
+      "q1": 2.8464098717413435,
+      "q3": 4.351092523251282,
+      "median_prepare": 0.08526448599877767,
+      "median_describe": 3.4683563560029143,
+      "median_decide": 0.00036823199479840696
+    }
+  },
+  "peak_gpu_mib": {
+    "attention": null,
+    "mean": null,
+    "max": null,
+    "probe_224": null,
+    "probe_512": null,
+    "inceptionv3_224": null,
+    "efficientnetv2s_224": null,
+    "convnext_tiny_224": null,
+    "swin_tiny_224": null,
+    "convnext_tiny_448": null,
+    "e1_top16": null,
+    "e4": null,
+    "e4_top16": null,
+    "attention_int8": null
+  },
+  "peak_rss_mib": {
+    "attention": 1481.60546875,
+    "mean": 1470.08203125,
+    "max": 1468.55078125,
+    "probe_224": 1317.41796875,
+    "probe_512": 1320.671875,
+    "inceptionv3_224": 1003.890625,
+    "efficientnetv2s_224": 1019.2578125,
+    "convnext_tiny_224": 1020.05078125,
+    "swin_tiny_224": 1020.21875,
+    "convnext_tiny_448": 1019.984375,
+    "e1_top16": 1370.98828125,
+    "e4": 1067.625,
+    "e4_top16": 1063.81640625,
+    "attention_int8": 1582.95703125
+  },
+  "machine_state_start": {
+    "total_cpu_percent": 0.4,
+    "busy_processes": [],
+    "python_processes": [
+      {
+        "pid": 6956,
+        "cmdline": "/usr/bin/python3 /usr/share/omarchy/default/input-methods/indicator.py"
+      }
+    ],
+    "gpu_mib_used": 889,
+    "nvidia_smi": "Sat Nov 21 18:47:47 2026       \n+-----------------------------------------------------------------------------------------+\n| NVIDIA-SMI 615.78.08              KMD Version: 615.78.08     CUDA UMD Version: 13.4     |\n+-----------------------------------------+------------------------+----------------------+\n| GPU  Name                 Persistence-M | Bus-Id          Disp.A | Volatile Uncorr. ECC |\n| Fan  Temp   Perf          Pwr:Usage/Cap |           Memory-Usage | GPU-Util  Compute M. |\n|                                         |                        |               MIG M. |\n|=========================================+========================+======================|\n|   0  NVIDIA GeForce RTX 4060        Off |   00000000:01:00.0  On |                  N/A |\n|  0%   49C    P8            N/A  /  115W |     889MiB /   8188MiB |      0%      Default |\n|                                         |                        |                  N/A |\n+-----------------------------------------+------------------------+----------------------+\n\n+-----------------------------------------------------------------------------------------+\n| Processes:                                                                              |\n|  GPU   GI   CI              PID   Type   Process name                        GPU Memory |\n|        ID   ID                                                               Usage      |\n|=========================================================================================|\n|    0   N/A  N/A            1268      G   Hyprland                                150MiB |\n|    0   N/A  N/A            1366      G   Xwayland                                  2MiB |\n|    0   N/A  N/A            6406      G   quickshell                              163MiB |\n|    0   N/A  N/A           16538      G   ghostty                                 126MiB |\n|    0   N/A  N/A          142823      G   ...rack-uuid=3190708988185955192        137MiB |\n+-----------------------------------------------------------------------------------------+\n"
+  },
+  "machine_state_end": {
+    "total_cpu_percent": 0.4,
+    "busy_processes": [],
+    "python_processes": [
+      {
+        "pid": 311103,
+        "cmdline": "/usr/bin/python3 /usr/share/omarchy/default/input-methods/indicator.py"
+      }
+    ],
+    "gpu_mib_used": 905,
+    "nvidia_smi": "Sat Nov 21 19:30:57 2026       \n+-----------------------------------------------------------------------------------------+\n| NVIDIA-SMI 615.78.08              KMD Version: 615.78.08     CUDA UMD Version: 13.4     |\n+-----------------------------------------+------------------------+----------------------+\n| GPU  Name                 Persistence-M | Bus-Id          Disp.A | Volatile Uncorr. ECC |\n| Fan  Temp   Perf          Pwr:Usage/Cap |           Memory-Usage | GPU-Util  Compute M. |\n|                                         |                        |               MIG M. |\n|=========================================+========================+======================|\n|   0  NVIDIA GeForce RTX 4060        Off |   00000000:01:00.0  On |                  N/A |\n|  0%   45C    P8            N/A  /  115W |     905MiB /   8188MiB |      0%      Default |\n|                                         |                        |                  N/A |\n+-----------------------------------------+------------------------+----------------------+\n\n+-----------------------------------------------------------------------------------------+\n| Processes:                                                                              |\n|  GPU   GI   CI              PID   Type   Process name                        GPU Memory |\n|        ID   ID                                                               Usage      |\n|=========================================================================================|\n|    0   N/A  N/A            1268      G   Hyprland                                150MiB |\n|    0   N/A  N/A            1366      G   Xwayland                                  2MiB |\n|    0   N/A  N/A           16538      G   ghostty                                 122MiB |\n|    0   N/A  N/A          142823      G   ...rack-uuid=3190708988185955192        137MiB |\n|    0   N/A  N/A          310931      G   quickshell                              153MiB |\n+-----------------------------------------------------------------------------------------+\n"
+  }
+}

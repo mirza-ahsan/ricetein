@@ -1,0 +1,113 @@
+{
+  "partition": "none",
+  "device": "cpu",
+  "methods": [
+    "final_onnx"
+  ],
+  "median_seconds_per_photo": {
+    "final_onnx": 0.9341669665082009
+  },
+  "summary": {
+    "final_onnx": {
+      "n": 100,
+      "median": 0.9341669665082009,
+      "q1": 0.9043866367537703,
+      "q3": 1.0114264482581348,
+      "median_prepare": 0.09464305150322616,
+      "median_describe": 0.8314772680023452,
+      "median_decide": 0.0001652189966989681
+    }
+  },
+  "peak_gpu_mib": {
+    "final_onnx": null
+  },
+  "peak_rss_mib": {
+    "final_onnx": 1710.0625
+  },
+  "machine_state_start": {
+    "total_cpu_percent": 1.1,
+    "busy_processes": [
+      {
+        "pid": 1268,
+        "name": "Hyprland",
+        "cpu_percent": 3.5
+      },
+      {
+        "pid": 140815,
+        "name": "dev-tool",
+        "cpu_percent": 1.5
+      },
+      {
+        "pid": 142776,
+        "name": "brave",
+        "cpu_percent": 3.5
+      },
+      {
+        "pid": 142823,
+        "name": "brave",
+        "cpu_percent": 2.5
+      },
+      {
+        "pid": 143075,
+        "name": "brave",
+        "cpu_percent": 1.5
+      },
+      {
+        "pid": 251124,
+        "name": "dev-tool",
+        "cpu_percent": 3.5
+      }
+    ],
+    "python_processes": [
+      {
+        "pid": 311103,
+        "cmdline": "/usr/bin/python3 /usr/share/omarchy/default/input-methods/indicator.py"
+      }
+    ],
+    "gpu_mib_used": 927,
+    "nvidia_smi": "Sat Nov 21 20:00:34 2026       \n+-----------------------------------------------------------------------------------------+\n| NVIDIA-SMI 615.78.08              KMD Version: 615.78.08     CUDA UMD Version: 13.4     |\n+-----------------------------------------+------------------------+----------------------+\n| GPU  Name                 Persistence-M | Bus-Id          Disp.A | Volatile Uncorr. ECC |\n| Fan  Temp   Perf          Pwr:Usage/Cap |           Memory-Usage | GPU-Util  Compute M. |\n|                                         |                        |               MIG M. |\n|=========================================+========================+======================|\n|   0  NVIDIA GeForce RTX 4060        Off |   00000000:01:00.0  On |                  N/A |\n|  0%   50C    P5            N/A  /  115W |     927MiB /   8188MiB |      0%      Default |\n|                                         |                        |                  N/A |\n+-----------------------------------------+------------------------+----------------------+\n\n+-----------------------------------------------------------------------------------------+\n| Processes:                                                                              |\n|  GPU   GI   CI              PID   Type   Process name                        GPU Memory |\n|        ID   ID                                                               Usage      |\n|=========================================================================================|\n|    0   N/A  N/A            1268      G   Hyprland                                150MiB |\n|    0   N/A  N/A            1366      G   Xwayland                                  2MiB |\n|    0   N/A  N/A           16538      G   ghostty                                  52MiB |\n|    0   N/A  N/A          142823      G   ...rack-uuid=3190708988185955192        193MiB |\n|    0   N/A  N/A          310931      G   quickshell                              161MiB |\n+-----------------------------------------------------------------------------------------+\n"
+  },
+  "machine_state_end": {
+    "total_cpu_percent": 9.5,
+    "busy_processes": [
+      {
+        "pid": 1268,
+        "name": "Hyprland",
+        "cpu_percent": 5.5
+      },
+      {
+        "pid": 142776,
+        "name": "brave",
+        "cpu_percent": 24.4
+      },
+      {
+        "pid": 142823,
+        "name": "brave",
+        "cpu_percent": 6.5
+      },
+      {
+        "pid": 251124,
+        "name": "dev-tool",
+        "cpu_percent": 2.0
+      },
+      {
+        "pid": 320633,
+        "name": "brave",
+        "cpu_percent": 5.0
+      },
+      {
+        "pid": 323808,
+        "name": "brave",
+        "cpu_percent": 7.0
+      }
+    ],
+    "python_processes": [
+      {
+        "pid": 311103,
+        "cmdline": "/usr/bin/python3 /usr/share/omarchy/default/input-methods/indicator.py"
+      }
+    ],
+    "gpu_mib_used": 964,
+    "nvidia_smi": "Sat Nov 21 20:02:21 2026       \n+-----------------------------------------------------------------------------------------+\n| NVIDIA-SMI 615.78.08              KMD Version: 615.78.08     CUDA UMD Version: 13.4     |\n+-----------------------------------------+------------------------+----------------------+\n| GPU  Name                 Persistence-M | Bus-Id          Disp.A | Volatile Uncorr. ECC |\n| Fan  Temp   Perf          Pwr:Usage/Cap |           Memory-Usage | GPU-Util  Compute M. |\n|                                         |                        |               MIG M. |\n|=========================================+========================+======================|\n|   0  NVIDIA GeForce RTX 4060        Off |   00000000:01:00.0  On |                  N/A |\n|  0%   51C    P0            N/A  /  115W |     964MiB /   8188MiB |     34%      Default |\n|                                         |                        |                  N/A |\n+-----------------------------------------+------------------------+----------------------+\n\n+-----------------------------------------------------------------------------------------+\n| Processes:                                                                              |\n|  GPU   GI   CI              PID   Type   Process name                        GPU Memory |\n|        ID   ID                                                               Usage      |\n|=========================================================================================|\n|    0   N/A  N/A            1268      G   Hyprland                                150MiB |\n|    0   N/A  N/A            1366      G   Xwayland                                  2MiB |\n|    0   N/A  N/A           16538      G   ghostty                                  52MiB |\n|    0   N/A  N/A          142823      G   ...rack-uuid=3190708988185955192        229MiB |\n|    0   N/A  N/A          310931      G   quickshell                              161MiB |\n+-----------------------------------------------------------------------------------------+\n"
+  }
+}
