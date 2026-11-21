@@ -132,7 +132,7 @@ def ablations(root: Path) -> Result:
         i = list(val["Variant"]).index(r["Variant"])
         low, high = numbers(r["Photo range"])               # main minus variant; the plot shows variant minus main
         axis.hlines(y[i], -high, -low, color=INK, lw=1.2)
-        axis.plot(-numbers(r["Main minus variant (points)"])[0], y[i], "D", color=INK,
+        axis.plot(-numbers(r["Main minus variant, pooled (points)"])[0], y[i], "D", color=INK,
                   label="test, tested once (95% photo range)" if n == 0 else None)
     axis.axvline(0, color=MID, lw=0.6)
     axis.set_yticks(y, val["Variant"])
@@ -215,6 +215,11 @@ def cost(root: Path) -> Result:
     return figure, [root / path]
 
 
+NOTES = {"heatmaps": "One example per class, the 'correct, rank 1' heat map of the Stage 12 example rule (the best case of each "
+                     "class); say so in the caption.",
+         "confusion": "Row-normalised (% of the true class); the bold row is hispa, the pre-declared diagnostic."}
+
+
 @dataclass(frozen=True)
 class Spec:
     name: str
@@ -236,6 +241,8 @@ def build_all(root: Path = mt.REPO_ROOT, out: Path | None = None) -> dict:
         try:
             figure, sources = spec.build(root)
         except Missing as missing:
+            for ext in ("png", "pdf"):                       # an older picture must not pass for the current one
+                (out / f"{stem}.{ext}").unlink(missing_ok=True)
             report["figures"][spec.name] = {"status": "pending", "stage": spec.stage, "reason": f"missing {missing.path}"}
             print(f"{spec.name:16s} pending ({missing.path})")
             continue
@@ -245,6 +252,8 @@ def build_all(root: Path = mt.REPO_ROOT, out: Path | None = None) -> dict:
         rels = [str(p.relative_to(root)) for p in sources]
         report["figures"][spec.name] = {"status": "present", "stage": spec.stage, "files": [f"{stem}.png", f"{stem}.pdf"],
                                         "sources": {rel: mt.sha256(root / rel) for rel in sorted(set(rels))}}
+        if spec.name in NOTES:
+            report["figures"][spec.name]["note"] = NOTES[spec.name]
         print(f"{spec.name:16s} present -> {stem}.png/.pdf")
     (out / "final_figures.json").write_text(json.dumps(report, indent=2) + "\n")
     return report

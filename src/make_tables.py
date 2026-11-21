@@ -46,6 +46,7 @@ NAMES = {
     "inceptionv3": "InceptionV3", "efficientnetv2s": "EfficientNetV2-S", "convnext_tiny": "ConvNeXt-T",
     "swin_tiny": "Swin-T", "convnext_tiny_448": "ConvNeXt-T (448 px)",
 }
+ROUNDS = 5
 METRICS = {"macro_f1": "macro-F1", "balanced_accuracy": "balanced accuracy"}
 HEADLINE_CONFUSION = ("attention", "swin_tiny_224", "convnext_tiny_224", "convnext_tiny_448")
 
@@ -111,6 +112,8 @@ def tested_runs(root: Path, runs: list[str], plan_rel: str, files: tuple[str, ..
     """Paths of ``files`` of every run, after checking that the study's frozen plan lists the run: the test
     files of a run whose study has not finished its evaluate step are never opened."""
     planned = read_json(root, plan_rel)["runs"]
+    if len(runs) != ROUNDS:
+        raise ValueError(f"expected {ROUNDS} runs (one per round) for {plan_rel}, found {len(runs)}: {runs[:2]}")
     paths = []
     for run in runs:
         if run not in planned:
@@ -184,6 +187,15 @@ def main_table(root: Path) -> Built:
             row["Locked macro-F1"] = row["Locked balanced acc."] = DASH
         row.update(paddy_cells(paddy, r.method))
         rows.append(row)
+    conditions = root / f"{TABLES}/session_conditions_scores.csv"
+    if conditions.exists():         # the best whole-image model at 448 px is a declared Stage 5 condition: shown, not hidden
+        sources.append(conditions)
+        big = pd.read_csv(conditions)
+        for r in big[(big.model == "convnext_tiny") & (big.condition.astype(str) == "448")].itertuples():
+            key = f"{r.model}_{r.condition}"
+            rows.append({"Method": name_of(key), "Session macro-F1": pm(r.macro_f1_mean, r.macro_f1_sd),
+                         "Session balanced acc.": pm(r.balanced_accuracy_mean, r.balanced_accuracy_sd),
+                         "Locked macro-F1": DASH, "Locked balanced acc.": DASH, **paddy_cells(paddy, key)})
     frame = pd.DataFrame(rows).fillna(DASH)       # a method without that zoom level (no zoom levels) shows a dash
     if paddy is None:
         frame["Paddy native macro-F1"] = frame["Paddy native balanced acc."] = "pending: Stage 10"
@@ -205,6 +217,17 @@ def paddy_cells(paddy: pd.DataFrame | None, method: str) -> dict[str, str]:
     for row in other.itertuples():
         cells[f"Paddy {row.zoom} zoom macro-F1"] = pm(row.macro_f1_mean, row.macro_f1_sd)
     return cells
+
+
+MODELS = ("inceptionv3", "efficientnetv2s", "convnext_tiny", "swin_tiny")
+
+
+def condition_name(key: str) -> str:
+    """"efficientnetv2s_224_otsu" -> "EfficientNetV2-S, 224 px + Otsu"; unknown keys are shown as written."""
+    for model in MODELS:
+        if key.startswith(model + "_"):
+            return f"{NAMES[model]}, {condition_label(key[len(model) + 1:])}"
+    return name_of(key)
 
 
 def condition_label(condition: str) -> str:
@@ -241,12 +264,12 @@ def confusion_table(root: Path) -> Built:
     return pd.DataFrame(rows), files
 
 
-def paired_view(frame: pd.DataFrame, key: str, wins: str, other_wins: str | None = None) -> pd.DataFrame:
+def paired_view(frame: pd.DataFrame, key: str, wins: str, other_wins: str | None = None, label=name_of) -> pd.DataFrame:
     """Every row of a paired-test table, with the verdict words copied as the source gives them."""
     rows = []
     for r in frame.to_dict("records"):
-        row = {"Against": name_of(str(r[key])), "Metric": METRICS[r["metric"]],
-               "Difference (points)": pts(r["difference"]),
+        row = {"Against": label(str(r[key])), "Metric": METRICS[r["metric"]],
+               "Difference, pooled (points)": pts(r["difference"]),
                "Photo range": rng(r["photo_low"], r["photo_high"]), "Block range": rng(r["block_low"], r["block_high"]),
                "Rounds won by attention": f"{r[wins]}/{r['rounds']}"}
         if other_wins:
@@ -269,7 +292,7 @@ def paired_locked_table(root: Path) -> Built:
 def paired_conditions_table(root: Path) -> Built:
     path = f"{TABLES}/paired_conditions.csv"          # written by the Stage 5 paired-conditions branch
     frame = read_table(root, path)
-    return paired_view(frame, "condition", "attention_round_wins", "condition_round_wins"), [root / path]
+    return paired_view(frame, "condition", "attention_round_wins", "condition_round_wins", condition_name), [root / path]
 
 
 def ablations_table(root: Path) -> Built:
@@ -318,7 +341,7 @@ def ablations_test_table(root: Path) -> Built:
         key = r["metric"]
         rows.append({"Variant": r["variant"], "Metric": METRICS[key],
                      "Variant test score": pm(*own[key]), "Main test score": pm(main[f"{key}_mean"], main[f"{key}_sd"]),
-                     "Main minus variant (points)": r["difference (points)"], "Photo range": r["photo range"],
+                     "Main minus variant, pooled (points)": r["difference (points)"], "Photo range": r["photo range"],
                      "Block range": r["block range"], "Rounds won by main": r["rounds won by main"],
                      "Reading (photo range)": r["reading (photo range)"], "Verdict (block range)": r["verdict (block range)"]})
     return pd.DataFrame(rows), files
@@ -329,12 +352,14 @@ def partition_order_table(root: Path) -> Built:
     po = read_table(root, path)
     frame = pd.DataFrame({
         "Model": [name_of(m) for m in po.model], "Condition": po.condition, "What it is": po.meaning,
-        "Macro-F1 (test, pooled)": [f"{pct(v)} {rng(lo, hi)}" for v, lo, hi in zip(po.macro_f1_pooled, po.macro_f1_low, po.macro_f1_high)],
+        "Macro-F1, pooled": [f"{pct(v)} {rng(lo, hi)}" for v, lo, hi in zip(po.macro_f1_pooled, po.macro_f1_low, po.macro_f1_high)],
         "Inflation vs A (points)": [f"{pts(v)} {rng(lo, hi)}" for v, lo, hi in
                                     zip(po.macro_f1_inflation, po.macro_f1_inflation_low, po.macro_f1_inflation_high)],
         "Reading": po.macro_f1_reading,
         "Balanced acc. (test, pooled)": [pct(v) for v in po.balanced_accuracy_pooled],
         "Balanced acc. inflation (points)": [pts(v) for v in po.balanced_accuracy_inflation]})
+    frame.attrs["note"] = ("Set-ups: " + "; ".join(f"{c}: {m}" for c, m in dict(zip(po.condition, po.meaning)).items())
+                           + ". Scores are pooled over all scored photos of the set-up (set-up D scores training photos too).")
     return frame, [root / path]
 
 
@@ -358,7 +383,7 @@ def passthrough(candidates: tuple[str, ...]) -> Callable[[Path], Built]:
                 for col in frame.columns:
                     if pd.api.types.is_float_dtype(frame[col]):
                         score = re.search(r"f1|accuracy|recall|precision", col)
-                        frame[col] = [pct(v) if score else f"{v:.3g}" for v in frame[col]]
+                        frame[col] = [DASH if pd.isna(v) else pct(v) if score else f"{v:.3g}" for v in frame[col]]
                 return frame, [root / rel]
         raise Missing(candidates[0])
     return build
@@ -372,7 +397,7 @@ def deletion_table(root: Path) -> Built:
         "Macro-F1, nothing removed": [pct(v) for v in d.full_macro_f1],
         "Macro-F1, top-k attended removed": [pct(v) for v in d.top_macro_f1],
         "Macro-F1, random k removed": [pct(v) for v in d.random_macro_f1],
-        "True-class probability gap (points)": [pts(v) for v in d.gap_p_true],
+        "True-class probability, random minus top-k removed (points)": [pts(v) for v in d.gap_p_true],
         "Photo range": [rng(lo, hi) for lo, hi in zip(d.gap_low, d.gap_high)],
         "Block range": [rng(lo, hi) for lo, hi in zip(d.gap_block_low, d.gap_block_high)],
         "Rounds won": [f"{w}/{n}" for w, n in zip(d.round_wins, d.rounds)],
@@ -395,8 +420,8 @@ SPECS = [
     Spec("main", "Stage 10 (Paddy Doctor columns)",
          "Main results: test macro-F1 and balanced accuracy (\\%), mean $\\pm$ SD over the 5 rounds. Session: "
          "session-blocked split, the headline (each method tuned on its own validation photos, each selected "
-         "configuration tested once). Locked: the locked split of the follow-up study. Paddy Doctor: zero-shot, "
-         "nothing trained or tuned on it.", main_table, wide=True),
+         "configuration tested once). ConvNeXt-T at 448 px is a Stage 5 condition (learning rate chosen at 224 px, tested "
+         "once). Locked: the locked split of the follow-up study. Paddy Doctor: zero-shot, nothing trained or tuned on it.", main_table, wide=True),
     Spec("conditions", "Stage 5",
          "Whole-image models at other input conditions: test macro-F1 and balanced accuracy (\\%), mean $\\pm$ SD "
          "over 5 rounds, session-blocked split.", conditions_table),
@@ -407,22 +432,22 @@ SPECS = [
          "Confusion matrices (photo counts) of the headline methods on the session-blocked test photos, pooled "
          "over the 5 rounds. Rows are the true class.", confusion_table, wide=True),
     Spec("paired_session", "Stage 7 (session evaluation)",
-         "Attention against every other method, session-blocked split, test. Difference in points (attention "
-         "minus the other); 95\\% photo and block bootstrap ranges; verdict words as in the source.",
+         "Attention against every other method, session-blocked split, test. Difference of the pooled scores in points "
+         "(attention minus the other; it can differ from the difference of the round means in the main table); 95\\% photo "
+         "and block bootstrap ranges; verdict words as in the source.",
          paired_session_table, wide=True),
     Spec("paired_conditions", "Stage 5 paired test (branch stage5/paired-conditions)",
-         "Attention against each Stage 5 condition, session-blocked split, test.", paired_conditions_table, wide=True),
+         "Attention against each Stage 5 condition, session-blocked split, test. Difference of the pooled scores in points (attention minus the condition).", paired_conditions_table, wide=True),
     Spec("paired_locked", "Stage 7 (locked split)",
-         "Attention against every other method, locked split, test.", paired_locked_table, wide=True),
+         "Attention against every other method, locked split, test. Difference of the pooled scores in points (attention minus the other).", paired_locked_table, wide=True),
     Spec("ablations", "Stage 8",
          "Stage 8 ablations, validation macro-F1 (\\%), mean $\\pm$ SD over the 5 rounds, session-blocked split. "
          "Validation scores favour the main configuration, whose settings were chosen on them.", ablations_table, wide=True),
     Spec("ablations_test", "Stage 8",
-         "The two variants tested once on the session-blocked test photos: scores (\\%) and the difference "
-         "main minus variant in points.", ablations_test_table, wide=True),
+         "The two variants tested once on the session-blocked test photos: scores (\\%, mean $\\pm$ SD over 5 rounds) and "
+         "the difference of the pooled scores, main minus variant, in points (so it can differ from the difference of the means).", ablations_test_table, wide=True),
     Spec("partition_order", "Stage 9",
-         "Partition-order experiment: pooled test macro-F1 (\\%) and its inflation over the correct set-up (A), "
-         "with 95\\% ranges.", partition_order_table, wide=True, tex_skip=("What it is",)),
+         "Partition-order experiment: pooled macro-F1 (\\%) and its inflation over the correct set-up (A), with 95\\% ranges.", partition_order_table, wide=True, tex_skip=("What it is",)),
     Spec("shortcuts", "Stage 4 / follow-up",
          "Sanity and shortcut controls that never see the leaf: test scores (\\%), mean $\\pm$ SD over 5 rounds, "
          "on the locked and on the session-blocked split.", shortcuts_table, wide=True),
@@ -444,7 +469,8 @@ LATEX = {"\\": r"\textbackslash{}", "&": r"\&", "%": r"\%", "$": r"\$", "#": r"\
 def escape(text: str) -> str:
     """LaTeX-safe text: special characters escaped; ± and dashes turned into commands."""
     out = "".join(LATEX.get(ch, ch) for ch in str(text))
-    return out.replace("±", r"$\pm$").replace("–", "--").replace("—", "---")
+    out = out.replace("±", r"$\pm$").replace("–", "--").replace("—", "---")
+    return re.sub(r"(?<![\w$])-(?=\d)", "$-$", out)       # a minus sign, not a hyphen
 
 
 def column_spec(frame: pd.DataFrame) -> str:
@@ -494,24 +520,32 @@ def build_one(root: Path, spec: Spec) -> tuple[pd.DataFrame, list[Path], str | N
 
 
 def build_all(root: Path = REPO_ROOT, out: Path | None = None) -> dict[str, Any]:
+    """Every table, even when one fails: a guard error (a run outside its frozen plan, a wrong run count) is
+    raised at the end, after the other tables are written and the failed one is marked as an error."""
     out = out or root / TABLES
     out.mkdir(parents=True, exist_ok=True)
     provenance: dict[str, Any] = {"code_version": code_version(), "tables": {}}
+    errors = []
     for spec in SPECS:
-        frame, sources, pending = build_one(root, spec)
+        try:
+            frame, sources, pending = build_one(root, spec)
+        except ValueError as error:
+            errors.append(f"{spec.name}: {error}")
+            frame, sources, pending = pd.DataFrame({"status": [f"error: {error}"]}), [], f"error: {error}"
         rels = [str(p.relative_to(root)) for p in sources]
-        frame.to_csv(out / f"final_{spec.name}.csv", index=False)
-        caption = spec.caption if pending is None else f"{spec.caption} Pending: {spec.stage}."
-        (out / f"final_{spec.name}.tex").write_text(
-            to_latex(spec.name, frame, caption, rels, spec.wide, spec.bold, spec.tex_skip))
         inline = pending is None and any(frame[c].astype(str).str.startswith("pending:").any() for c in frame.columns)
-        provenance["tables"][spec.name] = {
-            "status": "pending" if pending else ("partly pending" if inline else "present"),
-            "stage": spec.stage, "reason": pending, "rows": len(frame),
-            "sources": {rel: sha256(root / rel) for rel in sorted(set(rels))}}
-        print(f"{spec.name:18s} {provenance['tables'][spec.name]['status']:15s} {len(frame)} rows"
-              + (f"  ({pending})" if pending else ""))
+        caption = spec.caption + (f" Pending: {spec.stage}." if pending else f" Cells marked pending wait for {spec.stage}." if inline else "")
+        if note := frame.attrs.get("note"):
+            caption += " " + escape(note)
+        frame.to_csv(out / f"final_{spec.name}.csv", index=False)
+        (out / f"final_{spec.name}.tex").write_text(to_latex(spec.name, frame, caption, rels, spec.wide, spec.bold, spec.tex_skip))
+        status = "error" if errors and errors[-1].startswith(spec.name + ":") else "pending" if pending else "partly pending" if inline else "present"
+        provenance["tables"][spec.name] = {"status": status, "stage": spec.stage, "reason": pending, "rows": len(frame),
+                                           "sources": {rel: sha256(root / rel) for rel in sorted(set(rels))}}
+        print(f"{spec.name:18s} {status:15s} {len(frame)} rows" + (f"  ({pending})" if pending else ""))
     (out / "final_provenance.json").write_text(json.dumps(provenance, indent=2) + "\n")
+    if errors:
+        raise RuntimeError("tables with errors (the others were written): " + "; ".join(errors))
     return provenance
 
 
@@ -566,10 +600,15 @@ def commitments(root: Path) -> list[dict[str, str]]:
 
 def present(root: Path, token: str, built: dict[str, Any], figures: dict[str, Any]) -> bool:
     if token.startswith("table:"):
-        return built.get(token[6:], {}).get("status") in ("present", "partly pending")   # a pending Paddy column is not missing here
+        return built.get(token[6:], {}).get("status") in ("present", "partly pending")   # P1-6, O3, O4 need the main table, not its Paddy columns
     if token.startswith("figure:"):
         return figures.get(token[7:], {}).get("status") == "present"
     return (root / token).exists()
+
+
+def stale(root: Path, entry: dict[str, Any]) -> bool:
+    """True when a source file of a built table or figure changed or vanished since it was built."""
+    return any(not (root / rel).exists() or sha256(root / rel) != digest for rel, digest in entry.get("sources", {}).items())
 
 
 def check(root: Path = REPO_ROOT) -> dict[str, Any]:
@@ -580,13 +619,16 @@ def check(root: Path = REPO_ROOT) -> dict[str, Any]:
     ready: dict[str, Any] = {"tables": {}, "figures": {}, "dataset_reports": {}, "commitments": []}
     for spec in SPECS:
         state = built.get(spec.name, {"status": "not built"})
-        ready["tables"][spec.name] = {"status": state["status"], "stage": spec.stage}
+        ready["tables"][spec.name] = {"status": "stale: rebuild" if stale(root, state) else state["status"], "stage": spec.stage}
     for name, (stage, _) in PROMISED_FIGURES.items():
-        ready["figures"][name] = {"status": figures.get(name, {}).get("status", "not built"), "stage": stage}
+        state = figures.get(name, {"status": "not built"})
+        ready["figures"][name] = {"status": "stale: rebuild" if stale(root, state) else state["status"], "stage": stage}
     pipeline = [p for pattern in ("paper/fig/pipeline*", f"{FIGURES}/final_pipeline*") for p in root.glob(pattern)]
     ready["figures"]["pipeline_diagram"] = {"status": "present" if pipeline else "pending", "stage": "drawn by hand with the paper"}
     for name, rel in DATASET_REPORTS.items():
         ready["dataset_reports"][name] = {"status": "present" if (root / rel).exists() else "pending", "file": rel}
+    built = {k: v for k, v in ready["tables"].items()}
+    figures = {k: v for k, v in ready["figures"].items()}
     for c in commitments(root):
         needs = EVIDENCE.get(c["id"])
         if needs is None:
@@ -595,7 +637,7 @@ def check(root: Path = REPO_ROOT) -> dict[str, Any]:
             missing = [t for t in needs if not present(root, t, built, figures)]
             status = "present" if not missing else "pending"
         ready["commitments"].append({**c, "status": status, "missing": missing})
-    counts = {k: sum(v["status"] == "present" for v in ready[k].values()) for k in ("tables", "figures", "dataset_reports")}
+    counts = {k: sum(v["status"] in ("present", "partly pending") for v in ready[k].values()) for k in ("tables", "figures", "dataset_reports")}
     counts["commitments"] = sum(c["status"] == "present" for c in ready["commitments"])
     ready["present_counts"] = counts
     return ready

@@ -61,6 +61,28 @@ def test_nothing_heavy_runs_by_default(tmp_path):
         assert isinstance(tree.body[0], ast.If) and ast.unparse(tree.body[0].test) == "RUN_STAGES", cell.source[:80]
 
 
+def test_every_launcher_cell_is_guarded(tmp_path):
+    notebook, _ = build(tmp_path)
+    launcher = [c for c in notebook.cells if "launcher" in c.metadata]
+    assert len(launcher) > 15
+    for cell in launcher:
+        tree = ast.parse(cell.source)
+        assert len(tree.body) == 1 and isinstance(tree.body[0], ast.If) and ast.unparse(tree.body[0].test) == "RUN_STAGES"
+        assert tree.body[0].orelse                              # the else branch says it was not re-run
+
+
+def test_a_launcher_cell_with_a_multi_line_string_is_refused():
+    import pytest
+
+    with pytest.raises(ValueError, match="multi-line string"):
+        bn.guarded('x = """a\nb"""', "n.ipynb")
+
+
+def test_a_source_file_that_contains_a_code_fence_gets_a_longer_fence():
+    cell = bn.source_cell(REPO, "build_submission_notebook")
+    assert "````python" in cell.source and cell.source.rstrip().endswith("````")
+
+
 def test_the_source_appendix_is_every_module_of_src(tmp_path):
     notebook, _ = build(tmp_path)
     bundled = {c.metadata["bundle_path"]: c for c in notebook.cells if "bundle_path" in c.metadata}

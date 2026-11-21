@@ -108,7 +108,7 @@ def test_paired_conditions_reads_the_stage_5_branch_columns(fixture):
     mt.build_all(fixture)
     shown = table(fixture, "paired_conditions")
     assert shown["Rounds won by attention"].tolist() == ["1/5", "0/5"] and shown["Rounds won by the other"].tolist() == ["4/5", "5/5"]
-    assert shown["Against"][0] == "ConvNeXt-T (448 px)"
+    assert shown["Against"][0] == "ConvNeXt-T, 448 px"
 
 
 def test_per_class_and_confusion_agree_with_the_predictions(fixture):
@@ -132,8 +132,9 @@ def test_test_files_of_a_run_outside_its_frozen_plan_are_never_read(fixture):
     runs = json.loads(plan.read_text())
     runs["runs"].pop("stage7_session_attention_r3")
     plan.write_text(json.dumps(runs))
-    with pytest.raises(ValueError, match="must not be read"):
+    with pytest.raises(RuntimeError, match="must not be read"):
         mt.build_all(fixture)
+    assert table(fixture, "per_class").status[0].startswith("error:")
 
 
 def test_a_planned_run_without_test_predictions_is_pending(fixture):
@@ -146,7 +147,7 @@ def test_ablation_tables_label_validation_and_test(fixture):
     assert set(table(fixture, "ablations")["Partition"]) == {"validation"}
     test = table(fixture, "ablations_test")
     assert set(test.Variant) == {"otsu_on", "native_scale"}
-    assert test["Reading (photo range)"].eq("main beats variant").all() and "Main minus variant (points)" in test
+    assert test["Reading (photo range)"].eq("main beats variant").all() and "Main minus variant, pooled (points)" in test
     values = [json.loads(p.read_text())["macro_f1"] for p in sorted((fixture / "runs").glob("stage7_session_otsu_on_r*/test_metrics.json"))]
     assert not values                                                    # the variants' runs are the 'ablate' ones
     own = [json.loads(p.read_text())["macro_f1"] for p in sorted((fixture / "runs").glob("stage7_session_ablate_otsu_on_r*/test_metrics.json"))]
@@ -169,7 +170,7 @@ def test_latex_is_plain_balanced_and_escaped(tmp_path):
         joined = "\n".join(body)
         stripped = re.sub(r"\\[{}\\]", "", joined)
         assert stripped.count("{") == stripped.count("}"), path.name
-        assert not re.search(r"(?<!\\)[%#_^~$](?![a-z])", re.sub(r"\$\\pm\$", "", joined).replace("\\$", "")), path.name
+        assert not re.search(r"(?<!\\)[%#_^~$](?![a-z])", re.sub(r"\$\\pm\$|\$-\$", "", joined).replace("\\$", "")), path.name
         begin = joined.count("\\begin{table"), joined.count("\\end{table")
         assert begin[0] == begin[1] == 1
         rows = [line for line in body if line.endswith("\\\\")]
@@ -218,3 +219,39 @@ def test_the_real_tracked_records_build_every_session_table(tmp_path):
     expected = f"{100 * (pooled[pooled.true_class == 'hispa'].pred_class == 'hispa').mean():.1f}"
     assert pd.read_csv(out / "final_per_class.csv", dtype=str).set_index("Method").loc[mt.NAMES["attention"], "hispa (diagnostic)"] == expected
     assert list(CLASSES) == mt.CLASSES
+
+
+def test_a_wrong_run_count_stops_the_table_but_the_others_are_still_written(fixture):
+    plan = json.loads((fixture / "runs/session_ablations_plan.json").read_text())
+    plan["runs"].pop("stage7_session_ablate_otsu_on_r5")
+    (fixture / "runs/session_ablations_plan.json").write_text(json.dumps(plan))
+    # the run folder of r5 is still there, but only four runs are in the frozen plan: the name filter finds four
+    with pytest.raises(RuntimeError, match="ablations_test"):
+        mt.build_all(fixture)
+    assert table(fixture, "ablations_test").status[0].startswith("error:")
+    assert (fixture / "results/tables/final_main.csv").exists() and (fixture / "results/tables/final_shortcuts.csv").exists()
+    assert json.loads((fixture / "results/tables/final_provenance.json").read_text())["tables"]["ablations_test"]["status"] == "error"
+
+
+def test_the_main_table_shows_convnext_at_448_and_names_conditions(fixture):
+    mt.build_all(fixture)
+    assert mt.NAMES["convnext_tiny_448"] in set(table(fixture, "main").Method)
+    assert mt.condition_name("efficientnetv2s_224_otsu") == "EfficientNetV2-S, 224 px + Otsu"
+    assert mt.condition_name("inceptionv3_128") == "InceptionV3, 128 px" and mt.condition_name("something_else") == "something else"
+
+
+def test_partition_order_tex_defines_its_letters_and_minus_signs_are_math(fixture):
+    mt.build_all(fixture)
+    tex = (fixture / "results/tables/final_partition_order.tex").read_text()
+    assert "A: correct" not in tex and "A: set-up A" in tex and "L: set-up L" in tex
+    assert mt.escape("[-1.0, 2.0] top-k") == "[$-$1.0, 2.0] top-k"
+
+
+def test_the_readiness_check_notices_a_changed_source_and_counts_a_partly_pending_main(fixture):
+    mt.build_all(fixture)
+    assert mt.write_readiness(fixture)["tables"]["main"]["status"] == "partly pending"
+    path = fixture / "results/tables/session_final.csv"
+    path.write_text(path.read_text().replace("0.7", "0.6", 1))
+    ready = mt.write_readiness(fixture)
+    assert ready["tables"]["main"]["status"] == "stale: rebuild" and ready["tables"]["ablations_test"]["status"] == "stale: rebuild"
+    assert ready["present_counts"]["tables"] < 10

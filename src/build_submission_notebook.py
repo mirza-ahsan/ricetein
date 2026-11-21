@@ -19,6 +19,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import re
 import subprocess
 from pathlib import Path
 
@@ -111,6 +112,8 @@ def git(*args: str, root: Path = ROOT) -> str:
 
 def guarded(source: str, label: str) -> str:
     """The launcher cell's code, run only when RUN_STAGES is True."""
+    if '"""' in source or "'''" in source:
+        raise ValueError(f"{label}: a launcher cell with a multi-line string cannot be indented safely; split the string")
     body = "\n".join(("    " + line) if line.strip() else line for line in source.splitlines())
     return f"if RUN_STAGES:\n{body}\nelse:\n    guard({label!r})\n"
 
@@ -125,14 +128,14 @@ def launcher_cells(root: Path, stage: int) -> list:
             if cell.cell_type == "markdown":
                 cells.append(v4.new_markdown_cell(cell.source))
             elif cell.cell_type == "code" and cell.source.strip():
-                cells.append(v4.new_code_cell(guarded(cell.source, path.name)))
+                cells.append(v4.new_code_cell(guarded(cell.source, path.name), metadata={"launcher": path.name}))
     return cells
 
 
 def source_cell(root: Path, module: str) -> object:
     relative = f"src/{module}.py"
     text = (root / relative).read_text()
-    fence = "```"
+    fence = "`" * max(3, max((len(run) for run in re.findall("`+", text)), default=0) + 1)   # longer than any run in the code
     return v4.new_markdown_cell(
         f"#### `{relative}`\n\n{fence}python\n{text}{'' if text.endswith(chr(10)) else chr(10)}{fence}\n",
         metadata={"bundle_path": relative, "sha256": hashlib.sha256(text.encode()).hexdigest(),

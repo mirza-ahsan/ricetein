@@ -76,3 +76,13 @@ def test_the_real_session_figures_build(tmp_path):
     report = mf.build_all(mt.REPO_ROOT, out)["figures"]
     assert report["confusion"]["status"] == report["partition_order"]["status"] == report["ablations"]["status"] == "present"
     assert (out / "final_confusion.pdf").exists()
+
+
+def test_an_older_figure_is_removed_when_its_source_goes_missing(tmp_path):
+    root = make_fixture(tmp_path)
+    mf.build_all(root)
+    assert (root / "results/figures/final_confusion.png").exists()
+    (root / "runs/session_conditions_selection.json").write_text(json.dumps({"configurations": {}}))
+    (root / "runs/session_selection.json").unlink()
+    mf.build_all(root)
+    assert not (root / "results/figures/final_confusion.png").exists() and status(root)["confusion"] == "pending"
