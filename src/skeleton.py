@@ -1,6 +1,6 @@
 """Stage 0 walking skeleton: the whole pipeline, end to end, on about 20 photos.
 
-Throwaway code (handbook Stage 0). Load photos -> cut native-resolution tiles -> describe
+Throwaway code (Stage 0). Load photos -> cut native-resolution tiles -> describe
 every tile with the frozen encoder -> train a tiny gated-attention head for a few steps ->
 predict -> score -> write a run record. It scores badly (20 photos, 50 steps); it exists to
 prove the pipeline runs and gives the same numbers on the local machine and on Kaggle.
@@ -56,7 +56,7 @@ def tile_starts(length: int, tile: int) -> list[int]:
     """Smallest number of tiles covering ``length``, evenly spread, first and last touching the edges."""
     if length <= tile:
         return [0]
-    n = -(-length // tile)  # ceil(L / t), the same as the handbook's ceil((L - t) / t) + 1
+    n = -(-length // tile)  # ceil(L / t), the same as the methodology's ceil((L - t) / t) + 1
     return [i * (length - tile) // (n - 1) for i in range(n)]
 
 

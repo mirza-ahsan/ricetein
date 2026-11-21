@@ -1,4 +1,4 @@
-"""Tables and the report of the follow-up study (declared 2026-11-14; handbook §24).
+"""Tables and the report of the follow-up study (declared 2026-11-14).
 
     uv run python -m src.followup_report
 
@@ -247,7 +247,7 @@ def build_report(tables: dict[str, pd.DataFrame]) -> str:
     return f"""# Follow-up study: split sensitivity, extended searches and controls
 
 Built by `src/followup_report.py` from `runs/` and `splits/session_blocked/folds.csv`; do not edit by hand.
-Study plan: handbook §24, rows of 2026-11-14. All scores are percentages.
+Study plan: declared 2026-11-14. All scores are percentages.
 
 **Which photos each number comes from**
 

@@ -1,6 +1,6 @@
 # Partition-order experiment
 
-Built by `src/partition_report.py` from `runs/`; do not edit by hand. Declared on 2026-11-20 (handbook §24).
+Built by `src/partition_report.py` from `runs/`; do not edit by hand. Declared on 2026-11-20.
 
 **What this is.** A general lesson about testing practice. Testing mistakes are common across plant-disease recognition work (Xu et al., 2024). Here we repeat three of them on our own photos and models and measure how much each raises the score, compared with the correct protocol. No published study is assessed.
 

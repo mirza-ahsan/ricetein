@@ -1,4 +1,4 @@
-"""Stage 11: does a committee of different models beat the best single model? (declared in handbook §24, 2026-11-21)
+"""Stage 11: does a committee of different models beat the best single model? (declared 2026-11-21)
 
     uv run python -m src.committee select     # validation files only: choose the members, write runs/committee_selection.json
     uv run python -m src.committee plan       # freeze runs/committee_plan.json, before any test file is read
@@ -700,7 +700,7 @@ def report_text(config: dict[str, Any], tables: dict[str, pd.DataFrame]) -> str:
            md_table(score_view(tables["tta_scores"])) + "\n\n" + md_table(paired_view(tables["tta_paired"])))
     return f"""# Committee: does combining models beat the best single model? (Stage 11)
 
-Built by `src/committee.py` from `runs/`; do not edit by hand. Declaration: handbook §24, 2026-11-21 ("Stage 11
+Built by `src/committee.py` from `runs/`; do not edit by hand. Declared 2026-11-21 ("Stage 11
 committee"), written before any committee number. All scores are percentages on the session-blocked split
 (`splits/session_blocked/folds.csv`) unless the heading says Paddy Doctor.
 

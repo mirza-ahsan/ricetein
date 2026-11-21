@@ -1,6 +1,6 @@
 # Attention against the nine Stage 5 conditions (session-blocked split, test)
 
-Built by `src/paired_conditions.py` from `runs/`; do not edit by hand. Declared on 2026-11-21 (handbook §24). All
+Built by `src/paired_conditions.py` from `runs/`; do not edit by hand. Declared on 2026-11-21. All
 scores are percentages, and differences are in percentage points.
 
 **Which photos:** test photos of the session-blocked split (`splits/session_blocked/folds.csv`). Nothing was trained

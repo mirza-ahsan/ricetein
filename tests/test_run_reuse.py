@@ -1,4 +1,4 @@
-"""A completed run is reusable while the code it executes is unchanged (handbook §24, 2026-11-14)."""
+"""A completed run is reusable while the code it executes is unchanged (declared 2026-11-14)."""
 
 import json
 

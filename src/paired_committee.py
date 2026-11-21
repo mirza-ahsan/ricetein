@@ -1,4 +1,4 @@
-"""The Stage 11 committee ``row2_plain`` against ConvNeXt-T at 448 px alone (declared 2026-11-21; handbook §24).
+"""The Stage 11 committee ``row2_plain`` against ConvNeXt-T at 448 px alone (declared 2026-11-21).
 
     uv run python -m src.paired_committee report
 
@@ -95,7 +95,7 @@ def build_report(paired: pd.DataFrame, scores: pd.DataFrame) -> str:
         "verdict (block range)": paired["verdict_block"].map(say)})
     return f"""# Committee against ConvNeXt-T at 448 px alone (session-blocked split, test)
 
-Built by `src/paired_committee.py` from `runs/`; do not edit by hand. Declared on 2026-11-21 (handbook §24). All
+Built by `src/paired_committee.py` from `runs/`; do not edit by hand. Declared on 2026-11-21. All
 scores are percentages, and differences are in percentage points.
 
 **Which photos:** test photos of the session-blocked split (`splits/session_blocked/folds.csv`). Nothing was trained

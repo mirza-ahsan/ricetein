@@ -49,7 +49,7 @@ def test_swin_knows_every_input_size():
 
 def test_planned_runs_are_45_and_448_is_only_for_the_best_model():
     pairs = session_conditions.planned("convnext_tiny")
-    assert len(pairs) * len(followup.ROUNDS) == 45    # the 45 runs declared in handbook §24
+    assert len(pairs) * len(followup.ROUNDS) == 45    # the 45 declared runs
     assert [m for m, c in pairs if c == "448"] == ["convnext_tiny"]
 
 

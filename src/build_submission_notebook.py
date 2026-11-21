@@ -1,4 +1,4 @@
-"""Stage 14 (handbook file 95): assemble the final submission notebook from the real code of this checkout.
+"""Stage 14: assemble the final submission notebook from the real code of this checkout.
 
     uv run python -m src.build_submission_notebook            # writes submission/final/ricetein_final.ipynb
 
@@ -10,8 +10,7 @@ The notebook goes from data preparation to the final results, in stage order. It
 * every module under ``src/`` (a source appendix with checksums), so the notebook always matches the real code.
 
 The notebook has no outputs (nbstripout rules) and nothing in its default cells trains, splits or evaluates.
-``submission/final/`` is git-ignored, like ``submission/phase4/``. The older ``scripts/build_submission_notebook.py``
-belongs to the frozen Phase 4 package and is not used here.
+``submission/final/`` is git-ignored.
 """
 
 from __future__ import annotations

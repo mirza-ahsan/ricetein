@@ -1,4 +1,4 @@
-"""Whole-photo descriptions re-filed as one-tile bags (declared 2026-11-14, handbook §24).
+"""Whole-photo descriptions re-filed as one-tile bags (declared 2026-11-14).
 
 The Stage 7.1 probe is a linear model on the class token, while the tile models have a hidden layer and
 choose their description by tuning, so "tiles vs whole photo" also compares two different heads. This

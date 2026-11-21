@@ -8,7 +8,7 @@ It trains and evaluates nothing and reads no test file. It checks that:
 2. every packed descriptor file the head studies (8 versions) and their evaluation (1 version) need is on
    disk. A missing file is built here, one descriptor kind at a time. The frozen ``BagStore`` fails with
    "class-token and patch-mean bag indices differ" when it has to build one kind while the other is already
-   on disk (handbook §24, 2026-11-16, incidents), so the files must exist before it is used.
+   on disk (incidents of 2026-11-16), so the files must exist before it is used.
 The packed files live in ``cache/`` (git-ignored); building them changes no code and no result.
 """
 

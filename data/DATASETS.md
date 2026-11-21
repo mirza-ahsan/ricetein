@@ -43,8 +43,8 @@ Class counts derived directly from `LabelledRice/Labelled/`:
   * 1,293 distinct sizes; 3,341 square and 14 nearly square (e.g. 1881 × 1880).
   * Shorter side: minimum **734 px**, median **1,918 px**, maximum **3,120 px**. Most common sizes: 3120 × 3120 (573 images), 1881 × 1881 (105), 2172 × 2172 (34).
   * Shorter side by band: <1000 px: 22 · 1000–1499: 599 · 1500–1999: 1,245 · 2000–2499: 787 · 2500–2999: 121 · ≥3000: 581.
-  * **Sizes differ by class** (median shorter side: BrownSpot 2,080, Healthy 2,000, Hispa 1,946, LeafBlast 1,736). This is a possible shortcut; the photo-properties-only baseline (handbook Stage 4b) tests it.
-  * With 224-px tiles (handbook Stage 6 rule), a photo at native size gives 16–196 tiles; 330,618 tiles in total, about 98.5 per photo. After the Stage 1 rescale (each photo to the common leaf scale, `rescale_factor` in `src/leaf_width.py`) photos give **49–100 tiles, 265,349 in total**.
+  * **Sizes differ by class** (median shorter side: BrownSpot 2,080, Healthy 2,000, Hispa 1,946, LeafBlast 1,736). This is a possible shortcut; the photo-properties-only baseline (Stage 4b) tests it.
+  * With 224-px tiles (Stage 6 rule), a photo at native size gives 16–196 tiles; 330,618 tiles in total, about 98.5 per photo. After the Stage 1 rescale (each photo to the common leaf scale, `rescale_factor` in `src/leaf_width.py`) photos give **49–100 tiles, 265,349 in total**.
 
 ---
 

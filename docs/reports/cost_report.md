@@ -1,6 +1,6 @@
 # Stage 13: cost and compression
 
-Built by `src/cost.py` from `runs/`; do not edit by hand. Declaration: handbook §24, 2026-11-21.
+Built by `src/cost.py` from `runs/`; do not edit by hand. Declared 2026-11-21.
 
 **Hardware dependence.** Every time and every memory figure comes from one machine, `halo` (RTX 4060 8 GB, Ryzen 7 7700,
 8 threads for torch and onnxruntime), and depends on it. Times are medians over 100 training photos of round 1, one photo

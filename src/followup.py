@@ -1,4 +1,4 @@
-"""The follow-up study declared on 2026-11-14 (handbook §24, rows of that date).
+"""The follow-up study declared on 2026-11-14.
 
     uv run python -m src.followup <action>
 

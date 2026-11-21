@@ -1,4 +1,4 @@
-"""Stage 9 inflation table and report (declared 2026-11-20, handbook §24). Reads scored predictions only.
+"""Stage 9 inflation table and report (declared 2026-11-20). Reads scored predictions only.
 
     uv run python -m src.partition_report report   # results/tables/partition_order_inflation.csv and the report
     uv run python -m src.partition_report leaks    # the leak counter of every condition, from the split files alone
@@ -252,8 +252,7 @@ def report_text(table: pd.DataFrame) -> str:
                      "in time is also in training (percent):", "", md_table(leak), ""]
     return "\n".join([
         "# Partition-order experiment", "",
-        "Built by `src/partition_report.py` from `runs/`; do not edit by hand. Declared on 2026-11-20 "
-        "(handbook §24).", "",
+        "Built by `src/partition_report.py` from `runs/`; do not edit by hand. Declared on 2026-11-20.", "",
         "**What this is.** A general lesson about testing practice. Testing mistakes are common across plant-disease "
         "recognition work (Xu et al., 2024). Here we repeat three of them on our own photos and models and measure how "
         "much each raises the score, compared with the correct protocol. No published study is assessed.", "",

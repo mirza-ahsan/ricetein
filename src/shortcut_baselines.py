@@ -1,4 +1,4 @@
-"""Two more shortcut controls (declared 2026-11-14, handbook §24), for either split.
+"""Two more shortcut controls (declared 2026-11-14), for either split.
 
 - ``time_neighbour``: no image at all. Each photo gets the class of the training photo from the same camera
   that was taken closest in time (the training majority class when there is none). It measures how much of

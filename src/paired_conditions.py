@@ -1,4 +1,4 @@
-"""Attention against each of the nine Stage 5 conditions on the session-blocked split (declared 2026-11-21; handbook §24).
+"""Attention against each of the nine Stage 5 conditions on the session-blocked split (declared 2026-11-21).
 
     uv run python -m src.paired_conditions report
 
@@ -88,7 +88,7 @@ def build_report(paired: pd.DataFrame, scores: pd.DataFrame) -> str:
         "verdict (photo range)": paired["verdict_photo"], "verdict (block range)": paired["verdict_block"]})
     return f"""# Attention against the nine Stage 5 conditions (session-blocked split, test)
 
-Built by `src/paired_conditions.py` from `runs/`; do not edit by hand. Declared on 2026-11-21 (handbook §24). All
+Built by `src/paired_conditions.py` from `runs/`; do not edit by hand. Declared on 2026-11-21. All
 scores are percentages, and differences are in percentage points.
 
 **Which photos:** test photos of the session-blocked split (`splits/session_blocked/folds.csv`). Nothing was trained

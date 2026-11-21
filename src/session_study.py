@@ -1,4 +1,4 @@
-"""The session-split tuning protocol declared on 2026-11-16 (handbook §24; manuals/HANDOFF.md).
+"""The session-split tuning protocol declared on 2026-11-16.
 
 Every method is tuned on validation photos of the session-blocked split, with the search rules of the
 2026-11-14 follow-up study (edge rule D6, two studies per head D7, same-head whole-photo controls D8).

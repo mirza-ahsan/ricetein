@@ -1,8 +1,8 @@
 # ===================================================================
-# configs/wholeimage/recipe.yaml: the shared fine-tuning recipe (handbook Stage 5a; methodology Table II)
+# configs/wholeimage/recipe.yaml: the shared fine-tuning recipe (Stage 5a; methodology Table II)
 # ===================================================================
 # Every model x setting file extends this one and sets only model, size and otsu.
-# The same recipe, learning rates and budget for every model (handbook §5, rule 9).
+# The same recipe, learning rates and budget for every model (the equal-budget rule).
 # ===================================================================
 extends: ../split.yaml
 
@@ -15,7 +15,7 @@ wholeimage:
   patience: 8                        # early stopping on validation macro-F1; the best checkpoint is kept
   batch_size: {128: 32, 224: 32, 448: 16, 512: 16}
   workers: 8
-  determinism: fast                  # cuDNN autotuning and TF32 allowed for fine-tuning (handbook Stage 0)
+  determinism: fast                  # cuDNN autotuning and TF32 allowed for fine-tuning (Stage 0)
   models:                            # timm ImageNet-1k weights, pinned Hugging Face commits (data/DATASETS.md)
     inceptionv3:
       repo: timm/inception_v3.tv_in1k

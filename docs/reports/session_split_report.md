@@ -1,6 +1,6 @@
 # Session-blocked split report
 
-Built by `src/session_split.py`; do not edit by hand. A sensitivity split declared on 2026-11-14 (handbook §24). The locked split is unchanged.
+Built by `src/session_split.py`; do not edit by hand. A sensitivity split declared on 2026-11-14. The locked split is unchanged.
 
 The same 3334 photos as the locked split, grouped into 74 capture blocks: runs of consecutive photos from one camera with no pause longer than 60 s, merged where they share a near-duplicate group. Block sizes: largest 287 photos (8.6% of all), median 24. StratifiedGroupKFold, 5 folds, seed 2026; validation = a stratified, grouped 1/8 of the other four folds.
 

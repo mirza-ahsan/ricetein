@@ -1,6 +1,6 @@
 # Committee: does combining models beat the best single model? (Stage 11)
 
-Built by `src/committee.py` from `runs/`; do not edit by hand. Declaration: handbook §24, 2026-11-21 ("Stage 11
+Built by `src/committee.py` from `runs/`; do not edit by hand. Declared 2026-11-21 ("Stage 11
 committee"), written before any committee number. All scores are percentages on the session-blocked split
 (`splits/session_blocked/folds.csv`) unless the heading says Paddy Doctor.
 

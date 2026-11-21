@@ -1,4 +1,4 @@
-"""Stage 5 other conditions on the session-blocked split (declared 2026-11-20, handbook §24).
+"""Stage 5 other conditions on the session-blocked split (declared 2026-11-20).
 
 Every model keeps the learning rate that was selected at 224 px on session-split validation photos
 (runs/session_selection.json). It is trained again at 128 px and at 224 px with Otsu background removal. The

@@ -1,5 +1,5 @@
 # ===================================================================
-# configs/committee.yaml: the Stage 11 plan as a settings file (handbook §24, 2026-11-21 "Stage 11 committee")
+# configs/committee.yaml: the Stage 11 plan as a settings file (declared 2026-11-21)
 # ===================================================================
 # Written after the declaration row and before any committee number. Choices use session-split validation
 # predictions only. Paddy Doctor is never used for training, tuning or selection.

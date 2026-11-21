@@ -1,4 +1,4 @@
-"""Stage 13 compression variants (declared in handbook §24, 2026-11-21).
+"""Stage 13 compression variants (declared 2026-11-21).
 
     uv run python -m src.compress fewer-tiles    # validation macro-F1 of every tile variant (needs distilled runs)
     uv run python -m src.compress int8-describe  # describe the 8-bit subset on the CPU (long, resumable)
@@ -258,7 +258,7 @@ def cached_bags(config: dict[str, Any], encoder: str, descriptor: str, folds: pd
     cache = CACHES[encoder]
     packed = {**config, "mil": {**config["mil"], "cache": cache, "versions": 1,
                                 "override": {"descriptor": descriptor}}}
-    pack_one_key_at_a_time(packed)    # builds the packed files one kind at a time (HANDOFF Part 7)
+    pack_one_key_at_a_time(packed)    # builds the packed files one kind at a time
     store = train_mil.BagStore(cache, descriptor, sorted(folds["photo_id"]), 1)
 
     def bag_of(photo: str) -> np.ndarray:

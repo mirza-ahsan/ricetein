@@ -1,4 +1,4 @@
-"""Stage 9: how much do testing mistakes inflate scores? (declared 2026-11-20, handbook §24)
+"""Stage 9: how much do testing mistakes inflate scores? (declared 2026-11-20)
 
 Condition A is the correct protocol: the five existing session-blocked runs of each model, reused as they are.
 B, C and D are DELIBERATELY WRONG demonstrations (src/partition_splits.py): B augments first and splits the copies

@@ -1,6 +1,6 @@
 # Stage 8 ablations on the session-blocked split
 
-Built by `src/session_ablations.py` from `runs/`; do not edit by hand. Every variant changes one thing and uses the settings selected for the main configuration (no tuning for any variant, handbook §24 2026-11-20). Five rounds, one seed.
+Built by `src/session_ablations.py` from `runs/`; do not edit by hand. Every variant changes one thing and uses the settings selected for the main configuration (no tuning for any variant, declared 2026-11-20). Five rounds, one seed.
 
 **Limits.** Validation scores favour the main configuration: its settings were chosen on these same validation photos, the variants' were not. The settings were also tuned for the E1 class-token plus patch-average description (1,536 numbers), so a variant on another encoder or description may be handicapped (E4 has 384 dimensions; E2 gives one pooled vector, so its variant changes the encoder and the description together). The row "main, seeds 1 and 2" shows how much the same configuration moves with the training seed.
 

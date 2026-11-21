@@ -1,4 +1,4 @@
-"""Stage 9 split files and the leak counter (declared 2026-11-20, handbook §24).
+"""Stage 9 split files and the leak counter (declared 2026-11-20).
 
 Three split files, built from the photos of the session-blocked split and written once into
 ``splits/partition_order/``. They are used by Stage 9 only and never mixed with ``splits/folds.csv`` or

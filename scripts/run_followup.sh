@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# One queue of the 2026-11-14 follow-up study (handbook §24). Run from a clean commit.
+# One queue of the 2026-11-14 follow-up study. Run from a clean commit.
 # Known flaw: the DONE line prints even when a step before the last one of an && chain fails.
 set -euo pipefail
 cd "$(dirname "$0")/.."

@@ -4,7 +4,7 @@
 # ===================================================================
 # Flagging thresholds are fixed in the pre-declared methodology ("Data audits");
 # do not change them after looking at results. The automatic check and the
-# sampled review of rejected pairs are a logged deviation (handbook §24,
+# sampled review of rejected pairs are a recorded deviation (decided
 # 2026-11-07): the pre-declared rules flag too many pairs to review by hand.
 # ===================================================================
 extends: inventory.yaml        # inventory file paths (and, through it, base.yaml)

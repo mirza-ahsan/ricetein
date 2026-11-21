@@ -1,4 +1,4 @@
-"""The session-blocked sensitivity split (declared 2026-11-14; handbook §24).
+"""The session-blocked sensitivity split (declared 2026-11-14).
 
 Why: the primary photos were shot in long sessions, a few seconds apart, and the same leaf was often
 photographed several times. The Stage 2 audit groups pixel-level copies only, so in the locked split most
@@ -138,7 +138,7 @@ def report(config: dict[str, Any], result: dict[str, Any]) -> str:
                        for name, ok in result["checks"].items())
     text = (
         "# Session-blocked split report\n\nBuilt by `src/session_split.py`; do not edit by hand. "
-        "A sensitivity split declared on 2026-11-14 (handbook §24). The locked split is unchanged.\n\n"
+        "A sensitivity split declared on 2026-11-14. The locked split is unchanged.\n\n"
         f"The same {len(table)} photos as the locked split, grouped into {len(sizes)} capture blocks: runs "
         f"of consecutive photos from one camera with no pause longer than {session['max_gap_seconds']} s, "
         "merged where they share a near-duplicate group. Block sizes: largest "

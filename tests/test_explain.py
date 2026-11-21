@@ -332,7 +332,7 @@ def test_example_list_survives_the_csv_round_trip_that_select_uses_to_check_itse
     pd.testing.assert_frame_equal(pd.read_csv(tmp_path / "examples.csv"), sheet, check_dtype=False, atol=1e-6)
 
 
-# --------------------------------------------- Paddy Doctor extension (handbook §24, 2026-11-21)
+# --------------------------------------------- Paddy Doctor extension (declared 2026-11-21)
 
 
 def use_runs_dir(monkeypatch, path):

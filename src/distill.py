@@ -1,4 +1,4 @@
-"""Stage 13 distillation (declared in handbook §24, 2026-11-21).
+"""Stage 13 distillation (declared 2026-11-21).
 
     uv run python -m src.distill
 

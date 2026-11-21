@@ -1,7 +1,7 @@
 # Session-blocked split: every method tuned on its own validation photos
 
 Built by `src/session_report.py` from `runs/`, `splits/session_blocked/folds.csv` and the follow-up tables;
-do not edit by hand. Protocol: handbook §24, 2026-11-16. All scores are percentages.
+do not edit by hand. Protocol declared 2026-11-16. All scores are percentages.
 
 **Which photos each number comes from**
 

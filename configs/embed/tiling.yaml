@@ -1,5 +1,5 @@
 # ===================================================================
-# configs/embed/tiling.yaml: shared settings of every Stage 6 cache (handbook Stage 6)
+# configs/embed/tiling.yaml: shared settings of every Stage 6 cache
 # ===================================================================
 # Each cache file extends this one and sets its name and encoder (plus what it changes).
 # ===================================================================

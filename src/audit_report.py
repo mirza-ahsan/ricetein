@@ -70,7 +70,7 @@ def duplicates_section(config: dict[str, Any]) -> str:
             f"mirrored photo); a pair passes with >= {check['min_inliers']} distinct inliers. Raters review "
             "every "
             f"passed pair plus {settings['rejected_sample']} random rejected pairs per comparison, blind to "
-            "class and check result (deviation from \"review every flagged pair\": handbook §24, "
+            "class and check result (deviation from \"review every flagged pair\", decided "
             "2026-11-07).\n\n")
     path = REPO_ROOT / settings["candidates_file"]
     if not path.exists():

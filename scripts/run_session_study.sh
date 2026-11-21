@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# One queue of the session-split tuning protocol (declared 2026-11-16; manuals/HANDOFF.md).
+# One queue of the session-split tuning protocol (declared 2026-11-16).
 # Run from a clean commit. Every action is resumable at that same commit: relaunching a queue skips finished
 # work, but a study cannot be resumed after a new commit.
 # Commands are separate statements on purpose: with `set -e` a failed one stops the queue before the DONE line.

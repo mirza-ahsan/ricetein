@@ -8,7 +8,7 @@
    distinct inlier keypoints.
    The review queue holds every passed pair plus a random sample of rejected ones (to measure what the
    check misses), shuffled and blind: reviewers see two photos, not classes or check results.
-   Deviation from "review every flagged pair": handbook §24, 2026-11-07.
+   Deviation from "review every flagged pair", decided 2026-11-07.
 2. ``review --reviewer <name>``: two people each judge every queued pair alone (Y same leaf / N different).
 3. ``settle``: both look together at the pairs they disagreed on.
 4. ``extend``: the declared miss rule, applied once: if people confirmed any sampled rejected pair, every

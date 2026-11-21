@@ -1,7 +1,7 @@
 # Follow-up study: split sensitivity, extended searches and controls
 
 Built by `src/followup_report.py` from `runs/` and `splits/session_blocked/folds.csv`; do not edit by hand.
-Study plan: handbook §24, rows of 2026-11-14. All scores are percentages.
+Study plan: declared 2026-11-14. All scores are percentages.
 
 **Which photos each number comes from**
 

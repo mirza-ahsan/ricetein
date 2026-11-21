@@ -1,4 +1,4 @@
-"""Stage 8 ablations on the session-blocked split (declared 2026-11-20, handbook §24).
+"""Stage 8 ablations on the session-blocked split (declared 2026-11-20).
 
 Each variant changes one thing in the main configuration (E1 + attention on the session-split selection) and
 keeps everything else. **Every variant gets the same tuning budget: none.** All variants are trained with the
@@ -34,7 +34,7 @@ PLAN = "session_ablations_plan.json"
 REPORT, TABLE = "docs/reports/session_ablation_report.md", "results/tables/session_ablations.csv"
 PARTS = {"c": ["cls"], "m": ["mean"], "cm": ["cls", "mean"]}
 # name -> what changes. mil: the changed training settings (cache = another description cache, override = other
-# selected parameters); tested: evaluated on test (the headline ablations of handbook Stage 8); the rest stay
+# selected parameters); tested: evaluated on test (the headline ablations of Stage 8); the rest stay
 # on validation.
 VARIANTS: dict[str, dict[str, Any]] = {
     "otsu_on": {"mil": {"cache": "e1_otsu"}, "tested": True, "question": "Tiles of Otsu-cleaned photos"},
@@ -76,7 +76,7 @@ def main_runs() -> list[str]:
 
 def pack_one_key_at_a_time(config: dict[str, Any]) -> None:
     """Build the packed descriptor files one kind at a time, before ``train_mil`` needs them: the frozen
-    ``BagStore`` fails for good when one kind is on disk and the other has to be built (HANDOFF Part 7)."""
+    ``BagStore`` fails for good when one kind is on disk and the other has to be built."""
     mil = config["mil"]
     descriptor = {**read_json(get_default_runs_dir() / "stage7_tune_session_attention" / "metrics.json")["best_params"],
                   **mil.get("override", {})}["descriptor"]
@@ -158,7 +158,7 @@ def report() -> None:
                           "rounds better than main": table.rounds_better_than_main})
     lines = ["# Stage 8 ablations on the session-blocked split", "",
              "Built by `src/session_ablations.py` from `runs/`; do not edit by hand. Every variant changes one thing and "
-             "uses the settings selected for the main configuration (no tuning for any variant, handbook §24 2026-11-20). "
+             "uses the settings selected for the main configuration (no tuning for any variant, declared 2026-11-20). "
              "Five rounds, one seed.", "",
              "**Limits.** Validation scores favour the main configuration: its settings were chosen on these same validation "
              "photos, the variants' were not. The settings were also tuned for the E1 class-token plus patch-average "

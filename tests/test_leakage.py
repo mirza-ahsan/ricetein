@@ -1,4 +1,4 @@
-"""Leakage rules for the whole-photo loader (handbook §5 rules 2 and 5; a written commitment): validation and
+"""Leakage rules for the whole-photo loader (leakage rules 2 and 5; written commitment P1-4): validation and
 test photos are never augmented, each dataset serves exactly its role, and roles never mix within a round."""
 
 import numpy as np

@@ -1,5 +1,5 @@
 # ===================================================================
-# configs/paddy_zero_shot.yaml: the Stage 10 plan as a settings file (handbook Stage 10, §24 2026-11-20)
+# configs/paddy_zero_shot.yaml: the Stage 10 plan as a settings file (declared 2026-11-20)
 # ===================================================================
 # Written and frozen BEFORE any Paddy Doctor photo is described or scored. The reasons and the rules are in
 # docs/reports/paddy_pre_declaration.md. Paddy Doctor is never used for training, tuning or selection.

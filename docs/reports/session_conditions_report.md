@@ -1,6 +1,6 @@
 # Stage 5 other conditions on the session-blocked split
 
-Declared on 2026-11-20 (handbook §24) before any of these runs. Each of the four whole-image models is trained at
+Declared on 2026-11-20 before any of these runs. Each of the four whole-image models is trained at
 128 px and at 224 px with Otsu background removal; the model with the best validation score at 224 px
 (convnext_tiny) is also trained at 448 px. Every model keeps the learning rate selected at 224 px on validation
 photos, and the recipe and budget are those of the 224 px runs. Nothing was searched again. Every condition was

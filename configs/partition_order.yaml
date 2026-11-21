@@ -7,7 +7,7 @@
 #   B  augment first, then split the copies at random   (versions of one photo land on both sides)
 #   C  correct order, but near-duplicate groups and capture blocks ignored (random photo split)
 #   D  train on every photo and score on every photo
-# See handbook Stage 9 and §24 (2026-11-20). Run names: stage9_<model>_<condition>_r<round>.
+# Stage 9, declared 2026-11-20. Run names: stage9_<model>_<condition>_r<round>.
 # ===================================================================
 extends: session/split.yaml
 

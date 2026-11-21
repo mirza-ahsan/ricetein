@@ -7,7 +7,7 @@ generated from ``runs/``.
 Nothing is typed by hand: every number below is read from a file under ``runs/`` or from a ``results/tables``
 file that a stage report generated from ``runs/``. A table whose source does not exist yet is still written, as
 one line ``pending: <stage>``, so it is never left out silently. The test files of a run are opened only when
-the run is listed in its study's frozen evaluation plan (golden rule 4). Percentages have one decimal.
+the run is listed in its study's frozen evaluation plan (test-set rule). Percentages have one decimal.
 ``results/tables/final_provenance.json`` lists the source files of every table with their SHA-256.
 """
 
@@ -624,7 +624,7 @@ PROMISED_FIGURES = {   # name -> (stage that produces it, file stem under result
     "heatmaps": ("Stage 12", "final_heatmaps"),
     "cost": ("Stage 13", "final_cost"),
 }
-DATASET_REPORTS = {   # handbook Stage 14: recount, background audit, duplicates
+DATASET_REPORTS = {   # Stage 14: recount, background audit, duplicates
     "recount": "docs/reports/inventory_report.md", "background audit": "docs/reports/audit_report.md",
     "duplicates": "docs/reports/split_report.md"}
 EVIDENCE = {   # commitment -> what must exist; "table:x" needs a built table, "figure:x" a built figure

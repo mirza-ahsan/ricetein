@@ -25,7 +25,7 @@ Flags (share of photos, per rater):
 
 ## 2. Near-duplicates (2b) and overlap with Paddy Doctor (2c)
 
-Flag rules (pre-declared methodology): perceptual hashes within 8 bits (any of 8 rotations/flips), or whole-photo E1 class-token cosine > 0.95. Automatic check: SIFT keypoints (photos at 1200 px), ratio test 0.75, each keypoint used once, RANSAC similarity transform (tolerance 8.0 px, scale 0.25-4.0x, also against the mirrored photo); a pair passes with >= 15 distinct inliers. Raters review every passed pair plus 200 random rejected pairs per comparison, blind to class and check result (deviation from "review every flagged pair": handbook §24, 2026-11-07).
+Flag rules (pre-declared methodology): perceptual hashes within 8 bits (any of 8 rotations/flips), or whole-photo E1 class-token cosine > 0.95. Automatic check: SIFT keypoints (photos at 1200 px), ratio test 0.75, each keypoint used once, RANSAC similarity transform (tolerance 8.0 px, scale 0.25-4.0x, also against the mirrored photo); a pair passes with >= 15 distinct inliers. Raters review every passed pair plus 200 random rejected pairs per comparison, blind to class and check result (deviation from "review every flagged pair", decided 2026-11-07).
 
 | comparison | flagged | hash only | cosine only | both | pass check | queued |
 |---|---|---|---|---|---|---|

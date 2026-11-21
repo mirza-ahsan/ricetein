@@ -1,4 +1,4 @@
-"""Stage 13 cost: size, speed and memory of every main method, and the one tested small model (handbook §24,
+"""Stage 13 cost: size, speed and memory of every main method, and the one tested small model (declared
 2026-11-21).
 
     uv run python -m src.cost sizes                  # parameters, files, cache bytes (no timing)
@@ -635,7 +635,7 @@ def report(config: dict[str, Any]) -> None:
                       "\nThere is no committee row: Stage 11 had not produced a committee when this was built.\n")
     text = f"""# Stage 13: cost and compression
 
-Built by `src/cost.py` from `runs/`; do not edit by hand. Declaration: handbook §24, 2026-11-21.
+Built by `src/cost.py` from `runs/`; do not edit by hand. Declared 2026-11-21.
 
 **Hardware dependence.** Every time and every memory figure comes from one machine, `halo` (RTX 4060 8 GB, Ryzen 7 7700,
 {t["cpu_threads"]} threads for torch and onnxruntime), and depends on it. Times are medians over {t["photos"]} training photos of round {t["source_round"]}, one photo

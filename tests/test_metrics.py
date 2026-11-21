@@ -1,5 +1,5 @@
 """Known-answer checks for the scoring toolkit (src/metrics.py, src/stats.py). Must pass before any model is
-scored (handbook Stage 4a)."""
+scored (Stage 4a)."""
 
 import numpy as np
 import pandas as pd
