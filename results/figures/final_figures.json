@@ -1,10 +1,28 @@
 {
-  "code_version": "fc8a293",
+  "code_version": "61415fe",
   "figures": {
     "samples": {
-      "status": "pending",
+      "status": "present",
       "stage": "Stage 1 data (main checkout only)",
-      "reason": "missing data/raw/rice_diseases/LabelledRice/Labelled (photos exist only in the main checkout)"
+      "files": [
+        "final_samples.png",
+        "final_samples.pdf"
+      ],
+      "sources": {
+        "data/raw/rice_diseases/LabelledRice/Labelled/BrownSpot/IMG_20190419_095712.jpg": "91aa38b21377de688deabb3f6370e7ad3b72cad99f85eed2336ea0feab935980",
+        "data/raw/rice_diseases/LabelledRice/Labelled/BrownSpot/IMG_20190420_194553.jpg": "bf9bd1b096258da39295e4b72069aaec3ca32399617cc4008cdd33ca93f9f13d",
+        "data/raw/rice_diseases/LabelledRice/Labelled/BrownSpot/IMG_5511.jpg": "80c29c36df55be25229710c6c1b3d53afb2bd3003c79a0753e288102181c7625",
+        "data/raw/rice_diseases/LabelledRice/Labelled/Healthy/IMG_20190419_094251.jpg": "7838ef904b1cd5844f641b77edf0c033dc5efbd7e1cbaed28737faf5dbca3e81",
+        "data/raw/rice_diseases/LabelledRice/Labelled/Healthy/IMG_20190419_170242.jpg": "743b7e50538e4eb696b0c2bb6e26d6d6c6b9234ca503f236b67df735e1fa27da",
+        "data/raw/rice_diseases/LabelledRice/Labelled/Healthy/IMG_4957.jpg": "c9a1e71821133577df977c818f80a80494276183748fd079a1dc75824ba3d1b6",
+        "data/raw/rice_diseases/LabelledRice/Labelled/Hispa/IMG_20190419_094238.jpg": "f696c43d48f00e8a674b3e7ad495518b9e68c912dccc572be4654c9dc13a28a5",
+        "data/raw/rice_diseases/LabelledRice/Labelled/Hispa/IMG_20190419_162005.jpg": "95fe685863105931526cefca95bd45eeb6761f3c6d4a4991d209ef030b40c9f5",
+        "data/raw/rice_diseases/LabelledRice/Labelled/Hispa/IMG_20190424_134011.jpg": "08740fd62c833aa9ad422606e464c52349cf4e6381b6b9ed7647bb952322a41c",
+        "data/raw/rice_diseases/LabelledRice/Labelled/LeafBlast/IMG_20190419_095029.jpg": "d1b8139b75cbd578d59d8d4f5e9a73ac950bf5923dda445732d545e3073c63a2",
+        "data/raw/rice_diseases/LabelledRice/Labelled/LeafBlast/IMG_20190419_161953.jpg": "f72904441a729761caa561fba0f7e70f1aaf92c9ab76fba4e26290990770c39e",
+        "data/raw/rice_diseases/LabelledRice/Labelled/LeafBlast/IMG_5526.jpg": "8fe6ac365591166979423ab2e9ec126e36e08bc6524be4d859b93ceabb382203",
+        "splits/folds.csv": "9891c146c2a369ac455a4794a4707509a1508b3005a680b5d2257206f7023ba7"
+      }
     },
     "confusion": {
       "status": "present",
@@ -61,9 +79,15 @@
       }
     },
     "paddy_zoom": {
-      "status": "pending",
+      "status": "present",
       "stage": "Stage 10",
-      "reason": "missing results/tables/paddy_results.csv"
+      "files": [
+        "final_paddy_zoom.png",
+        "final_paddy_zoom.pdf"
+      ],
+      "sources": {
+        "results/tables/paddy_results.csv": "86036639edc06873f82f7ab767502f3a2c3840d73d8bcad59df18a3993058247"
+      }
     },
     "deletion": {
       "status": "pending",

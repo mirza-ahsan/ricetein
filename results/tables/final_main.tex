@@ -1,29 +1,30 @@
 % final_main.tex: built by src/make_tables.py; do not edit by hand.
 % source: results/tables/session_final.csv
 % source: results/tables/followup_final.csv
+% source: results/tables/paddy_results.csv
 % source: results/tables/session_conditions_scores.csv
 \begin{table*}[t]
 \centering
-\caption{Main results: test macro-F1 and balanced accuracy (\%), mean $\pm$ SD over the 5 rounds. Session: session-blocked split, the headline (each method tuned on its own validation photos, each selected configuration tested once). ConvNeXt-T at 448 px is a Stage 5 condition (learning rate chosen at 224 px, tested once). Locked: the locked split of the follow-up study. Paddy Doctor: zero-shot, nothing trained or tuned on it. Cells marked pending wait for Stage 10 (Paddy Doctor columns).}
+\caption{Main results: test macro-F1 and balanced accuracy (\%), mean $\pm$ SD over the 5 rounds. Session: session-blocked split, the headline (each method tuned on its own validation photos, each selected configuration tested once). ConvNeXt-T at 448 px is a Stage 5 condition (learning rate chosen at 224 px, tested once). Locked: the locked split of the follow-up study. Paddy Doctor: zero-shot, nothing trained or tuned on it.}
 \label{tab:final_main}
 \footnotesize
 \setlength{\tabcolsep}{3pt}
-\begin{tabular}{lrrrrlll}
+\begin{tabular}{lrrrrrrrr}
 \toprule
-Method & Session macro-F1 & Session balanced acc. & Locked macro-F1 & Locked balanced acc. & Paddy native macro-F1 & Paddy native balanced acc. & Paddy other zooms macro-F1 \\
+Method & Session macro-F1 & Session balanced acc. & Locked macro-F1 & Locked balanced acc. & Paddy native macro-F1 & Paddy native balanced acc. & Paddy midway zoom macro-F1 & Paddy matched zoom macro-F1 \\
 \midrule
-InceptionV3 (224 px) & 72.0 $\pm$ 3.6 & 72.2 $\pm$ 4.9 & 80.9 $\pm$ 2.7 & 81.7 $\pm$ 2.2 & pending: Stage 10 & pending: Stage 10 & pending: Stage 10 \\
-EfficientNetV2-S (224 px) & 74.1 $\pm$ 4.8 & 73.9 $\pm$ 5.9 & 83.5 $\pm$ 1.8 & 83.6 $\pm$ 2.0 & pending: Stage 10 & pending: Stage 10 & pending: Stage 10 \\
-ConvNeXt-T (224 px) & 75.0 $\pm$ 5.0 & 75.8 $\pm$ 3.7 & 83.4 $\pm$ 2.6 & 83.5 $\pm$ 2.9 & pending: Stage 10 & pending: Stage 10 & pending: Stage 10 \\
-Swin-T (224 px) & 76.3 $\pm$ 4.1 & 75.8 $\pm$ 4.8 & 83.7 $\pm$ 1.3 & 84.5 $\pm$ 1.9 & pending: Stage 10 & pending: Stage 10 & pending: Stage 10 \\
-Linear probe (224 px) & 73.0 $\pm$ 4.0 & 73.3 $\pm$ 4.0 & 78.2 $\pm$ 0.7 & 79.0 $\pm$ 0.5 & pending: Stage 10 & pending: Stage 10 & pending: Stage 10 \\
-Linear probe (512 px) & 73.5 $\pm$ 5.9 & 73.9 $\pm$ 6.8 & 81.3 $\pm$ 1.1 & 82.0 $\pm$ 1.1 & pending: Stage 10 & pending: Stage 10 & pending: Stage 10 \\
-Mean pooling over tiles & 69.1 $\pm$ 8.5 & 68.9 $\pm$ 9.2 & 78.5 $\pm$ 2.7 & 78.9 $\pm$ 2.5 & pending: Stage 10 & pending: Stage 10 & pending: Stage 10 \\
-Max pooling over tiles & 73.4 $\pm$ 7.1 & 74.0 $\pm$ 8.4 & 82.9 $\pm$ 1.7 & 83.4 $\pm$ 1.7 & pending: Stage 10 & pending: Stage 10 & pending: Stage 10 \\
-Attention MIL (ours) & 77.9 $\pm$ 3.1 & 78.0 $\pm$ 3.6 & 82.8 $\pm$ 1.5 & 83.4 $\pm$ 1.7 & pending: Stage 10 & pending: Stage 10 & pending: Stage 10 \\
-Same head, whole photo (224 px) & 69.3 $\pm$ 7.1 & 69.1 $\pm$ 7.2 & 80.2 $\pm$ 1.8 & 80.4 $\pm$ 2.0 & pending: Stage 10 & pending: Stage 10 & pending: Stage 10 \\
-Same head, whole photo (512 px) & 73.2 $\pm$ 6.9 & 73.5 $\pm$ 6.9 & 81.8 $\pm$ 1.8 & 81.5 $\pm$ 1.9 & pending: Stage 10 & pending: Stage 10 & pending: Stage 10 \\
-ConvNeXt-T (448 px) & 79.2 $\pm$ 3.8 & 79.1 $\pm$ 5.0 & -- & -- & pending: Stage 10 & pending: Stage 10 & pending: Stage 10 \\
+InceptionV3 (224 px) & 72.0 $\pm$ 3.6 & 72.2 $\pm$ 4.9 & 80.9 $\pm$ 2.7 & 81.7 $\pm$ 2.2 & 16.6 $\pm$ 6.6 & 27.9 $\pm$ 3.7 & -- & -- \\
+EfficientNetV2-S (224 px) & 74.1 $\pm$ 4.8 & 73.9 $\pm$ 5.9 & 83.5 $\pm$ 1.8 & 83.6 $\pm$ 2.0 & 27.0 $\pm$ 5.5 & 32.5 $\pm$ 5.2 & -- & -- \\
+ConvNeXt-T (224 px) & 75.0 $\pm$ 5.0 & 75.8 $\pm$ 3.7 & 83.4 $\pm$ 2.6 & 83.5 $\pm$ 2.9 & 30.1 $\pm$ 7.3 & 35.5 $\pm$ 4.8 & -- & -- \\
+Swin-T (224 px) & 76.3 $\pm$ 4.1 & 75.8 $\pm$ 4.8 & 83.7 $\pm$ 1.3 & 84.5 $\pm$ 1.9 & 27.0 $\pm$ 5.8 & 32.6 $\pm$ 2.6 & -- & -- \\
+Linear probe (224 px) & 73.0 $\pm$ 4.0 & 73.3 $\pm$ 4.0 & 78.2 $\pm$ 0.7 & 79.0 $\pm$ 0.5 & 26.1 $\pm$ 4.1 & 29.3 $\pm$ 2.1 & -- & -- \\
+Linear probe (512 px) & 73.5 $\pm$ 5.9 & 73.9 $\pm$ 6.8 & 81.3 $\pm$ 1.1 & 82.0 $\pm$ 1.1 & 26.1 $\pm$ 6.5 & 30.0 $\pm$ 4.8 & -- & -- \\
+Mean pooling over tiles & 69.1 $\pm$ 8.5 & 68.9 $\pm$ 9.2 & 78.5 $\pm$ 2.7 & 78.9 $\pm$ 2.5 & 16.7 $\pm$ 2.4 & 27.7 $\pm$ 1.5 & 14.8 $\pm$ 1.0 & 15.2 $\pm$ 1.3 \\
+Max pooling over tiles & 73.4 $\pm$ 7.1 & 74.0 $\pm$ 8.4 & 82.9 $\pm$ 1.7 & 83.4 $\pm$ 1.7 & 20.7 $\pm$ 3.8 & 29.0 $\pm$ 1.6 & 17.5 $\pm$ 4.3 & 16.8 $\pm$ 4.9 \\
+Attention MIL (ours) & 77.9 $\pm$ 3.1 & 78.0 $\pm$ 3.6 & 82.8 $\pm$ 1.5 & 83.4 $\pm$ 1.7 & 26.1 $\pm$ 4.2 & 33.8 $\pm$ 2.9 & 21.5 $\pm$ 4.0 & 17.7 $\pm$ 2.9 \\
+Same head, whole photo (224 px) & 69.3 $\pm$ 7.1 & 69.1 $\pm$ 7.2 & 80.2 $\pm$ 1.8 & 80.4 $\pm$ 2.0 & 25.4 $\pm$ 4.2 & 30.7 $\pm$ 2.5 & -- & -- \\
+Same head, whole photo (512 px) & 73.2 $\pm$ 6.9 & 73.5 $\pm$ 6.9 & 81.8 $\pm$ 1.8 & 81.5 $\pm$ 1.9 & 24.0 $\pm$ 6.4 & 32.9 $\pm$ 2.1 & -- & -- \\
+ConvNeXt-T (448 px) & 79.2 $\pm$ 3.8 & 79.1 $\pm$ 5.0 & -- & -- & 26.2 $\pm$ 7.7 & 32.7 $\pm$ 4.8 & -- & -- \\
 \bottomrule
 \end{tabular}
 \end{table*}
