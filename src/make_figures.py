@@ -193,7 +193,7 @@ def heatmaps(root: Path) -> Result:
 
 
 # the two linear-probe points are close together: the 224 px label goes below its point so the labels do not overlap
-COST_LABEL_OFFSETS = {"probe_224": (3, -7)}
+COST_LABEL_OFFSETS = {"probe_224": (3, -12)}
 
 
 def cost(root: Path) -> Result:
