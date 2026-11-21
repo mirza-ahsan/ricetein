@@ -118,17 +118,14 @@ kaggle/kernels/*/*.ipynb
 !kaggle/kernels/00-smoke/*.ipynb
 !kaggle/kernels/00-skeleton/*.ipynb
 
-# Local submission files containing dataset photographs; source/metrics stay tracked.
+# Local build outputs and per-photo images that contain dataset photographs (never committed;
+# no dataset image is redistributed). The CSV and JSON files of results/explain/ and the final figures stay tracked.
+submission/
 results/figures/phase4_predictions.png
 results/figures/phase4_attention.png
 results/tables/phase4_computational_progress.json
-submission/phase4/
-submission/final/
 results/explain/background_fraction/
 results/explain/background_fraction_paddy/
-
-# Per-photo heat maps and blind rating sheets contain the dataset photos (never commit photos; commitment P1-13).
-# The files stay on disk; the CSV and JSON files of results/explain/ and the final figures stay tracked.
 results/explain/blind/
 results/explain/heatmaps/
 
