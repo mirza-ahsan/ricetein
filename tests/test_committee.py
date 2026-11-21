@@ -112,7 +112,11 @@ def test_weights_are_used_when_they_help():
 def test_choice_is_deterministic_and_reads_validation_files_only(monkeypatch):
     config, seen = load_config("configs/committee.yaml"), []
     original = pd.read_csv
-    monkeypatch.setattr(pd, "read_csv", lambda path, *a, **k: (seen.append(str(path)), original(path, *a, **k))[1])
+    def spy(path, *a, **k):
+        seen.append(str(path))
+        return original(path, *a, **k)
+
+    monkeypatch.setattr(pd, "read_csv", spy)
     first, second = committee.choose(config), committee.choose(config)
     assert json.dumps(first, sort_keys=True) == json.dumps(second, sort_keys=True)
     assert seen and all(p.endswith("/predictions.csv") for p in seen)         # no test, Paddy or TTA file was opened
@@ -121,12 +125,28 @@ def test_choice_is_deterministic_and_reads_validation_files_only(monkeypatch):
 
 
 def test_pool_a_choice_without_a_tile_head_falls_back_to_the_forced_member(monkeypatch):
-    config = load_config("configs/committee.yaml")
-    only_cnn = dict(config["committee"]["pools"], A=config["committee"]["pools"]["B"] + ["attention_e1"])
-    config["committee"]["pools"] = only_cnn
-    config["committee"]["forced_first"] = "attention_e1"
-    chosen = committee.choose(config)["committees"]["row2_plain"]
-    assert any(config["committee"]["members"][m]["tile"] for m in chosen["members"])
+    names = [CLASSES[i] for i in TRUTH]
+    good, weak = one_hot(TRUTH), one_hot([0] * 20)
+    tables = {m: {r: table(r, "val", p, names) for r in (1, 2)} for m, p in
+              (("cnn_a", good), ("cnn_b", good), ("attention_e1", weak))}
+    config = {"classes": CLASSES, "committee": {
+        "rounds": [1, 2], "split_file": "x", "choice": CHOICE, "forced_first": "attention_e1", "tta": {"pool": "B"},
+        "members": {"cnn_a": {"tile": False}, "cnn_b": {"tile": False}, "attention_e1": {"tile": True}},
+        "pools": {"A": ["cnn_a", "cnn_b", "attention_e1"], "B": ["cnn_a", "cnn_b"]}}}
+    monkeypatch.setattr(committee, "member_runs", lambda c: {m: [f"{m}1", f"{m}2"] for m in tables})
+    monkeypatch.setattr(committee, "read_member", lambda runs, *a: tables[runs[0][:-1]])
+    row2 = committee.choose(config)["committees"]["row2_plain"]
+    assert row2["forced_first"] and row2["members"][0] == "attention_e1"      # the plain choice holds no tile head
+
+
+def test_disagreement_reports_pairs_and_the_committee_oracle():
+    names = [CLASSES[i] for i in TRUTH]
+    tables = {m: {1: table(1, "val", one_hot(g), names)} for m, g in
+              (("right", TRUTH), ("wrong", [0 if t else 1 for t in TRUTH]), ("also_wrong", [0 if t else 1 for t in TRUTH]))}
+    out = committee.disagreement(tables, {"c": ["right", "wrong"]}).set_index(["kind", "a", "b"])
+    assert out.loc[("pair", "wrong", "also_wrong"), "disagreement"] == 0.0 and out.loc[("pair", "wrong", "also_wrong"), "double_fault"] > 0
+    row = out.loc[("committee", "c", "right+wrong")]
+    assert row["oracle"] == 1.0 and row["double_fault"] == 0.0 and row["disagreement"] > 0
 
 
 def test_selection_never_changes_once_written(tmp_path, monkeypatch):
@@ -152,6 +172,8 @@ def make_runs(root, members: dict[str, list[int]], rounds=(1, 2)) -> dict[str, l
             folder.mkdir()
             table(r, "val", one_hot(guess), names).to_csv(folder / "predictions.csv", index=False)
             table(r, "test", one_hot(guess), names).to_csv(folder / "test_predictions.csv", index=False)
+            (folder / "record.json").write_text(json.dumps({"status": "completed", "code_version": "abc1234",
+                                                            "split_checksum": "split0"}))
             runs[m].append(folder.name)
     return runs
 
@@ -163,7 +185,7 @@ def setup(tmp_path, monkeypatch):
     runs = make_runs(tmp_path, {"a": TRUTH, "b": [0] * 20})
     config = {"classes": CLASSES, "committee": {"rounds": [1, 2]}}
     plan = tmp_path / "plan.json"
-    plan.write_text(json.dumps({"tested_members_test_sha256": {
+    plan.write_text(json.dumps({"selection_sha256": "sel0", "tested_members_test_sha256": {
         run: committee.sha256(tmp_path / run / "test_predictions.csv") for rs in runs.values() for run in rs}}))
     spec = {"members": ["a", "b"], "weights": [2, 1], "runs": runs}
     return config, spec, plan, tmp_path
@@ -207,7 +229,8 @@ def test_plan_is_frozen_once_and_refuses_a_changed_selection(setup, monkeypatch)
     selection = {"member_runs": spec["runs"], "tta_member": "a",
                  "committees": {"row2_plain": {"members": ["a", "b"], "weights": [1, 1]}}}
     (root / "selection.json").write_text(json.dumps(selection))
-    config["committee"]["files"] = {"selection": str(root / "selection.json"), "plan": str(root / "committee_plan.json")}
+    config["committee"].update(files={"selection": str(root / "selection.json"), "plan": str(root / "committee_plan.json")},
+                               members={"a": {"tile": False}, "b": {"tile": False}}, paddy={"zoom": "native"})
     committee.plan(config)
     frozen = json.loads((root / "committee_plan.json").read_text())
     assert frozen["runs"] == {} and set(frozen["tested_members_test_sha256"]) == {f"{m}_r{r}" for m in "ab" for r in (1, 2)}
@@ -220,11 +243,12 @@ def test_plan_is_frozen_once_and_refuses_a_changed_selection(setup, monkeypatch)
 # ------------------------------------------------------------------------------------------- rules and views
 def test_the_rule_is_read_in_both_directions():
     rule = {"min_round_wins": 4, "ci_excludes_zero": True}
-    assert committee.two_way(0.01, 0.05, 4, 5, rule) == "A beats B"
-    assert committee.two_way(0.01, 0.05, 3, 5, rule) == "no clear difference"
-    assert committee.two_way(-0.05, -0.01, 1, 5, rule) == "B beats A"
-    assert committee.two_way(-0.05, -0.01, 2, 5, rule) == "no clear difference"
-    assert committee.two_way(-0.01, 0.05, 5, 5, rule) == "no clear difference"
+    assert committee.two_way(0.01, 0.05, 4, 1, rule) == "A beats B"
+    assert committee.two_way(0.01, 0.05, 3, 2, rule) == "no clear difference"
+    assert committee.two_way(-0.05, -0.01, 1, 4, rule) == "B beats A"
+    assert committee.two_way(-0.05, -0.01, 2, 3, rule) == "no clear difference"
+    assert committee.two_way(-0.05, -0.01, 0, 3, rule) == "no clear difference"   # tied rounds are won by neither
+    assert committee.two_way(-0.01, 0.05, 5, 0, rule) == "no clear difference"
 
 
 def test_eight_views_are_distinct_and_start_with_the_photo():
@@ -275,10 +299,41 @@ def test_paddy_scores_compare_committee_rounds_with_the_single_model(monkeypatch
     config = {"classes": CLASSES, "seed": 0, "committee": {"rounds": [1, 2, 3, 4, 5]},
               "evaluation": {"bootstrap": {"resamples": 50, "confidence": 0.95, "stratified": True},
                              "comparison": {"min_round_wins": 4, "ci_excludes_zero": True}}}
-    better = committee.paddy_scores(config, rounds(truth), rounds([0] * 60))
+    def scores(a, b):
+        return {**committee.paddy_summary(config, a), **committee.paddy_versus(config, a, b)}
+
+    better = scores(rounds(truth), rounds([0] * 60))
     assert better["macro_f1_round_wins"] == 5 and better["macro_f1_verdict"] == "A beats B"
     assert better["macro_f1_mean"] == 1.0 and better["macro_f1_five_round"] == 1.0
-    worse = committee.paddy_scores(config, rounds([0] * 60), rounds(truth))
+    worse = scores(rounds([0] * 60), rounds(truth))
     assert worse["macro_f1_verdict"] == "B beats A" and worse["macro_f1_round_wins"] == 0
-    same = committee.paddy_scores(config, rounds(truth), rounds(truth))
+    same = scores(rounds(truth), rounds(truth))
     assert same["macro_f1_verdict"] == "no clear difference"
+
+
+def test_plan_lists_heads_without_test_predictions_in_the_evaluate_format(setup):
+    config, spec, _, root = setup
+    run = "e2_r1"
+    (root / run).mkdir()
+    (root / run / "predictions.csv").write_text("x")
+    (root / run / "model.pt").write_bytes(b"weights")
+    (root / run / "record.json").write_text(json.dumps({"status": "completed", "code_version": "abc1234",
+                                                        "split_checksum": "split0"}))
+    runs = {**spec["runs"], "e2": [run, "a_r2"]}
+    selection = {"member_runs": runs, "tta_member": "a",
+                 "committees": {"row2_plain": {"members": ["a", "e2"], "weights": [1, 1]}}}
+    (root / "selection.json").write_text(json.dumps(selection))
+    config["committee"].update(files={"selection": str(root / "selection.json"), "plan": str(root / "committee_plan.json")},
+                               members={"a": {"tile": False}, "e2": {"tile": True, "paddy": "x"}}, paddy={"zoom": "native"})
+    committee.plan(config)
+    frozen = json.loads((root / "committee_plan.json").read_text())
+    assert frozen["selection_partition"] == "val" and list(frozen["runs"]) == [run]
+    assert set(frozen["runs"][run]) == {"record_sha256", "checkpoint_sha256", "split_checksum"}
+
+
+def test_a_missing_member_file_stops_the_committee_before_its_marker_is_created(setup):
+    config, spec, plan, root = setup
+    (root / "b_r2" / "test_predictions.csv").unlink()
+    with pytest.raises(ValueError, match="no test predictions"):
+        committee.test_committee(config, "row2_plain", spec, plan)
+    assert not (root / "committee_row2_plain" / "test_started.json").exists()   # nothing was spent

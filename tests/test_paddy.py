@@ -52,6 +52,37 @@ def test_batched_tile_scoring_equals_scoring_each_photo_alone(tmp_path, monkeypa
         np.testing.assert_allclose(batched[i], alone, atol=1e-5)
 
 
+def test_a_class_token_only_cache_of_a_timm_encoder_is_described_validated_and_scored(tmp_path, monkeypatch):
+    """E2 (ConvNeXt-T) has no patch average: its cache files hold "cls" only, and a head on "cls" scores them."""
+    torch.manual_seed(0)
+    dim, lengths = 6, [3, 4]
+    folder = tmp_path / "cache" / "tiles"
+    rng = np.random.default_rng(1)
+    for i, n in enumerate(lengths):
+        embed.save(folder / "v0" / f"p{i}.npz", torch.from_numpy(rng.normal(size=(n, dim))).float(), None,
+                   np.zeros((n, 4), np.int32))
+        with np.load(folder / "v0" / f"p{i}.npz") as saved:
+            assert set(saved.files) == {"cls", "boxes"}
+    model = MILModel(dim, 8, 0.0, "attention", 4).eval()
+    config = {"paddy": {"caches": {"tiles": {"native": "tiles"}}, "encoder": "E2"},
+              "encoders": {"E2": {"dim": dim, "library": "timm"}}}
+    monkeypatch.setattr(pz, "cache_folder", lambda name: folder)
+    monkeypatch.setattr(pz, "photo_ids", lambda c: ["p0", "p1"])
+    monkeypatch.setattr(pz, "photo_key", lambda photo_id: photo_id)
+    monkeypatch.setattr(pz, "load_head", lambda run, d, device: (model, ["cls"]))
+    out = pz.predict_tile_heads(config, "native", ["run"], torch.device("cpu"), batch=2)["run"]
+    assert out.shape == (2, 4) and np.allclose(out.sum(axis=1), 1.0, atol=1e-5)
+    # the cache check asks for "cls" only when the encoder is a timm one
+    monkeypatch.setattr(paddy_embed, "cache_folder", lambda name: folder)
+    monkeypatch.setattr(paddy_embed, "photo_ids", lambda c: ["p0", "p1"])
+    monkeypatch.setattr(paddy_embed, "photo_key", lambda photo_id: photo_id)
+    spec = {"format": 1}
+    (folder / "spec.json").write_text(json.dumps(spec))
+    monkeypatch.setattr(paddy_embed, "cache_spec", lambda c, s: spec)
+    monkeypatch.setattr(paddy_embed, "description_caches", lambda c: {"tiles": {"kind": "tiles"}})
+    assert paddy_embed.validate(config, "tiles")["descriptor_rows"] == sum(lengths)
+
+
 def frame(true, pred):
     return pd.DataFrame({"photo_id": [f"p{i}" for i in range(len(true))], "true_class": true, "pred_class": pred})
 

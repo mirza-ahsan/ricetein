@@ -38,7 +38,7 @@ committee:
     weights: [1, 2, 3]                   # the weighted variant: integer weights tried for every member
   tta:
     pool: B                              # the best whole-image member of this pool by mean validation macro-F1
-    views: 8                             # four rotations of 90 degrees, each with and without a horizontal flip
+                                         # eight views: four rotations of 90 degrees, each with and without a flip
   paddy:
     zoom: native                         # the Stage 10 headline
     comparison_member: attention_e1      # the Paddy paired test is committee against this member

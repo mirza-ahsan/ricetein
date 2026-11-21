@@ -15,7 +15,6 @@ deleted); nothing is chosen on test or on Paddy Doctor.
 from __future__ import annotations
 
 import argparse
-import hashlib
 import itertools
 import json
 from pathlib import Path
@@ -30,13 +29,10 @@ from src.config import REPO_ROOT, load_config
 from src.followup import read_json
 from src.inventory_report import md_table
 from src.records import get_default_runs_dir, require_clean_code
+from src.split import sha256
 
 CONFIG = "configs/committee.yaml"
 TABLE_COLUMNS = ["round", "partition", "photo_id", "true_class", "pred_class"]
-
-
-def sha256(path: Path) -> str:
-    return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
 def path_of(config: dict[str, Any], key: str) -> Path:
@@ -139,7 +135,7 @@ def greedy(val: Validation, pool: list[str], choice: dict[str, Any], first: str 
         if not options:
             break
         s, best = first_best([(val.score([*chosen, m]), m) for m in options], choice["tie"])
-        if len(chosen) >= choice["min_members"] and s - current < choice["min_gain"]:
+        if len(chosen) >= choice["min_members"] and s - current < choice["min_gain"] - choice["tie"]:
             break
         steps.append({"added": best, "score": s, "gain": None if current is None else s - current})
         chosen.append(best)
@@ -150,29 +146,32 @@ def greedy(val: Validation, pool: list[str], choice: dict[str, Any], first: str 
 def weighted(val: Validation, members: list[str], choice: dict[str, Any]) -> dict[str, Any]:
     """Integer weights from the declared grid. The smallest weights win ties; the plain average stays unless
     the best weights raise S by ``min_gain``."""
-    plain, best, best_weights = val.score(members), None, None
+    plain, best, best_weights = val.score(members), -np.inf, None
     for w in sorted(itertools.product(choice["weights"], repeat=len(members)), key=lambda w: (sum(w), w)):
         s = val.score(members, list(w))
-        if best is None or s > best + choice["tie"]:
+        if s > best + choice["tie"]:
             best, best_weights = s, list(w)
-    if best - plain < choice["min_gain"]:
+    if best - plain < choice["min_gain"] - choice["tie"]:
         return {"weights": [1] * len(members), "score": plain, "same_as_plain": True}
     return {"weights": best_weights, "score": best, "same_as_plain": False}
 
 
 def disagreement(tables: dict[str, dict[int, pd.DataFrame]], committees: dict[str, list[str]]) -> pd.DataFrame:
     """Pairwise disagreement and double-fault rates of the members on validation photos (rounds pooled), and
-    for each committee the mean pairwise disagreement and the share of photos where some member is right."""
+    for each committee the mean pairwise disagreement, the share where every member is wrong (``double_fault``)
+    and the share where at least one member is right (``oracle``)."""
     pooled = {m: pd.concat([t[r] for r in sorted(t)], ignore_index=True) for m, t in tables.items()}
     true = next(iter(pooled.values()))["true_class"].to_numpy()
     wrong = {m: p["pred_class"].to_numpy() != true for m, p in pooled.items()}
     pred = {m: p["pred_class"].to_numpy() for m, p in pooled.items()}
     rows = [{"kind": "pair", "a": a, "b": b, "disagreement": float((pred[a] != pred[b]).mean()),
-             "double_fault": float((wrong[a] & wrong[b]).mean())} for a, b in itertools.combinations(pooled, 2)]
+             "double_fault": float((wrong[a] & wrong[b]).mean()), "oracle": np.nan}
+            for a, b in itertools.combinations(pooled, 2)]
     for cid, members in committees.items():
         pairs = [(pred[a] != pred[b]).mean() for a, b in itertools.combinations(members, 2)]
         rows.append({"kind": "committee", "a": cid, "b": "+".join(members), "disagreement": float(np.mean(pairs)),
-                     "double_fault": float(np.logical_and.reduce([wrong[m] for m in members]).mean())})
+                     "double_fault": float(np.logical_and.reduce([wrong[m] for m in members]).mean()),
+                     "oracle": float(np.logical_or.reduce([~wrong[m] for m in members]).mean())})
     return pd.DataFrame(rows)
 
 
@@ -194,11 +193,11 @@ def choose(config: dict[str, Any]) -> dict[str, Any]:
         tuned = weighted(val, found["members"], choice)
         committees[f"row{row}_plain"] = plain
         committees[f"row{row}_weighted"] = {**plain, "variant": "weighted", **tuned}
-    singles = [(val.score([m]), m) for m in c["pools"][c["tta"]["pool"]]]
-    tta_member = first_best(singles, choice["tie"])[1]
+    member_scores = {m: val.score([m]) for m in val.members}
+    tta_member = first_best([(member_scores[m], m) for m in c["pools"][c["tta"]["pool"]]], choice["tie"])[1]
     table = disagreement(tables, {cid: e["members"] for cid, e in committees.items() if e["variant"] == "plain"})
     return {"partition": "val", "split": c["split_file"], "pools": c["pools"],
-            "member_runs": runs, "member_scores": {m: val.score([m]) for m in val.members},
+            "member_runs": runs, "member_scores": member_scores,
             "committees": committees, "tta_member": tta_member,
             "disagreement": table.to_dict("records")}
 
@@ -235,11 +234,23 @@ def has_test(run: str) -> bool:
 def head_entry(run: str) -> dict[str, str]:
     folder = get_default_runs_dir() / run
     record = read_json(folder / "record.json")
-    if record["status"] != "completed" or record["code_version"] in ("unknown",) or record["code_version"].endswith("-dirty"):
+    if record["status"] != "completed" or record["code_version"] == "unknown" or record["code_version"].endswith("-dirty"):
         raise ValueError(f"{run}: incomplete or untraceable training run")
     return {"record_sha256": evaluate.digest(folder / "record.json"),
             "checkpoint_sha256": evaluate.digest(evaluate.checkpoint(folder)),
             "split_checksum": record["split_checksum"]}
+
+
+def stage10_paddy_files(config: dict[str, Any], committees: dict[str, dict[str, Any]]) -> dict[str, str]:
+    """Checksums of the Stage 10 Paddy prediction files of the chosen members (the E2 and E3 files do not exist yet)."""
+    found = {}
+    for spec in committees.values():
+        for member, runs in spec["runs"].items():
+            for run in runs:
+                path = paddy_path(config, member, run)
+                if "paddy" not in config["committee"]["members"][member] and path.exists():
+                    found[run] = sha256(path)
+    return found
 
 
 def plan(config: dict[str, Any]) -> None:
@@ -262,7 +273,8 @@ def plan(config: dict[str, Any]) -> None:
               "tta_member": selection["tta_member"], "committees": committees,
               "runs": {run: head_entry(run) for run in untested},
               "tested_members_test_sha256": {run: sha256(root / run / "test_predictions.csv") for run in used if has_test(run)},
-              "validation_sha256": {run: sha256(root / run / "predictions.csv") for run in used}}
+              "validation_sha256": {run: sha256(root / run / "predictions.csv") for run in used},
+              "stage10_paddy_sha256": stage10_paddy_files(config, committees)}
     with path.open("x") as out:
         json.dump(result, out, indent=2)
     print(f"{path}: {len(committees)} committees, {len(untested)} untested head runs")
@@ -272,76 +284,110 @@ def summary_of(table: pd.DataFrame, classes: list[str]) -> dict[str, Any]:
     return {"partition": "test", **metrics.scores(table["true_class"], table["pred_class"], classes)}
 
 
+def create_marker(path: Path, payload: dict[str, Any], what: str) -> None:
+    """The run-once marker: it can be created only once, and a second try means the first one crashed."""
+    try:
+        with path.open("x") as out:
+            json.dump(payload, out, indent=2)
+    except FileExistsError:
+        raise ValueError(f"{what}: started but has no result; stop and report, do not retry") from None
+
+
+def write_csv_atomic(table: pd.DataFrame, path: Path) -> None:
+    """Write in one step, so that an existing file is always complete."""
+    partial = path.with_name(path.name + ".tmp")
+    table.to_csv(partial, index=False)
+    partial.replace(path)
+
+
+def combined(spec: dict[str, Any], filename: str, partition: str, config: dict[str, Any]) -> pd.DataFrame:
+    """The committee's prediction table of one partition: the members' round tables, averaged round by round."""
+    rounds, classes = config["committee"]["rounds"], config["classes"]
+    members = {m: read_member(spec["runs"][m], filename, partition, rounds) for m in spec["members"]}
+    return pd.concat([average([members[m][r] for m in spec["members"]], spec["weights"], classes) for r in rounds],
+                     ignore_index=True)
+
+
+def check_plan(config: dict[str, Any]) -> dict[str, Any]:
+    """The frozen plan, after checking that the choice it rests on is unchanged."""
+    frozen = read_json(path_of(config, "plan"))
+    if frozen["selection_sha256"] != sha256(path_of(config, "selection")):
+        raise ValueError("the selection changed after the plan was frozen")
+    return frozen
+
+
 def test_committee(config: dict[str, Any], cid: str, spec: dict[str, Any], plan_path: Path) -> None:
-    """Test one committee, once. The marker is created before any test file is read."""
-    folder, classes, rounds = committee_dir(cid), config["classes"], config["committee"]["rounds"]
+    """Test one committee, once. Everything that can fail is checked first without opening test content (files
+    present and unchanged since the plan, validation tables aligned); then the marker is created, then the test
+    tables are read, and ``test_predictions.csv`` is written last, so that its existence means "complete"."""
+    folder, classes, root = committee_dir(cid), config["classes"], get_default_runs_dir()
     if (folder / "test_predictions.csv").exists():
         return
-    folder.mkdir(parents=True, exist_ok=True)
-    try:
-        with (folder / "test_started.json").open("x") as out:
-            json.dump({"evaluation_code": require_clean_code(), "plan_sha256": sha256(plan_path)}, out)
-    except FileExistsError:
-        raise ValueError(f"{cid}: started but has no test predictions; stop and report, do not retry") from None
-    plan = read_json(plan_path)
-    for run, digest in plan["tested_members_test_sha256"].items():
-        if sha256(get_default_runs_dir() / run / "test_predictions.csv") != digest:
+    frozen, version = read_json(plan_path), require_clean_code()
+    runs = sorted({run for rs in spec["runs"].values() for run in rs})
+    for run in runs:
+        path = root / run / "test_predictions.csv"
+        if not path.exists():
+            raise ValueError(f"{run}: no test predictions; evaluate the members first")
+        if run in frozen["tested_members_test_sha256"] and sha256(path) != frozen["tested_members_test_sha256"][run]:
             raise ValueError(f"{run}: test predictions changed after the plan was frozen")
-    members = {m: {part: read_member(spec["runs"][m], name, part, rounds)
-                   for part, name in (("val", "predictions.csv"), ("test", "test_predictions.csv"))}
-               for m in spec["members"]}
-    out_tables = {part: pd.concat([average([members[m][part][r] for m in spec["members"]], spec["weights"], classes)
-                                   for r in rounds], ignore_index=True) for part in ("val", "test")}
-    out_tables["val"].to_csv(folder / "predictions.csv", index=False)
-    out_tables["test"].to_csv(folder / "test_predictions.csv", index=False)
+    val_table = combined(spec, "predictions.csv", "val", config)
+    folder.mkdir(parents=True, exist_ok=True)
+    create_marker(folder / "test_started.json", {"evaluation_code": version, "plan_sha256": sha256(plan_path)}, cid)
+    test_table = combined(spec, "test_predictions.csv", "test", config)
+    val_table.to_csv(folder / "predictions.csv", index=False)
     (folder / "test_metrics.json").write_text(json.dumps(
-        {**summary_of(out_tables["test"], classes), "per_round": {
-            r: metrics.scores(g["true_class"], g["pred_class"], classes)["macro_f1"]
-            for r, g in out_tables["test"].groupby("round")}}, indent=2))
-    (folder / "committee.json").write_text(json.dumps({"id": cid, **spec}, indent=2))
+        {**summary_of(test_table, classes), "per_round": {
+            int(r): metrics.scores(g["true_class"], g["pred_class"], classes)["macro_f1"]
+            for r, g in test_table.groupby("round")}}, indent=2))
+    (folder / "committee.json").write_text(json.dumps(
+        {"id": cid, **spec, "split_checksum": sorted({read_json(root / run / "record.json")["split_checksum"] for run in runs}),
+         "record_sha256": {run: sha256(root / run / "record.json") for run in runs},
+         "plan_sha256": sha256(plan_path), "selection_sha256": frozen["selection_sha256"],
+         "evaluation_code": version}, indent=2))
+    write_csv_atomic(test_table, folder / "test_predictions.csv")
 
 
 def evaluate_all(config: dict[str, Any]) -> None:
     require_clean_code()
     plan_path = path_of(config, "plan")
-    plan = read_json(plan_path)
-    if plan["selection_sha256"] != sha256(path_of(config, "selection")):
-        raise ValueError("the selection changed after the plan was frozen")
-    for run in plan["runs"]:
+    frozen = check_plan(config)
+    for run in frozen["runs"]:
         if has_test(run):
             continue
         evaluate.evaluate(run, plan_path)
         print(f"{run}: test evaluated", flush=True)
-    for cid, spec in plan["committees"].items():
+    for cid, spec in frozen["committees"].items():
         test_committee(config, cid, spec, plan_path)
         print(f"{cid}: tested", flush=True)
 
 
 # ----------------------------------------------------------------------------------------------- Paddy Doctor
-def two_way(low: float, high: float, wins: int, rounds: int, comparison: dict[str, Any]) -> str:
-    """The declared rule read in both directions (A is the committee, B the single model)."""
+def two_way(low: float, high: float, a_wins: int, b_wins: int, comparison: dict[str, Any]) -> str:
+    """The declared rule read in both directions (A is the committee, B the single model): the range must be on
+    one side of 0 and that side must win at least ``min_round_wins`` rounds (a tied round is won by neither)."""
     need = comparison["min_round_wins"]
-    above = low > 0 if comparison["ci_excludes_zero"] else True
-    below = high < 0 if comparison["ci_excludes_zero"] else True
-    if above and wins >= need:
+    above, below = (low > 0, high < 0) if comparison["ci_excludes_zero"] else (True, True)
+    if above and a_wins >= need:
         return "A beats B"
-    if below and wins <= rounds - need:
+    if below and b_wins >= need:
         return "B beats A"
     return "no clear difference"
 
 
-def paddy_path(run: str, tile: bool, zoom: str) -> Path:
+def paddy_path(config: dict[str, Any], member: str, run: str) -> Path:
+    """Where this member's round-model keeps its Paddy predictions at the declared zoom."""
     from src import paddy_zero_shot as zp
 
-    return zp.paths(run, zoom if tile else None)[0]
+    c = config["committee"]
+    return zp.paths(run, c["paddy"]["zoom"] if c["members"][member]["tile"] else None)[0]
 
 
 def paddy_member_rounds(config: dict[str, Any], member: str, runs: list[str]) -> dict[int, pd.DataFrame]:
     """Round -> the member's Paddy predictions at the declared zoom (Stage 10 files, or the new E2/E3 files)."""
-    c, ids = config["committee"], None
-    out = {}
-    for r, run in zip(c["rounds"], runs):
-        table = pd.read_csv(paddy_path(run, c["members"][member]["tile"], c["paddy"]["zoom"]))
+    out, ids = {}, None
+    for r, run in zip(config["committee"]["rounds"], runs):
+        table = pd.read_csv(paddy_path(config, member, run))
         ids = ids or table["photo_id"].tolist()
         if set(table["round"]) != {r} or table["photo_id"].tolist() != ids:
             raise ValueError(f"{run}: Paddy predictions are not round {r} on the shared photo order")
@@ -354,16 +400,13 @@ def paddy_new_heads(config: dict[str, Any], plan_path: Path) -> None:
     import torch
 
     from src import paddy_zero_shot as zp
-    from src import train_wholeimage as tw
     from src.seeding import seed_everything
 
-    c, plan = config["committee"], read_json(plan_path)
-    for member in sorted({m for e in plan["committees"].values() for m in e["members"]}):
-        if "paddy" not in c["members"][member]:
-            continue
-        runs, pconfig, zoom = next(e["runs"][member] for e in plan["committees"].values() if member in e["runs"]), \
-            load_config(c["members"][member]["paddy"]), c["paddy"]["zoom"]
-        todo = zp.pending(runs, zoom)
+    c, frozen, runs = config["committee"], check_plan(config), selected_runs(config)
+    chosen = {m for e in frozen["committees"].values() for m in e["members"]}
+    for member in sorted(m for m in chosen if "paddy" in c["members"][m]):
+        pconfig, zoom = load_config(c["members"][member]["paddy"]), c["paddy"]["zoom"]
+        todo = zp.pending(runs[member], zoom)
         if not todo:
             continue
         seed_everything(pconfig["seed"], pconfig["determinism"])
@@ -371,55 +414,58 @@ def paddy_new_heads(config: dict[str, Any], plan_path: Path) -> None:
         probs = zp.predict_tile_heads(pconfig, zoom, todo, torch.device("cuda"))
         folds = zp.truth(pconfig)
         for run in todo:
-            table_path, marker = zp.paths(run, zoom)
-            with marker.open("x") as out:
-                json.dump({"code_version": require_clean_code(), "plan_sha256": sha256(plan_path)}, out, indent=2)
-            table = tw.prediction_table(folds, np.arange(len(folds)), probs[run], zp.record(run)["round"], "paddy",
-                                        config["classes"])
-            partial = table_path.with_name(table_path.name + ".tmp")
-            table.to_csv(partial, index=False)
-            partial.replace(table_path)
+            zp.save_once({"classes": config["classes"]}, folds, run, zoom, zp.record(run)["round"], probs[run],
+                         plan_sha256=sha256(plan_path))
         print(f"{member}: {len(todo)} runs scored on Paddy at {zoom}", flush=True)
 
 
-def paddy_scores(config: dict[str, Any], rounds_a: dict[int, pd.DataFrame], rounds_b: dict[int, pd.DataFrame]) -> dict[str, Any]:
-    """Round committees A and B on Paddy: mean ± SD of each metric, the five-round committees, and A against B
-    (paired photo bootstrap on the five-round committees; rounds won counted per round)."""
-    classes, rounds = config["classes"], config["committee"]["rounds"]
+def paddy_summary(config: dict[str, Any], rounds: dict[int, pd.DataFrame]) -> dict[str, Any]:
+    """Mean ± SD over the round committees, and the score of the five-round committee."""
+    classes, found = config["classes"], {}
+    pooled = average([rounds[r] for r in config["committee"]["rounds"]], None, classes)
+    for m, scorer in fr.scorers(classes).items():
+        values = [scorer(t["true_class"], t["pred_class"]) for t in rounds.values()]
+        found |= {f"{m}_mean": float(np.mean(values)), f"{m}_sd": float(np.std(values, ddof=1)),
+                  f"{m}_five_round": scorer(pooled["true_class"], pooled["pred_class"])}
+    return found
+
+
+def paddy_versus(config: dict[str, Any], rounds_a: dict[int, pd.DataFrame], rounds_b: dict[int, pd.DataFrame]) -> dict[str, Any]:
+    """A against B on Paddy: paired photo bootstrap on the five-round committees, rounds each one wins."""
+    classes, keys = config["classes"], config["committee"]["rounds"]
     boot, rule = config["evaluation"]["bootstrap"], config["evaluation"]["comparison"]
-    scorers = fr.scorers(classes)
-    own = {m: [scorers[m](t["true_class"], t["pred_class"]) for t in (rounds_a[r] for r in rounds)] for m in scorers}
-    other = {m: [scorers[m](t["true_class"], t["pred_class"]) for t in (rounds_b[r] for r in rounds)] for m in scorers}
-    pooled_a, pooled_b = (average([t[r] for r in rounds], None, classes) for t in (rounds_a, rounds_b))
-    row: dict[str, Any] = {}
-    for m, scorer in scorers.items():
+    pooled_a, pooled_b = (average([t[r] for r in keys], None, classes) for t in (rounds_a, rounds_b))
+    found = {}
+    for m, scorer in fr.scorers(classes).items():
         paired = stats.paired(pooled_a["true_class"], pooled_a["pred_class"], pooled_b["pred_class"], scorer, boot, config["seed"])
-        wins = sum(a > b for a, b in zip(own[m], other[m]))
-        row.update({f"{m}_mean": float(np.mean(own[m])), f"{m}_sd": float(np.std(own[m], ddof=1)),
-                    f"{m}_five_round": scorer(pooled_a["true_class"], pooled_a["pred_class"]),
-                    f"{m}_difference": paired["difference"], f"{m}_low": paired["low"], f"{m}_high": paired["high"],
-                    f"{m}_round_wins": int(wins),
-                    f"{m}_verdict": two_way(paired["low"], paired["high"], wins, len(rounds), rule)})
-    return row
+        mine = [scorer(rounds_a[r]["true_class"], rounds_a[r]["pred_class"]) for r in keys]
+        theirs = [scorer(rounds_b[r]["true_class"], rounds_b[r]["pred_class"]) for r in keys]
+        wins, lost = sum(a > b for a, b in zip(mine, theirs)), sum(a < b for a, b in zip(mine, theirs))
+        found |= {f"{m}_difference": paired["difference"], f"{m}_low": paired["low"], f"{m}_high": paired["high"],
+                  f"{m}_round_wins": wins, f"{m}_round_losses": lost,
+                  f"{m}_verdict": two_way(paired["low"], paired["high"], wins, lost, rule)}
+    return found
 
 
 def paddy_all(config: dict[str, Any]) -> None:
     require_clean_code()
-    plan_path = path_of(config, "plan")
-    paddy_new_heads(config, plan_path)
-    plan, c = read_json(plan_path), config["committee"]
-    runs = selected_runs(config)
-    single = c["paddy"]["comparison_member"]
-    base = paddy_member_rounds(config, single, runs[single])
-    rows = [{"committee": single, "against": single, **paddy_scores(config, base, base)}]
-    rows[0].update({k: "–" if k.endswith("verdict") else np.nan for k in rows[0] if k.endswith(("_difference", "_low", "_high", "_round_wins", "_verdict"))})
-    for cid, spec in plan["committees"].items():
-        members = {m: paddy_member_rounds(config, m, spec["runs"][m]) for m in spec["members"]}
-        mine = {r: average([members[m][r] for m in spec["members"]], spec["weights"], config["classes"])
+    paddy_new_heads(config, path_of(config, "plan"))
+    frozen, c, runs = check_plan(config), config["committee"], selected_runs(config)
+    single, loaded = c["paddy"]["comparison_member"], {}
+
+    def rounds_of(member: str) -> dict[int, pd.DataFrame]:   # each member is read once
+        if member not in loaded:
+            loaded[member] = paddy_member_rounds(config, member, runs[member])
+        return loaded[member]
+
+    base = rounds_of(single)
+    rows = [{"committee": single, **paddy_summary(config, base)}]
+    for cid, spec in frozen["committees"].items():
+        mine = {r: average([rounds_of(m)[r] for m in spec["members"]], spec["weights"], config["classes"])
                 for r in c["rounds"]}
-        rows.append({"committee": cid, "against": single, **paddy_scores(config, mine, base)})
+        rows.append({"committee": cid, **paddy_summary(config, mine), **paddy_versus(config, mine, base)})
     pd.DataFrame(rows).to_csv(path_of(config, "paddy"), index=False)
-    print(f"{len(rows)} committees scored on Paddy at {c['paddy']['zoom']}")
+    print(f"{len(rows)} rows scored on Paddy at {c['paddy']['zoom']}")
 
 
 # ----------------------------------------------------------------------------------------------- test-time augmentation
@@ -429,13 +475,26 @@ def views(x: Any) -> list[Any]:
     return turned + [v.flip(3) for v in turned]
 
 
-def tta_run(run: str, device: Any) -> pd.DataFrame:
-    """Probabilities averaged over the eight views for one whole-image round-model, on its own test photos."""
+def tta_run(run: str, device: Any, start: Any) -> pd.DataFrame:
+    """Probabilities averaged over the eight views for one whole-image round-model, on its own test photos.
+    ``start`` is called once the model and the photos are ready, just before the first test photo is scored."""
     import torch
+    from torch import nn
 
     from src import train_wholeimage as tw
     from src.seeding import seed_everything
     from src.split import read_folds
+
+    class Averaged(nn.Module):
+        """The log of the mean softmax over the views, so ``tw.predict`` (which takes a softmax) returns the mean."""
+
+        def __init__(self, model: nn.Module) -> None:
+            super().__init__()
+            self.model = model
+
+        def forward(self, x: torch.Tensor) -> torch.Tensor:
+            seen = views(x)
+            return (sum(torch.softmax(self.model(v).float(), dim=1) for v in seen) / len(seen)).clamp_min(1e-12).log()
 
     record = read_json(get_default_runs_dir() / run / "record.json")
     config = evaluate.restore_size_keys(record["config"])
@@ -443,43 +502,28 @@ def tta_run(run: str, device: Any) -> pd.DataFrame:
     folds, _ = read_folds(config)
     model = tw.build_model(config, config["wholeimage"]["size"])
     model.load_state_dict(torch.load(get_default_runs_dir() / run / "model.pt", map_location="cpu", weights_only=True))
-    model.eval().to(device)
-    mean = torch.tensor(config["normalisation"]["mean"], device=device).view(1, 3, 1, 1)
-    std = torch.tensor(config["normalisation"]["std"], device=device).view(1, 3, 1, 1)
-    rows, probs = [], []
-    with torch.inference_mode():
-        for images, _, row in tw.loaders(config, folds, config["round"], ("test",))["test"]:
-            x = (images.to(device).float() / 255 - mean) / std
-            total = 0
-            for v in views(x):
-                with torch.autocast("cuda", dtype=torch.float16, enabled=device.type == "cuda"):
-                    total = total + torch.softmax(model(v).float(), dim=1)
-            probs.append((total / 8).cpu())
-            rows.append(row)
-    return tw.prediction_table(folds, torch.cat(rows).numpy(), torch.cat(probs).numpy(), config["round"], "test",
-                               config["classes"])
+    loader = tw.loaders(config, folds, config["round"], ("test",))["test"]
+    start()
+    rows, probs = tw.predict(Averaged(model).to(device), loader, config, device)
+    return tw.prediction_table(folds, rows, probs, config["round"], "test", config["classes"])
 
 
 def tta_all(config: dict[str, Any]) -> None:
+    import functools
+
     import torch
 
     require_clean_code()
-    plan = read_json(path_of(config, "plan"))
-    runs = selected_runs(config)[plan["tta_member"]]
-    for run in runs:
+    plan_path, frozen = path_of(config, "plan"), check_plan(config)
+    for run in selected_runs(config)[frozen["tta_member"]]:
         folder = get_default_runs_dir() / run
         if (folder / "test_tta_predictions.csv").exists():
             continue
-        try:
-            with (folder / "test_tta_started.json").open("x") as out:
-                json.dump({"code_version": require_clean_code(), "plan_sha256": sha256(path_of(config, "plan")),
-                           "views": 8}, out)
-        except FileExistsError:
-            raise ValueError(f"{run}: TTA started but has no predictions; stop and report, do not retry") from None
-        table = tta_run(run, torch.device("cuda"))
-        partial = folder / "test_tta_predictions.csv.tmp"
-        table.to_csv(partial, index=False)
-        partial.replace(folder / "test_tta_predictions.csv")
+        mark = functools.partial(create_marker, folder / "test_tta_started.json",
+                                 {"code_version": require_clean_code(), "plan_sha256": sha256(plan_path), "views": 8}, run)
+        if (folder / "test_tta_started.json").exists():
+            mark()   # raises: a started run without predictions is never retried
+        write_csv_atomic(tta_run(run, torch.device("cuda"), mark), folder / "test_tta_predictions.csv")
         print(f"{run}: TTA scored", flush=True)
 
 
@@ -493,7 +537,7 @@ def pct(x: float) -> str:
 
 
 def plus_minus(mean: float, sd: float) -> str:
-    return f"{pct(mean)} ± {pct(sd)}"
+    return fr.plus_minus(mean, sd)
 
 
 def rng(low: float, high: float) -> str:
@@ -509,43 +553,54 @@ def readable(verdict: str, a: str, b: str) -> str:
     return verdict.replace("A beats B", f"{a} beats {b}").replace("B beats A", f"{b} beats {a}")
 
 
+def lost_rounds(a: pd.DataFrame, b: pd.DataFrame, scorer: Any) -> int:
+    """Rounds of the test photos in which B scores strictly higher than A."""
+    lost = 0
+    for r, g in a[a["partition"] == "test"].groupby("round"):
+        other = b[(b["partition"] == "test") & (b["round"] == r)].set_index("photo_id").loc[g["photo_id"]]
+        lost += scorer(g["true_class"], g["pred_class"]) < scorer(g["true_class"], other["pred_class"])
+    return int(lost)
+
+
 def paired_with_two_way(a: pd.DataFrame, b: pd.DataFrame, a_name: str, b_name: str, blocks: pd.Series,
                         config: dict[str, Any]) -> pd.DataFrame:
     """A against B on test (both ranges, both metrics) with the declared rule read in both directions."""
     rule = config["evaluation"]["comparison"]
     rows = fr.paired_rows(a, {b_name: b}, blocks, config)
     rows.insert(0, "A", a_name)
+    scorers = fr.scorers(config["classes"])
+    rows["round_losses"] = [lost_rounds(a, b, scorers[m]) for m in rows["metric"]]
     for kind in ("photo", "block"):
-        rows[f"verdict_{kind}"] = [two_way(r[f"{kind}_low"], r[f"{kind}_high"], r["round_wins"], r["rounds"], rule)
+        rows[f"verdict_{kind}"] = [two_way(r[f"{kind}_low"], r[f"{kind}_high"], r["round_wins"], r["round_losses"], rule)
                                    for _, r in rows.iterrows()]
     return rows
 
 
 def tta_tables(config: dict[str, Any], blocks: pd.Series) -> tuple[pd.DataFrame, pd.DataFrame]:
     """Scores of the TTA member with one view and with eight views, and the paired test of the two."""
-    plan = read_json(path_of(config, "plan"))
-    runs = selected_runs(config)[plan["tta_member"]]
+    frozen = read_json(path_of(config, "plan"))
+    runs = selected_runs(config)[frozen["tta_member"]]
     files = [get_default_runs_dir() / run / "test_tta_predictions.csv" for run in runs]
     if not all(f.exists() for f in files):
         return pd.DataFrame(), pd.DataFrame()
     plain = fr.read_predictions(runs)
     augmented = pd.concat([plain[plain["partition"] == "val"], *[pd.read_csv(f) for f in files]], ignore_index=True)
-    scores = pd.DataFrame([{"name": f"{plan['tta_member']}, one view", **fr.method_scores(plain, blocks, config)},
-                           {"name": f"{plan['tta_member']}, eight views", **fr.method_scores(augmented, blocks, config)}])
+    scores = pd.DataFrame([{"name": f"{frozen['tta_member']}, one view", **fr.method_scores(plain, blocks, config)},
+                           {"name": f"{frozen['tta_member']}, eight views", **fr.method_scores(augmented, blocks, config)}])
     return scores, paired_with_two_way(augmented, plain, "eight views", "one view", blocks, config)
 
 
 def build_tables(config: dict[str, Any]) -> dict[str, pd.DataFrame]:
     """Every number of the report, from saved predictions only."""
     c, blocks = config["committee"], fr.block_of()
-    selection, plan = read_json(path_of(config, "selection")), read_json(path_of(config, "plan"))
+    selection, frozen = read_json(path_of(config, "selection")), read_json(path_of(config, "plan"))
     single = c["best_single"]
     tables = {single: fr.read_predictions(selection["member_runs"][single])}
-    tables |= {cid: committee_table(cid) for cid in plan["committees"]}
+    tables |= {cid: committee_table(cid) for cid in frozen["committees"]}
     scores = pd.DataFrame.from_dict({name: fr.method_scores(t, blocks, config) for name, t in tables.items()},
                                     orient="index").rename_axis("name").reset_index()
-    pairs = [(cid, single) for cid in plan["committees"]]
-    if {"row2_plain", "row3_plain"} <= set(plan["committees"]):
+    pairs = [(cid, single) for cid in frozen["committees"]]
+    if {"row2_plain", "row3_plain"} <= set(frozen["committees"]):
         pairs.append(("row2_plain", "row3_plain"))
     paired = pd.concat([paired_with_two_way(tables[a], tables[b], a, b, blocks, config) for a, b in pairs], ignore_index=True)
     paddy_file = path_of(config, "paddy")
@@ -570,27 +625,27 @@ def label(members: list[str], weights: list[int]) -> str:
 def results_rows(config: dict[str, Any], tables: dict[str, pd.DataFrame]) -> pd.DataFrame:
     """committee_results.csv for src/make_tables.py: score columns are fractions (their names hold f1 or
     accuracy), every other column is text."""
-    c, plan = config["committee"], read_json(path_of(config, "plan"))
+    c, frozen = config["committee"], read_json(path_of(config, "plan"))
     scores, paired = tables["scores"].set_index("name"), tables["paired"]
     paddy = tables["paddy"].set_index("committee") if not tables["paddy"].empty else None
     single, rows = c["best_single"], []
-    for name in [single, *plan["committees"]]:
-        spec = plan["committees"].get(name)
+    for name in [single, *frozen["committees"]]:
+        spec = frozen["committees"].get(name)
         mine = paired[(paired["A"] == name) & (paired["B"] == single) & (paired["metric"] == "macro_f1")]
         row = {"row": "1 best single model" if spec is None else ROW_NAMES[name],
                "members": single if spec is None else label(spec["members"], spec["weights"]),
                **{f"test_{m}_{k}": scores.loc[name, f"{m}_{k}"] for m in ("macro_f1", "balanced_accuracy") for k in ("mean", "sd")}}
         if paddy is not None and name in paddy.index:
             row |= {f"paddy_{m}_{k}": paddy.loc[name, f"{m}_{k}"] for m in ("macro_f1", "balanced_accuracy") for k in ("mean", "sd")}
-        shown = {"difference_vs_attention_points": "–", "photo_range": "–", "block_range": "–", "rounds_won": "–",
-                 "verdict_photo": "–", "verdict_block": "–"}
+        versus = dict.fromkeys(["difference_vs_attention_points", "photo_range", "block_range", "rounds_won",
+                                "verdict_photo", "verdict_block"], "–")
         if len(mine):
             m = mine.iloc[0]
-            shown = {"difference_vs_attention_points": pts(m["difference"]), "photo_range": rng(m["photo_low"], m["photo_high"]),
-                     "block_range": rng(m["block_low"], m["block_high"]), "rounds_won": f"{m['round_wins']}/{m['rounds']}",
-                     "verdict_photo": readable(m["verdict_photo"], "committee", "attention"),
-                     "verdict_block": readable(m["verdict_block"], "committee", "attention")}
-        rows.append({**row, **shown, "cost": c["cost"]})
+            versus.update(difference_vs_attention_points=pts(m["difference"]), photo_range=rng(m["photo_low"], m["photo_high"]),
+                          block_range=rng(m["block_low"], m["block_high"]), rounds_won=f"{m['round_wins']}/{m['rounds']}",
+                          verdict_photo=readable(m["verdict_photo"], "committee", "attention"),
+                          verdict_block=readable(m["verdict_block"], "committee", "attention"))
+        rows.append({**row, **versus, "cost": c["cost"]})
     return pd.DataFrame(rows)
 
 
@@ -611,16 +666,23 @@ def score_view(scores: pd.DataFrame) -> pd.DataFrame:
                          "balanced acc. (mean ± SD)": [plus_minus(m, s) for m, s in zip(scores["balanced_accuracy_mean"], scores["balanced_accuracy_sd"])]})
 
 
-def paddy_view(paddy: pd.DataFrame) -> pd.DataFrame:
+def cell(value: Any, fmt: Any) -> str:
+    return "–" if pd.isna(value) else fmt(value)
+
+
+def paddy_view(paddy: pd.DataFrame, rounds: int) -> pd.DataFrame:
+    """The Paddy table; the single model's row has no comparison columns (their cells are empty: a dash)."""
+    nan = pd.Series(np.nan, index=paddy.index)
+    low, high, wins, verdict, diff = (paddy.get(f"macro_f1_{k}", nan) for k in ("low", "high", "round_wins", "verdict", "difference"))
     return pd.DataFrame({
         "model": [shown(n) for n in paddy["committee"]],
         "macro-F1 (mean ± SD)": [plus_minus(m, s) for m, s in zip(paddy["macro_f1_mean"], paddy["macro_f1_sd"])],
         "balanced acc. (mean ± SD)": [plus_minus(m, s) for m, s in zip(paddy["balanced_accuracy_mean"], paddy["balanced_accuracy_sd"])],
         "five-round committee macro-F1": [pct(v) for v in paddy["macro_f1_five_round"]],
-        "difference to attention (points)": [pts(v) for v in paddy["macro_f1_difference"]],
-        "photo range": [rng(a, b) for a, b in zip(paddy["macro_f1_low"], paddy["macro_f1_high"])],
-        "rounds won": [f"{w}/5" for w in paddy["macro_f1_round_wins"]],
-        "verdict": [readable(v, "committee", "attention") for v in paddy["macro_f1_verdict"]]})
+        "difference to attention (points)": [cell(v, pts) for v in diff],
+        "photo range": [cell(a, lambda a, b=b: rng(a, b)) for a, b in zip(low, high)],
+        "rounds won": [cell(w, lambda w: f"{int(w)}/{rounds}") for w in wins],
+        "verdict": [cell(v, lambda v: readable(v, "committee", "attention")) for v in verdict]})
 
 
 def report_text(config: dict[str, Any], tables: dict[str, pd.DataFrame]) -> str:
@@ -631,10 +693,9 @@ def report_text(config: dict[str, Any], tables: dict[str, pd.DataFrame]) -> str:
     singles = pd.DataFrame({"member": list(selection["member_scores"]),
                             "validation macro-F1, mean over rounds": [pct(v) for v in selection["member_scores"].values()]})
     disagree = pd.DataFrame(selection["disagreement"])
-    disagree = disagree.assign(disagreement=[pct(v) for v in disagree["disagreement"]],
-                               double_fault=[pct(v) for v in disagree["double_fault"]])
+    disagree = disagree.assign(**{col: [pct(v) for v in disagree[col]] for col in ("disagreement", "double_fault", "oracle")})
     results = score_view(tables["scores"])
-    paddy = md_table(paddy_view(tables["paddy"])) if not tables["paddy"].empty else "Not scored yet."
+    paddy = md_table(paddy_view(tables["paddy"], len(c["rounds"]))) if not tables["paddy"].empty else "Not scored yet."
     tta = ("TTA was not run." if tables["tta_scores"].empty else
            md_table(score_view(tables["tta_scores"])) + "\n\n" + md_table(paired_view(tables["tta_paired"])))
     return f"""# Committee: does combining models beat the best single model? (Stage 11)
@@ -679,7 +740,7 @@ verdicts of each row against attention.
 ## 3. Paired tests on test photos (A against B)
 
 Rule (the decision rule, read in both directions): A beats B if the range is above 0 and A wins at least 4 of 5 rounds;
-B beats A if the range is below 0 and A wins at most 1; otherwise no clear difference.
+B beats A if the range is below 0 and B wins at least 4 (a tied round is won by neither); otherwise no clear difference.
 
 {md_table(paired_view(tables["paired"]))}
 
@@ -693,7 +754,8 @@ Committee rows: the round committees' mean ± SD, the five-round committee, and 
 ## 5. Disagreement of the members on validation photos (rounds pooled)
 
 `pair`: share of photos where two members predict different classes, and where both are wrong. `committee`: mean
-pairwise disagreement of its members, and the share of photos where every member is wrong.
+pairwise disagreement of its members, the share of photos where every member is wrong, and the share where at
+least one member is right (oracle).
 
 {md_table(disagree)}
 
