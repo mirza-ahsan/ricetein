@@ -688,7 +688,8 @@ def check(root: Path = REPO_ROOT) -> dict[str, Any]:
         state = figures.get(name, {"status": "not built"})
         ready["figures"][name] = {"status": "stale: rebuild" if stale(root, state) else state["status"], "stage": stage}
     pipeline = [p for pattern in ("paper/fig/pipeline*", f"{FIGURES}/final_pipeline*") for p in root.glob(pattern)]
-    ready["figures"]["pipeline_diagram"] = {"status": "present" if pipeline else "pending", "stage": "drawn by hand with the paper"}
+    tikz = any("fig:pipeline" in p.read_text(errors="ignore") for p in (root / "paper").glob("**/*.tex") if "build" not in p.parts)
+    ready["figures"]["pipeline_diagram"] = {"status": "present" if pipeline or tikz else "pending", "stage": "drawn by hand with the paper"}
     for name, rel in DATASET_REPORTS.items():
         ready["dataset_reports"][name] = {"status": "present" if (root / rel).exists() else "pending", "file": rel}
     for c in commitments(root):

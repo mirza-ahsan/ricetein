@@ -99,7 +99,7 @@
       "stage": "Stage 13"
     },
     "pipeline_diagram": {
-      "status": "pending",
+      "status": "present",
       "stage": "drawn by hand with the paper"
     }
   },
@@ -313,7 +313,7 @@
   ],
   "present_counts": {
     "tables": 16,
-    "figures": 8,
+    "figures": 9,
     "dataset_reports": 3,
     "commitments": 19
   }

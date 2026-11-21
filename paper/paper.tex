@@ -101,6 +101,10 @@ self-supervised features, grouped evaluation, zero-shot transfer
 
 \appendices
 \input{sections/appendix}
+% clean break: every appendix float prints before the Acknowledgements. After a page of
+% wide floats IEEEtran keeps the reduced column height for the next page, so reset it.
+\clearpage
+\makeatletter\global\@colroom=\@colht\global\vsize=\@colht\makeatother
 
 \section*{Acknowledgements}
 {\raggedright
