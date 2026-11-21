@@ -45,7 +45,7 @@
       "stage": "Stage 4 / follow-up"
     },
     "committee": {
-      "status": "pending",
+      "status": "partly pending",
       "stage": "Stage 11"
     },
     "explain": {
@@ -307,7 +307,7 @@
     }
   ],
   "present_counts": {
-    "tables": 12,
+    "tables": 13,
     "figures": 7,
     "dataset_reports": 3,
     "commitments": 18
