@@ -53,7 +53,7 @@
       "stage": "Stage 12"
     },
     "cost": {
-      "status": "pending",
+      "status": "present",
       "stage": "Stage 13"
     }
   },
@@ -87,7 +87,7 @@
       "stage": "Stage 12"
     },
     "cost": {
-      "status": "pending",
+      "status": "present",
       "stage": "Stage 13"
     },
     "pipeline_diagram": {
@@ -299,17 +299,14 @@
       "commitment": "Parameters, storage, inference latency; assess compressibility for on-device use",
       "delivered_by": "Stage 13",
       "document_status": "\u2b1c",
-      "status": "pending",
-      "missing": [
-        "table:cost",
-        "figure:cost"
-      ]
+      "status": "present",
+      "missing": []
     }
   ],
   "present_counts": {
-    "tables": 13,
-    "figures": 7,
+    "tables": 14,
+    "figures": 8,
     "dataset_reports": 3,
-    "commitments": 18
+    "commitments": 19
   }
 }

@@ -1,5 +1,5 @@
 {
-  "code_version": "78484bd",
+  "code_version": "165d494",
   "figures": {
     "samples": {
       "status": "present",
@@ -116,9 +116,15 @@
       "note": "One example per class: the most confident correct photo ('correct, rank 1') of the Stage 12 example rule, chosen from the validation predictions and drawn from validation photos. It is the best case of each class, not a typical one; say so in the caption."
     },
     "cost": {
-      "status": "pending",
+      "status": "present",
       "stage": "Stage 13",
-      "reason": "missing results/tables/cost_results.csv"
+      "files": [
+        "final_cost.png",
+        "final_cost.pdf"
+      ],
+      "sources": {
+        "results/tables/cost_results.csv": "8ccc19c6637cb3ac2b34895975107233a6b4f8545e8732af9b7879aaf796d1f2"
+      }
     }
   }
 }
