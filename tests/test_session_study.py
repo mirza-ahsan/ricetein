@@ -26,6 +26,7 @@ def runs(tmp_path, monkeypatch):
     monkeypatch.setattr(followup, "get_default_runs_dir", lambda: tmp_path)
     monkeypatch.setattr(session_study, "get_default_runs_dir", lambda: tmp_path)
     monkeypatch.setattr(followup, "completed", lambda name, checkpoint: True)
+    monkeypatch.setattr(session_study, "completed", lambda name, checkpoint: True)   # not the checkpoints on disk
     monkeypatch.setattr(session_study, "require_clean_code", lambda: "abc1234")
 
     def write(name, data):
