@@ -82,9 +82,11 @@ def pack_one_key_at_a_time(config: dict[str, Any]) -> None:
                   **mil.get("override", {})}["descriptor"]
     ids = sorted(read_folds(config)[0].photo_id)
     folder, fingerprint = cache_folder(mil["cache"]), completed_cache(config, mil["cache"])["spec_sha256"]
+    target = cache_folder(f"packed/{mil['cache']}", write=True)
+    target.mkdir(parents=True, exist_ok=True)                   # `train_mil.pack` does not create it
     for versions in {mil["versions"], 1}:                       # training reads `versions`, the test reads 1
         for key in PARTS[descriptor]:
-            train_mil.pack(folder, cache_folder(f"packed/{mil['cache']}", write=True), key, ids, versions, fingerprint)
+            train_mil.pack(folder, target, key, ids, versions, fingerprint)
 
 
 def fit(names: list[str] | None = None) -> None:
