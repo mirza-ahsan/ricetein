@@ -49,7 +49,7 @@
       "stage": "Stage 4 / follow-up"
     },
     "committee": {
-      "status": "partly pending",
+      "status": "present",
       "stage": "Stage 11"
     },
     "explain": {
@@ -213,7 +213,7 @@
     {
       "id": "P1-13",
       "commitment": "No images redistributed",
-      "delivered_by": "Always (`.gitignore`; Paddy Doctor on Kaggle is private)",
+      "delivered_by": "Always (`.gitignore`; Paddy Doctor on Kaggle is private). **2026-11-21:** the 122 per-photo heat-map and blind-rating PNGs of `results/explain/` are no longer tracked (they show the photos at 900 px); the files stay on disk. The final figures that show dataset photos (`final_samples`, `final_heatmaps`) stay tracked and are the only photo images the paper uses. Git history still holds the old files because the repository is private (Ahsan, 2026-11-21)",
       "document_status": "\ud83d\udfe1 ongoing",
       "status": "manual",
       "missing": []

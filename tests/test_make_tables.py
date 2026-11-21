@@ -89,6 +89,21 @@ def test_later_stage_tables_appear_when_their_source_exists(tmp_path):
     assert table(root, "explain")["Verdict"].iloc[0] == "top-k matters more than random-k"
 
 
+def test_committee_cost_comes_from_the_stage_13_table(tmp_path):
+    root = make_fixture(tmp_path, cost=True)
+    tables = root / "results/tables"
+    names = ["1 best single model", "2 committee with tile models", "3 committee of whole-image models"]
+    pd.DataFrame({"row": names, "test_macro_f1_mean": [0.78, 0.82, 0.80], "cost": ["pending: Stage 13"] * 3}).to_csv(
+        tables / "committee_results.csv", index=False)
+    pd.DataFrame({"method": ["attention", "committee"], "seconds_per_photo": [0.31, 0.357], "seconds_per_photo_cpu": [5.36, 5.47],
+                  "disk_mb": [327.7, 433.9]}).to_csv(tables / "cost_results.csv", index=False)
+    provenance = mt.build_all(root)["tables"]["committee"]
+    shown = table(root, "committee")
+    assert shown["cost"].tolist() == ["0.31 s per photo (GPU), 5.36 s (CPU), 328 MB",
+                                      "0.36 s per photo (GPU), 5.47 s (CPU), 434 MB", "not measured"]
+    assert provenance["status"] == "present" and "results/tables/cost_results.csv" in provenance["sources"]
+
+
 def test_paired_tables_copy_the_verdict_words(fixture):
     mt.build_all(fixture)
     source = pd.read_csv(fixture / "results/tables/session_paired.csv")
