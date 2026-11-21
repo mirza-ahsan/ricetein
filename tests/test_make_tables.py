@@ -230,14 +230,11 @@ def test_no_number_is_typed_in_the_table_code():
     assert big == []
 
 
-def test_readiness_lists_every_commitment_and_writes_the_json(fixture):
+def test_readiness_lists_tables_and_figures_and_writes_the_json(fixture):
     mt.build_all(fixture)
     ready = mt.write_readiness(fixture)
     assert json.loads((fixture / "results/tables/final_readiness.json").read_text()) == ready
-    by_id = {c["id"]: c for c in ready["commitments"]}
-    assert set(by_id) == {"P1-6", "P1-10", "P1-9", "O6"}
-    assert by_id["P1-10"]["status"] == "present" and by_id["P1-9"]["status"] == "manual"
-    assert by_id["O6"]["status"] == "pending" and "table:explain" in by_id["O6"]["missing"]
+    assert set(ready) == {"tables", "figures", "present_counts"}
     assert ready["tables"]["cost"] == {"status": "pending", "stage": "Stage 13"}
     assert ready["figures"]["deletion"]["status"] == "not built"        # make_figures has not run in the fixture
 
@@ -247,12 +244,6 @@ def test_the_pipeline_diagram_is_present_as_a_file_or_as_a_labelled_tikz_figure(
     (fixture / "paper" / "sections").mkdir(parents=True)
     (fixture / "paper/sections/methodology.tex").write_text("\\begin{tikzpicture}\\end{tikzpicture}\\label{fig:pipeline}")
     assert mt.check(fixture)["figures"]["pipeline_diagram"]["status"] == "present"
-
-
-def test_every_real_commitment_is_listed():
-    ids = {c["id"] for c in mt.commitments(REPO)}
-    assert ids == {*(f"P1-{i}" for i in range(1, 18)), *(f"O{i}" for i in range(1, 8))}
-    assert set(mt.EVIDENCE) <= ids
 
 
 def test_the_real_tracked_records_build_every_session_table(tmp_path):
@@ -305,16 +296,3 @@ def test_the_readiness_check_notices_a_changed_source_and_counts_a_partly_pendin
     ready = mt.write_readiness(fixture)
     assert ready["tables"]["main"]["status"] == "stale: rebuild" and ready["tables"]["ablations_test"]["status"] == "stale: rebuild"
     assert ready["present_counts"]["tables"] < 10
-
-
-def test_every_evidence_token_names_a_real_file_table_or_figure():
-    ids = {c["id"] for c in mt.commitments(REPO)}
-    for needs in mt.EVIDENCE.values():
-        for token in needs:
-            if token.startswith("table:"):
-                assert token[6:] in {spec.name for spec in mt.SPECS}, token
-            elif token.startswith("figure:"):
-                assert token[7:] in mt.PROMISED_FIGURES, token
-            else:
-                assert (REPO / token).exists() or token.startswith(("docs/reports/paddy", "docs/reports/explain")), token
-    assert set(mt.EVIDENCE) <= ids

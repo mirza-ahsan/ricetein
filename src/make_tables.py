@@ -2,7 +2,7 @@
 generated from ``runs/``.
 
     uv run python -m src.make_tables            # writes results/tables/final_*.{csv,tex} and final_provenance.json
-    uv run python -m src.make_tables --check    # lists every promised table, figure and written commitment
+    uv run python -m src.make_tables --check    # lists every promised table and figure
 
 Nothing is typed by hand: every number below is read from a file under ``runs/`` or from a ``results/tables``
 file that a stage report generated from ``runs/``. A table whose source does not exist yet is still written, as
@@ -624,62 +624,17 @@ PROMISED_FIGURES = {   # name -> (stage that produces it, file stem under result
     "heatmaps": ("Stage 12", "final_heatmaps"),
     "cost": ("Stage 13", "final_cost"),
 }
-DATASET_REPORTS = {   # Stage 14: recount, background audit, duplicates
-    "recount": "docs/reports/inventory_report.md", "background audit": "docs/reports/audit_report.md",
-    "duplicates": "docs/reports/split_report.md"}
-EVIDENCE = {   # commitment -> what must exist; "table:x" needs a built table, "figure:x" a built figure
-    "P1-1": ["data/inventory.csv", "docs/reports/inventory_report.md"],
-    "P1-2": ["docs/reports/audit_report.md"],
-    "P1-3": ["splits/folds.csv", "splits/session_blocked/folds.csv", "docs/reports/split_report.md"],
-    "P1-4": ["tests/test_leakage.py", "tests/test_mil_leakage.py", "tests/test_split.py"],
-    "P1-5": ["docs/reports/paddy_report.md", "splits/paddy4.csv"],
-    "P1-6": ["table:main"],
-    "P1-7": ["results/tables/session_conditions_scores.csv", "table:ablations_test"],
-    "P1-8": ["table:per_class", "table:confusion", "table:main"],
-    "P1-10": ["table:per_class"],
-    "P1-14": ["splits/folds.csv", "data/DATASETS.md", "docs/reports/inventory_report.md", "docs/reports/audit_report.md"],
-    "P1-15": ["docs/reports/explain_report.md"],
-    "P1-16": ["docs/reports/paddy_report.md", "docs/reports/audit_report.md"],
-    "O1": ["docs/reports/paddy_report.md", "data/paddy_inventory.csv"],
-    "O2": ["results/tables/session_final.csv", "tests/test_leakage.py"],
-    "O3": ["results/tables/session_conditions_scores.csv", "table:main"],
-    "O4": ["table:main"],
-    "O5": ["table:ablations", "table:ablations_test", "table:conditions"],
-    "O6": ["docs/reports/paddy_report.md", "docs/reports/explain_report.md", "table:explain", "table:explain_ratings"],
-    "O7": ["table:cost", "figure:cost"],
-}   # P1-9, P1-11, P1-12, P1-13 and P1-17 are checked by a person ("manual")
-
-
-def commitments(root: Path) -> list[dict[str, str]]:
-    """The written commitments of docs/commitments.md: id, text, delivered by, where it is delivered."""
-    text = (root / "docs/commitments.md").read_text()
-    rows = []
-    for line in text.splitlines():
-        cells = [c.strip() for c in line.strip().strip("|").split("|")]
-        if line.startswith("|") and re.match(r"^(P1-\d+|O\d+)$", cells[0]) and len(cells) >= 4:
-            rows.append({"id": cells[0], "commitment": cells[1], "delivered_by": cells[2], "document_status": cells[3]})
-    return rows
-
-
-def present(root: Path, token: str, built: dict[str, Any], figures: dict[str, Any]) -> bool:
-    if token.startswith("table:"):
-        return built.get(token[6:], {}).get("status") in ("present", "partly pending")   # P1-6, O3, O4 need the main table, not its Paddy columns
-    if token.startswith("figure:"):
-        return figures.get(token[7:], {}).get("status") == "present"
-    return (root / token).exists()
-
-
 def stale(root: Path, entry: dict[str, Any]) -> bool:
     """True when a source file of a built table or figure changed or vanished since it was built."""
     return any(not (root / rel).exists() or sha256(root / rel) != digest for rel, digest in entry.get("sources", {}).items())
 
 
 def check(root: Path = REPO_ROOT) -> dict[str, Any]:
-    """Every promised table, figure and written commitment as present or pending, with the stage."""
+    """Every promised table and figure as present or pending, with the stage."""
     prov_path, fig_path = root / TABLES / "final_provenance.json", root / FIGURES / "final_figures.json"
     built = json.loads(prov_path.read_text())["tables"] if prov_path.exists() else {}
     figures = json.loads(fig_path.read_text())["figures"] if fig_path.exists() else {}
-    ready: dict[str, Any] = {"tables": {}, "figures": {}, "dataset_reports": {}, "commitments": []}
+    ready: dict[str, Any] = {"tables": {}, "figures": {}}
     for spec in SPECS:
         state = built.get(spec.name, {"status": "not built"})
         ready["tables"][spec.name] = {"status": "stale: rebuild" if stale(root, state) else state["status"], "stage": spec.stage}
@@ -689,18 +644,7 @@ def check(root: Path = REPO_ROOT) -> dict[str, Any]:
     pipeline = [p for pattern in ("paper/fig/pipeline*", f"{FIGURES}/final_pipeline*") for p in root.glob(pattern)]
     tikz = any("fig:pipeline" in p.read_text(errors="ignore") for p in (root / "paper").glob("**/*.tex") if "build" not in p.parts)
     ready["figures"]["pipeline_diagram"] = {"status": "present" if pipeline or tikz else "pending", "stage": "drawn by hand with the paper"}
-    for name, rel in DATASET_REPORTS.items():
-        ready["dataset_reports"][name] = {"status": "present" if (root / rel).exists() else "pending", "file": rel}
-    for c in commitments(root):
-        needs = EVIDENCE.get(c["id"])
-        if needs is None:
-            status, missing = "manual", []
-        else:
-            missing = [t for t in needs if not present(root, t, ready['tables'], ready['figures'])]
-            status = "present" if not missing else "pending"
-        ready["commitments"].append({**c, "status": status, "missing": missing})
-    counts = {k: sum(v["status"] in ("present", "partly pending") for v in ready[k].values()) for k in ("tables", "figures", "dataset_reports")}
-    counts["commitments"] = sum(c["status"] == "present" for c in ready["commitments"])
+    counts = {k: sum(v["status"] in ("present", "partly pending") for v in ready[k].values()) for k in ("tables", "figures")}
     ready["present_counts"] = counts
     return ready
 
@@ -712,15 +656,11 @@ def write_readiness(root: Path = REPO_ROOT) -> dict[str, Any]:
 
 
 def print_readiness(ready: dict[str, Any]) -> None:
-    for kind in ("tables", "figures", "dataset_reports"):
+    for kind in ("tables", "figures"):
         print(f"\n{kind}:")
         for name, v in ready[kind].items():
             stage = v.get("stage", v.get("file", ""))
             print(f"  {v['status']:15s} {name}" + ("" if v["status"] == "present" else f"   <- {stage}"))
-    print("\ncommitments (docs/commitments.md):")
-    for c in ready["commitments"]:
-        tail = "" if c["status"] == "present" else f"   <- {c['delivered_by']}" + (f"; missing {', '.join(c['missing'])}" if c["missing"] else "")
-        print(f"  {c['status']:8s} {c['id']:6s}{tail}")
 
 
 def main() -> None:
