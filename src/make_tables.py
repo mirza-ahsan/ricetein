@@ -651,11 +651,10 @@ EVIDENCE = {   # commitment -> what must exist; "table:x" needs a built table, "
 
 
 def commitments(root: Path) -> list[dict[str, str]]:
-    """The written commitments of docs/DELIVERABLES.md section 6: id, text, delivered by, status in that file."""
-    text = (root / "docs/DELIVERABLES.md").read_text()
-    section = text.split("## 6. Written commitments", 1)[1].split("\n## 7", 1)[0]
+    """The written commitments of docs/commitments.md: id, text, delivered by, where it is delivered."""
+    text = (root / "docs/commitments.md").read_text()
     rows = []
-    for line in section.splitlines():
+    for line in text.splitlines():
         cells = [c.strip() for c in line.strip().strip("|").split("|")]
         if line.startswith("|") and re.match(r"^(P1-\d+|O\d+)$", cells[0]) and len(cells) >= 4:
             rows.append({"id": cells[0], "commitment": cells[1], "delivered_by": cells[2], "document_status": cells[3]})
@@ -718,7 +717,7 @@ def print_readiness(ready: dict[str, Any]) -> None:
         for name, v in ready[kind].items():
             stage = v.get("stage", v.get("file", ""))
             print(f"  {v['status']:15s} {name}" + ("" if v["status"] == "present" else f"   <- {stage}"))
-    print("\ncommitments (docs/DELIVERABLES.md section 6):")
+    print("\ncommitments (docs/commitments.md):")
     for c in ready["commitments"]:
         tail = "" if c["status"] == "present" else f"   <- {c['delivered_by']}" + (f"; missing {', '.join(c['missing'])}" if c["missing"] else "")
         print(f"  {c['status']:8s} {c['id']:6s}{tail}")

@@ -110,13 +110,13 @@ def make_fixture(root: Path, *, paddy: bool = False, explain: bool = False, cost
             report.append(f"| {variant} | {metric} | 5.2 | [3.8, 6.7] | [3.3, 7.3] | 4/5 | main beats variant | main beats variant |")
     (root / "docs/reports").mkdir(parents=True, exist_ok=True)
     (root / "docs/reports/session_ablation_report.md").write_text("\n".join(report) + "\n")
-    (root / "docs/DELIVERABLES.md").write_text(
-        "# D\n\n## 6. Written commitments (from the submitted Phase 1 and 2 documents)\n\n"
-        "| ID | Commitment | Delivered by (handbook) | Status |\n|---|---|---|---|\n"
+    (root / "docs/commitments.md").write_text(
+        "# Written commitments\n\n"
+        "| ID | Commitment | Delivered by (stage) | Where it is delivered |\n|---|---|---|---|\n"
         "| P1-6 | Five repetitions; mean ± std | All stages (5 rounds) | ⬜ |\n"
         "| P1-10 | Hispa recall reported | Stages 7, 14 | ⬜ |\n"
         "| P1-9 | No generative oversampling | Stages 5, 7 | ⬜ |\n"
-        "| O6 | Zero-shot evaluation and attention maps | Stages 10, 12 | ⬜ |\n\n## 7. Questions\n")
+        "| O6 | Zero-shot evaluation and attention maps | Stages 10, 12 | ⬜ |\n")
     if paddy:
         rows = []
         for method in ("attention", "swin_tiny_224"):
