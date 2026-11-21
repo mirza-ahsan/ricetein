@@ -405,6 +405,29 @@ def passthrough(candidates: tuple[str, ...]) -> Callable[[Path], Built]:
     return build
 
 
+COMMITTEE_FILES = ("results/tables/committee_results.csv", "results/tables/committee.csv")
+COMMITTEE_COST_ROW = {"1 best single model": "attention", "2 committee with tile models": "committee"}   # rows Stage 13 measured
+
+
+def committee_table(root: Path) -> Built:
+    """The Stage 11 table with its cost column read from Stage 13's ``cost_results.csv`` (sum of the members for the
+    committee). A row Stage 13 did not measure says so; without ``cost_results.csv`` the column stays as written."""
+    frame, sources = passthrough(COMMITTEE_FILES)(root)
+    path = f"{TABLES}/cost_results.csv"
+    if "cost" in frame.columns and (root / path).exists():
+        cost = pd.read_csv(root / path).set_index("method")
+
+        def text(row: str) -> str:
+            if row not in COMMITTEE_COST_ROW:
+                return "not measured"
+            c = cost.loc[COMMITTEE_COST_ROW[row]]
+            return f"{c.seconds_per_photo:.2f} s per photo (GPU), {c.seconds_per_photo_cpu:.2f} s (CPU), {c.disk_mb:.0f} MB"
+
+        frame["cost"] = [text(r) for r in frame["row"]]
+        sources = [*sources, root / path]
+    return frame, sources
+
+
 def deletion_table(root: Path) -> Built:
     path = f"{TABLES}/explain_deletion_test.csv"
     d = read_table(root, path)
@@ -471,8 +494,8 @@ SPECS = [
     Spec("shortcuts", "Stage 4 / follow-up",
          "Sanity and shortcut controls that never see the leaf: test scores (\\%), mean $\\pm$ SD over 5 rounds, "
          "on the locked and on the session-blocked split.", shortcuts_table, wide=True),
-    Spec("committee", "Stage 11", "Committee of tile-head members.",
-         passthrough(("results/tables/committee_results.csv", "results/tables/committee.csv"))),
+    Spec("committee", "Stage 11", "Committee of tile-head members. Cost: time per photo (GPU and CPU, `halo`) and disk size from Stage 13; "
+         "a committee costs the sum of its members. Only the rows Stage 13 measured have a cost.", committee_table),
     Spec("explain", "Stage 12",
          "Deletion test on the session-blocked test photos: removing the most attended tiles against removing "
          "random tiles.", deletion_table, wide=True),
