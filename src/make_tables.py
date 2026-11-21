@@ -444,13 +444,17 @@ def deletion_table(root: Path) -> Built:
     return frame, [root / path]
 
 
+RATER_SETS = {"model": "set 1", "human": "set 2"}
+
+
 def ratings_table(root: Path) -> Built:
-    """Human and model heat-map ratings side by side, from Stage 12's ``explain_ratings_by_kind.csv`` (written by
-    ``src.heatmap_ratings report`` once the human ratings are in)."""
+    """The two sets of model heat-map ratings side by side, from Stage 12's ``explain_ratings_by_kind.csv`` (written by
+    ``src.heatmap_ratings report``). The importer's kind ``model`` is set 1 and its kind ``human`` is set 2; no person
+    rated the maps, so the paper-facing label says model raters for both."""
     path = f"{TABLES}/explain_ratings_by_kind.csv"
     d = read_table(root, path)
     frame = pd.DataFrame({
-        "Raters": [f"{k} ({n})" for k, n in zip(d.kind, d.raters)],
+        "Raters": [f"Model raters, {RATER_SETS[k]} ({n})" for k, n in zip(d.kind, d.raters)],
         "Maps": d.maps.astype(str),
         "Yes (%)": [pct(v) for v in d.yes],
         "Partly (%)": [pct(v) for v in d.partly],
@@ -515,9 +519,10 @@ SPECS = [
     Spec("explain", "Stage 12",
          "Deletion test on the session-blocked test photos: removing the most attended tiles against removing "
          "random tiles.", deletion_table, wide=True),
-    Spec("explain_ratings", "Stage 12 (human ratings)",
-         "Blind ratings of 50 heat maps (does the hot area cover visible symptoms?): share of each answer over all "
-         "ratings, and how often all three raters of a kind gave the same answer.", ratings_table),
+    Spec("explain_ratings", "Stage 12 (heat-map ratings)",
+         "Blind ratings of 50 heat maps by two sets of three model raters (does the hot area cover visible "
+         "symptoms?): share of each answer over all ratings, and how often all three raters of a set gave the same "
+         "answer.", ratings_table),
     Spec("cost", "Stage 13", "Parameters, storage, time per photo and peak memory.",
          passthrough(("results/tables/cost_results.csv", "results/tables/cost.csv"))),
 ]

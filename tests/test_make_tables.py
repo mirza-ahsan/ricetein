@@ -89,16 +89,16 @@ def test_later_stage_tables_appear_when_their_source_exists(tmp_path):
     assert table(root, "explain")["Verdict"].iloc[0] == "top-k matters more than random-k"
 
 
-def test_the_ratings_table_is_pending_until_the_human_ratings_report_exists_then_shows_both_kinds(tmp_path):
+def test_the_ratings_table_is_pending_until_the_ratings_report_exists_then_shows_both_model_sets(tmp_path):
     root = make_fixture(tmp_path, explain=True)
     assert mt.build_all(root)["tables"]["explain_ratings"]["status"] == "pending"
-    assert table(root, "explain_ratings").status[0] == "pending: Stage 12 (human ratings)"
+    assert table(root, "explain_ratings").status[0] == "pending: Stage 12 (heat-map ratings)"
     pd.DataFrame({"kind": ["human", "model"], "raters": [3, 3], "maps": [50, 50], "yes": [0.4, 0.393], "partly": [0.3, 0.32],
                   "no": [0.3, 0.287], "all_agree": [0.7, 0.88], "kappa": [0.55, 0.88]}).to_csv(
         root / "results/tables/explain_ratings_by_kind.csv", index=False)
     assert mt.build_all(root)["tables"]["explain_ratings"]["status"] == "present"
     shown = table(root, "explain_ratings")
-    assert shown["Raters"].tolist() == ["human (3)", "model (3)"]
+    assert shown["Raters"].tolist() == ["Model raters, set 2 (3)", "Model raters, set 1 (3)"]
     assert shown.loc[0, ["Yes (%)", "All raters agree (%)", "Fleiss' kappa"]].tolist() == ["40.0", "70.0", "0.55"]
     assert shown.loc[1, "Yes (%)"] == "39.3"
 
