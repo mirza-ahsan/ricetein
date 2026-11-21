@@ -6,6 +6,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 
@@ -15,9 +16,9 @@ METHODS = ["inceptionv3_224", "efficientnetv2s_224", "convnext_tiny_224", "swin_
 FOLDER = {"healthy": "Healthy", "leaf_blast": "LeafBlast", "brown_spot": "BrownSpot", "hispa": "Hispa"}
 
 
-def score_columns(prefix_a: str = "macro_f1", prefix_b: str = "balanced_accuracy") -> dict:
+def score_columns() -> dict:
     cols = {}
-    for key, base in ((prefix_a, 0.70), (prefix_b, 0.71)):
+    for key, base in (("macro_f1", 0.70), ("balanced_accuracy", 0.71)):
         cols.update({f"{key}_mean": base, f"{key}_sd": 0.03, f"{key}_pooled": base + 0.01, f"{key}_photo_low": base - 0.02,
                      f"{key}_photo_high": base + 0.03, f"{key}_block_low": base - 0.04, f"{key}_block_high": base + 0.05})
     return cols
@@ -132,7 +133,6 @@ def make_fixture(root: Path, *, paddy: bool = False, explain: bool = False, cost
         for cls in CLASSES:
             folder = root / "results/explain/heatmaps/test"
             folder.mkdir(parents=True, exist_ok=True)
-            import matplotlib.pyplot as plt
             plt.imsave(folder / f"{cls}_correct_1_abc.png", np.random.default_rng(0).random((20, 20)))
     if cost:
         write_csv(root, f"{t}/cost_results.csv", pd.DataFrame([

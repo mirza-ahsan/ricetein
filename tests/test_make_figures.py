@@ -64,7 +64,7 @@ def test_a_run_outside_its_frozen_plan_stops_the_confusion_figure(tmp_path):
 
 
 def test_numbers_helper_reads_signed_cells():
-    assert mf.numbers("[3.8, 6.7]") == [3.8, 6.7] and mf.numbers("-12.0") == [-12.0] and mf.numbers("+0.5 [0.0, 1.0]") == [0.5, 0.0, 1.0]
+    assert mt.numbers("[3.8, 6.7]") == [3.8, 6.7] and mt.numbers("-12.0") == [-12.0] and mt.numbers("+0.5 [0.0, 1.0]") == [0.5, 0.0, 1.0]
 
 
 def test_the_figure_list_matches_the_promised_list():

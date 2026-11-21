@@ -26,8 +26,9 @@ import numpy as np
 import pandas as pd
 
 from src import metrics
+from src.config import REPO_ROOT
+from src.records import get_code_version
 
-REPO_ROOT = Path(__file__).resolve().parents[1]
 TABLES = "results/tables"
 FIGURES = "results/figures"
 CLASSES = ["healthy", "leaf_blast", "brown_spot", "hispa"]   # fixed forever (class-order rule)
@@ -94,17 +95,6 @@ def read_json(root: Path, rel: str) -> Any:
 
 def sha256(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
-
-
-def code_version() -> str:
-    try:
-        head = subprocess.check_output(["git", "rev-parse", "--short=7", "HEAD"], cwd=REPO_ROOT, text=True,
-                                       stderr=subprocess.DEVNULL).strip()
-        dirty = subprocess.check_output(["git", "status", "--porcelain", "--", "src", "configs", "splits"],
-                                        cwd=REPO_ROOT, text=True, stderr=subprocess.DEVNULL).strip()
-    except (OSError, subprocess.CalledProcessError):
-        return "unknown"
-    return head + ("-dirty" if dirty else "")
 
 
 # ------------------------------------------------------------------------------------------ run records
@@ -210,9 +200,9 @@ def paddy_cells(paddy: pd.DataFrame | None, method: str) -> dict[str, str]:
     mine = paddy[paddy["method"] == method]
     cells: dict[str, str] = {}
     head = mine[mine["headline"].astype(str).str.lower() == "true"]
-    cells["Paddy native macro-F1"] = pm(head.macro_f1_mean.iloc[0], head.macro_f1_sd.iloc[0]) if len(head) else DASH
-    cells["Paddy native balanced acc."] = (pm(head.balanced_accuracy_mean.iloc[0], head.balanced_accuracy_sd.iloc[0])
-                                           if len(head) else DASH)
+    first = head.iloc[0] if len(head) else None
+    cells["Paddy native macro-F1"] = pm(first.macro_f1_mean, first.macro_f1_sd) if first is not None else DASH
+    cells["Paddy native balanced acc."] = pm(first.balanced_accuracy_mean, first.balanced_accuracy_sd) if first is not None else DASH
     other = mine[(mine["headline"].astype(str).str.lower() != "true") & (mine["zoom"].astype(str) != "-")]
     for row in other.itertuples():
         cells[f"Paddy {row.zoom} zoom macro-F1"] = pm(row.macro_f1_mean, row.macro_f1_sd)
@@ -279,14 +269,9 @@ def paired_view(frame: pd.DataFrame, key: str, wins: str, other_wins: str | None
     return pd.DataFrame(rows)
 
 
-def paired_session_table(root: Path) -> Built:
-    path = f"{TABLES}/session_paired.csv"
-    return paired_view(read_table(root, path), "B", "round_wins"), [root / path]
-
-
-def paired_locked_table(root: Path) -> Built:
-    path = f"{TABLES}/followup_paired.csv"
-    return paired_view(read_table(root, path), "B", "round_wins"), [root / path]
+def paired_table(rel: str) -> Callable[[Path], Built]:
+    """Attention against every other method, from one paired-test table (columns B, round_wins)."""
+    return lambda root: (paired_view(read_table(root, rel), "B", "round_wins"), [root / rel])
 
 
 def paired_conditions_table(root: Path) -> Built:
@@ -306,6 +291,11 @@ def ablations_table(root: Path) -> Built:
     return frame, [root / path]
 
 
+def numbers(text: str) -> list[float]:
+    """The numbers in a cell such as ``[3.8, 6.7]`` or ``+5.2``."""
+    return [float(x) for x in re.findall(r"[-+]?\d+(?:\.\d+)?", text)]
+
+
 def markdown_table(text: str, heading: str) -> pd.DataFrame | None:
     """The first pipe table after the line that starts with ``heading``; None when the section has no table."""
     lines, rows, started = text.splitlines(), [], False
@@ -322,15 +312,23 @@ def markdown_table(text: str, heading: str) -> pd.DataFrame | None:
     return pd.DataFrame(rows[2:], columns=rows[0])
 
 
+ABLATION_REPORT = "docs/reports/session_ablation_report.md"
+
+
+def ablation_report_rows(root: Path) -> pd.DataFrame:
+    """The test rows of the Stage 8 report (main minus variant), as the report wrote them."""
+    if not (root / ABLATION_REPORT).exists():
+        raise Missing(ABLATION_REPORT)
+    rows = markdown_table((root / ABLATION_REPORT).read_text(), "## 2. Headline ablations on test")
+    if rows is None:
+        raise Missing(f"{ABLATION_REPORT} (test section)")
+    return rows
+
+
 def ablations_test_table(root: Path) -> Built:
     """The variants tested once on the session split: test scores from the runs, the readings of the report."""
-    report = "docs/reports/session_ablation_report.md"
-    plan_rel = "runs/session_ablations_plan.json"
-    if not (root / report).exists():
-        raise Missing(report)
-    paired = markdown_table((root / report).read_text(), "## 2. Headline ablations on test")
-    if paired is None:
-        raise Missing(f"{report} (test section)")
+    report, plan_rel = ABLATION_REPORT, "runs/session_ablations_plan.json"
+    paired = ablation_report_rows(root)
     main = read_table(root, f"{TABLES}/session_final.csv").set_index("method").loc["attention"]
     plan = read_json(root, plan_rel)["runs"]
     rows, files = [], [root / report, root / plan_rel, root / f"{TABLES}/session_final.csv"]
@@ -435,11 +433,11 @@ SPECS = [
          "Attention against every other method, session-blocked split, test. Difference of the pooled scores in points "
          "(attention minus the other; it can differ from the difference of the round means in the main table); 95\\% photo "
          "and block bootstrap ranges; verdict words as in the source.",
-         paired_session_table, wide=True),
+         paired_table(f"{TABLES}/session_paired.csv"), wide=True),
     Spec("paired_conditions", "Stage 5 paired test (branch stage5/paired-conditions)",
          "Attention against each Stage 5 condition, session-blocked split, test. Difference of the pooled scores in points (attention minus the condition).", paired_conditions_table, wide=True),
     Spec("paired_locked", "Stage 7 (locked split)",
-         "Attention against every other method, locked split, test. Difference of the pooled scores in points (attention minus the other).", paired_locked_table, wide=True),
+         "Attention against every other method, locked split, test. Difference of the pooled scores in points (attention minus the other).", paired_table(f"{TABLES}/followup_paired.csv"), wide=True),
     Spec("ablations", "Stage 8",
          "Stage 8 ablations, validation macro-F1 (\\%), mean $\\pm$ SD over the 5 rounds, session-blocked split. "
          "Validation scores favour the main configuration, whose settings were chosen on them.", ablations_table, wide=True),
@@ -508,41 +506,38 @@ def to_latex(name: str, frame: pd.DataFrame, caption: str, sources: list[str], w
     return "\n".join(lines)
 
 
-def build_one(root: Path, spec: Spec) -> tuple[pd.DataFrame, list[Path], str | None]:
-    """The table of one spec; when a source is missing, a one-line pending table and the reason."""
+def build_one(root: Path, spec: Spec) -> tuple[pd.DataFrame, list[Path], str, str | None]:
+    """The table of one spec with its status and reason. A missing source gives a one-line pending table; a guard
+    error (a run outside its frozen plan, a wrong run count) gives an error table and is raised by ``build_all``."""
     try:
         frame, sources = spec.build(root)
-        pending = None
     except Missing as missing:
-        frame, sources = pd.DataFrame({"status": [f"pending: {spec.stage}"]}), []
-        pending = f"missing {missing.path}"
-    return frame, sources, pending
+        return pd.DataFrame({"status": [f"pending: {spec.stage}"]}), [], "pending", f"missing {missing.path}"
+    except ValueError as error:
+        return pd.DataFrame({"status": [f"error: {error}"]}), [], "error", str(error)
+    partly = any(frame[c].astype(str).str.startswith("pending:").any() for c in frame.columns)
+    return frame, sources, "partly pending" if partly else "present", None
 
 
 def build_all(root: Path = REPO_ROOT, out: Path | None = None) -> dict[str, Any]:
-    """Every table, even when one fails: a guard error (a run outside its frozen plan, a wrong run count) is
-    raised at the end, after the other tables are written and the failed one is marked as an error."""
+    """Every table, even when one fails: errors are raised at the end, after the other tables are written."""
     out = out or root / TABLES
     out.mkdir(parents=True, exist_ok=True)
-    provenance: dict[str, Any] = {"code_version": code_version(), "tables": {}}
+    provenance: dict[str, Any] = {"code_version": get_code_version(), "tables": {}}
     errors = []
     for spec in SPECS:
-        try:
-            frame, sources, pending = build_one(root, spec)
-        except ValueError as error:
-            errors.append(f"{spec.name}: {error}")
-            frame, sources, pending = pd.DataFrame({"status": [f"error: {error}"]}), [], f"error: {error}"
+        frame, sources, status, reason = build_one(root, spec)
         rels = [str(p.relative_to(root)) for p in sources]
-        inline = pending is None and any(frame[c].astype(str).str.startswith("pending:").any() for c in frame.columns)
-        caption = spec.caption + (f" Pending: {spec.stage}." if pending else f" Cells marked pending wait for {spec.stage}." if inline else "")
+        caption = spec.caption + {"pending": f" Pending: {spec.stage}.", "partly pending": f" Cells marked pending wait for {spec.stage}."}.get(status, "")
         if note := frame.attrs.get("note"):
             caption += " " + escape(note)
         frame.to_csv(out / f"final_{spec.name}.csv", index=False)
         (out / f"final_{spec.name}.tex").write_text(to_latex(spec.name, frame, caption, rels, spec.wide, spec.bold, spec.tex_skip))
-        status = "error" if errors and errors[-1].startswith(spec.name + ":") else "pending" if pending else "partly pending" if inline else "present"
-        provenance["tables"][spec.name] = {"status": status, "stage": spec.stage, "reason": pending, "rows": len(frame),
+        provenance["tables"][spec.name] = {"status": status, "stage": spec.stage, "reason": reason, "rows": len(frame),
                                            "sources": {rel: sha256(root / rel) for rel in sorted(set(rels))}}
-        print(f"{spec.name:18s} {status:15s} {len(frame)} rows" + (f"  ({pending})" if pending else ""))
+        if status == "error":
+            errors.append(f"{spec.name}: {reason}")
+        print(f"{spec.name:18s} {status:15s} {len(frame)} rows" + (f"  ({reason})" if reason else ""))
     (out / "final_provenance.json").write_text(json.dumps(provenance, indent=2) + "\n")
     if errors:
         raise RuntimeError("tables with errors (the others were written): " + "; ".join(errors))
@@ -627,14 +622,12 @@ def check(root: Path = REPO_ROOT) -> dict[str, Any]:
     ready["figures"]["pipeline_diagram"] = {"status": "present" if pipeline else "pending", "stage": "drawn by hand with the paper"}
     for name, rel in DATASET_REPORTS.items():
         ready["dataset_reports"][name] = {"status": "present" if (root / rel).exists() else "pending", "file": rel}
-    built = {k: v for k, v in ready["tables"].items()}
-    figures = {k: v for k, v in ready["figures"].items()}
     for c in commitments(root):
         needs = EVIDENCE.get(c["id"])
         if needs is None:
             status, missing = "manual", []
         else:
-            missing = [t for t in needs if not present(root, t, built, figures)]
+            missing = [t for t in needs if not present(root, t, ready['tables'], ready['figures'])]
             status = "present" if not missing else "pending"
         ready["commitments"].append({**c, "status": status, "missing": missing})
     counts = {k: sum(v["status"] in ("present", "partly pending") for v in ready[k].values()) for k in ("tables", "figures", "dataset_reports")}

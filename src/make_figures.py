@@ -22,9 +22,9 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt  # noqa: E402
 import numpy as np  # noqa: E402
-import pandas as pd  # noqa: E402
 
 from src import make_tables as mt  # noqa: E402
+from src.records import get_code_version  # noqa: E402
 from src.make_tables import CLASSES, FIGURES, Missing  # noqa: E402
 
 COLUMN, PAGE = 3.5, 7.16          # inches: one IEEE column, the full page width
@@ -41,11 +41,6 @@ plt.rcParams.update({
     "lines.linewidth": 0.9, "lines.markersize": 4, "figure.dpi": 100, "savefig.dpi": 300,
     "pdf.fonttype": 42, "ps.fonttype": 42, "axes.prop_cycle": plt.cycler(color=[INK, MID, "#444444", "#aaaaaa"]),
 })
-
-
-def numbers(text: str) -> list[float]:
-    """The numbers in a cell such as ``[3.8, 6.7]`` or ``+5.2``."""
-    return [float(x) for x in re.findall(r"[-+]?\d+(?:\.\d+)?", text)]
 
 
 # -------------------------------------------------------------------------------------------- the figures
@@ -79,8 +74,9 @@ def samples(root: Path) -> Result:
 def confusion(root: Path) -> Result:
     scores, files = mt.session_scores(root, mt.HEADLINE_CONFUSION)
     figure, axes = plt.subplots(1, len(scores), figsize=(PAGE, 2.0))
-    first = np.atleast_1d(axes)[0]
-    for axis, (method, s) in zip(np.atleast_1d(axes), scores.items()):
+    axes = np.atleast_1d(axes)
+    first = axes[0]
+    for axis, (method, s) in zip(axes, scores.items()):
         counts = np.array(s["confusion"])
         share = counts / counts.sum(axis=1, keepdims=True)
         axis.imshow(share, cmap="Greys", vmin=0, vmax=1)
@@ -121,26 +117,25 @@ def partition_order(root: Path) -> Result:
 
 
 def ablations(root: Path) -> Result:
-    val, sources = mt.ablations_table(root)
-    test, test_sources = mt.ablations_test_table(root)
-    val = val[~val["Variant"].isin(["main"])].reset_index(drop=True)
+    path = f"{mt.TABLES}/session_ablations.csv"
+    val = mt.read_table(root, path).query("variant != 'main'").reset_index(drop=True)
+    test = mt.ablation_report_rows(root)
     figure, axis = plt.subplots(figsize=(COLUMN, 3.0))
     y = np.arange(len(val))[::-1]
-    axis.plot([numbers(v)[0] for v in val["Variant minus main (points)"]], y, "o", mfc="white", color=INK,
-              label="validation (all variants)")
-    for n, r in enumerate(test[test["Metric"] == "macro-F1"].to_dict("records")):
-        i = list(val["Variant"]).index(r["Variant"])
-        low, high = numbers(r["Photo range"])               # main minus variant; the plot shows variant minus main
+    axis.plot(100 * val["difference_vs_main"], y, "o", mfc="white", color=INK, label="validation (all variants)")
+    for n, r in enumerate(test[test["metric"] == "macro_f1"].to_dict("records")):
+        i = list(val["variant"]).index(r["variant"])
+        low, high = mt.numbers(r["photo range"])            # the report gives main minus variant; the plot shows variant minus main
         axis.hlines(y[i], -high, -low, color=INK, lw=1.2)
-        axis.plot(-numbers(r["Main minus variant, pooled (points)"])[0], y[i], "D", color=INK,
+        axis.plot(-mt.numbers(r["difference (points)"])[0], y[i], "D", color=INK,
                   label="test, tested once (95% photo range)" if n == 0 else None)
     axis.axvline(0, color=MID, lw=0.6)
-    axis.set_yticks(y, val["Variant"])
+    axis.set_yticks(y, val["variant"])
     axis.set_xlabel("variant minus main, macro-F1 (points)")
     axis.legend(frameon=False, loc="upper left")
     axis.grid(axis="x", color=LIGHT, lw=0.4)
     figure.tight_layout(pad=0.5)
-    return figure, sources + test_sources
+    return figure, [root / path, root / mt.ABLATION_REPORT]
 
 
 def paddy_zoom(root: Path) -> Result:
@@ -235,7 +230,7 @@ SPECS = [Spec(name, mt.PROMISED_FIGURES[name][0], build) for name, build in (
 def build_all(root: Path = mt.REPO_ROOT, out: Path | None = None) -> dict:
     out = out or root / FIGURES
     out.mkdir(parents=True, exist_ok=True)
-    report: dict = {"code_version": mt.code_version(), "figures": {}}
+    report: dict = {"code_version": get_code_version(), "figures": {}}
     for spec in SPECS:
         stem = mt.PROMISED_FIGURES[spec.name][1]
         try:

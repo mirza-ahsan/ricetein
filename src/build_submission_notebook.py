@@ -18,7 +18,6 @@ from __future__ import annotations
 
 import argparse
 import hashlib
-import json
 import re
 import subprocess
 from pathlib import Path
@@ -26,11 +25,12 @@ from pathlib import Path
 import nbformat
 from nbformat import v4
 
+from src.config import REPO_ROOT
 from src.make_figures import SPECS as FIGURE_SPECS   # the generators' own lists, so the notebook cannot drift
 from src.make_tables import PROMISED_FIGURES
 from src.make_tables import SPECS as TABLE_SPECS
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = REPO_ROOT
 OUTPUT = "submission/final/ricetein_final.ipynb"
 
 # stage number -> (title, what it does, src modules, saved reports shown)
@@ -192,7 +192,7 @@ def build(root: Path = ROOT) -> nbformat.NotebookNode:
         cells.append(v4.new_code_cell(f"show_figure('results/figures/{PROMISED_FIGURES[spec.name][1]}.png')"))
     cells.append(v4.new_markdown_cell("## Source appendix\n\nEvery module of `src/`, exactly as in the commit this notebook was "
                                       "built from (SHA-256 in each cell's metadata). Nothing here is executed."))
-    for stage, (_, _, modules, _) in STAGES.items():
+    for _, _, modules, _ in STAGES.values():
         for module in modules:
             if module in present:
                 cells.append(source_cell(root, module))

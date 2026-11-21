@@ -3,7 +3,6 @@
 import ast
 import json
 import re
-from pathlib import Path
 
 import pandas as pd
 import pytest
@@ -255,3 +254,16 @@ def test_the_readiness_check_notices_a_changed_source_and_counts_a_partly_pendin
     ready = mt.write_readiness(fixture)
     assert ready["tables"]["main"]["status"] == "stale: rebuild" and ready["tables"]["ablations_test"]["status"] == "stale: rebuild"
     assert ready["present_counts"]["tables"] < 10
+
+
+def test_every_evidence_token_names_a_real_file_table_or_figure():
+    ids = {c["id"] for c in mt.commitments(REPO)}
+    for needs in mt.EVIDENCE.values():
+        for token in needs:
+            if token.startswith("table:"):
+                assert token[6:] in {spec.name for spec in mt.SPECS}, token
+            elif token.startswith("figure:"):
+                assert token[7:] in mt.PROMISED_FIGURES, token
+            else:
+                assert (REPO / token).exists() or token.startswith(("docs/reports/paddy", "docs/reports/explain")), token
+    assert set(mt.EVIDENCE) <= ids
