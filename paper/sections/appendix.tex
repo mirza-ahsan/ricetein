@@ -1,7 +1,7 @@
-\section{Secondary Results and Settings}
+\section{Secondary Results}
 \label{sec:appendix}
 
-This appendix holds the secondary tables cited in the text. The training settings are in Section~\ref{sec:setup:training}.
+This appendix holds the secondary tables and one figure cited in the text.
 
 \PaperTable[\SmallWide]{ablations}{All ablations on validation photos: macro-F1 (\%), mean $\pm$ SD over the 5 rounds, session-blocked split. Validation scores favour the main configuration (Attention MIL), whose settings were chosen on them; the variants were not tuned.}
 
@@ -9,8 +9,15 @@ This appendix holds the secondary tables cited in the text. The training setting
 
 \PaperTable[\SmallWide]{paired_locked}{Attention MIL against every whole-image model and control on the locked split, test photos: difference of the pooled scores in points (Attention MIL minus the other), 95\,\% ranges, rounds won, and verdicts.}
 
-\PaperTable[\SmallWide]{confusion}{Confusion matrices (photo counts) of four methods on the session-blocked test photos, pooled over the 5 rounds. Rows are the true class.}
-
 \PaperTable[\SmallWide]{partition_order}{Partition-order experiment: pooled macro-F1 (\%) and its inflation over the correct set-up (A), with 95\,\% ranges, for EfficientNetV2-S and Attention MIL. L is the locked split; B, C and D are deliberately faulty set-ups (augment first, then split the copies at random; random split without grouping; train and score on the same photos) and are not estimates of performance.}
 
+\PaperTable[\SmallWide]{paired_committee}{Committee against ConvNeXt-T (448 px) alone, session-blocked test photos: difference of the pooled scores in points (committee minus ConvNeXt-T). Declared after both means were seen; ConvNeXt-T is a member of the committee, so the two are not independent.}
 
+\PaperTable[\SmallWide]{confusion}{Confusion matrices (photo counts) of four methods on the session-blocked test photos, pooled over the 5 rounds. Rows are the true class.}
+
+\begin{figure}[!b]
+\centering
+\includegraphics[width=0.8\columnwidth]{final_paddy_zoom.pdf}
+\caption{Zero-shot macro-F1 (\%) on Paddy Doctor, mean $\pm$ SD over the 5 round-models, for every method and condition; the tile methods are shown at native, midway and matched zoom. Lower-case labels are the 128-px and Otsu conditions of the whole-image models, for example ``inceptionv3 128'' = InceptionV3 (128 px) and ``convnext tiny 224 otsu'' = ConvNeXt-T (224 px + Otsu).}
+\label{fig:paddy-zoom}
+\end{figure}

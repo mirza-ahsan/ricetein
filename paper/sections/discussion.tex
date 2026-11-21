@@ -1,48 +1,81 @@
 \section{Discussion}
 \label{sec:discussion}
 
-This section interprets the results against the five hypotheses and the seven objectives; the numbers are in
-Section~\ref{sec:results}.
+\textbf{What do the results mean for the research problem?} The problem was to recognise rice leaf disease from
+high-resolution photos without throwing detail away, and to test the answer honestly. The results say that detail matters
+and that a small head on frozen tile descriptions can use it as well as a fine-tuned network. They also say that the leaf,
+the split and the data source decide how a score must be read: a method that looks good on plain-background photos from one
+region did not carry over to field photos, and a split that ignores capture sessions, or augments before splitting, makes
+every method look better than it is.
 
-\textbf{H1, tiles against whole-photo input: supported on the headline split.} With the same encoder and head, tiles at
-a common leaf scale beat one whole-photo description at both sizes. Two further observations point the same way:
-whole-image scores rise with input size (Table~\ref{tab:final_conditions}), and tiles at the stored scale do worse than
-tiles at the common scale (Table~\ref{tab:final_ablations-test}). Detail matters. It does not follow that tiling matters:
-ConvNeXt-T at 448 px has the higher mean and the paired test finds no clear difference. What the tile pipeline offers is a
-different cost profile, a small head trained from cached descriptions, against fine-tuning a whole network at
-a larger input size. The Committee gain suggests that the two kinds of model make partly different errors.
-On the locked split the benefit over the 512-px control was not clear, which is a reminder that the split changes
-conclusions.
+\subsection{Interpretation of the findings}
 
-\textbf{H2, attention against mean, max and Otsu: supported.} Most tiles hold background, and the head gives them far less than their share of its attention (Section~\ref{sec:results}). Mean pooling averages all of them with the few informative
-tiles, which is a likely reason for its low score; max pooling keeps the single strongest tile and comes close, without a clear
-difference on balanced accuracy. Hard background removal by Otsu's method did not help whole-image models and lowered the
-tile model, so a learned weighting looked more useful than a fixed mask; an earlier report found Otsu alone changed
-accuracy little \cite{ali2026}.
+\textbf{Why detail helps (H1).} With the same encoder and head, tiles beat one whole-photo description at both sizes
+(Table~\ref{tab:final_paired-session}). Whole-image scores rise with input size (Table~\ref{tab:final_conditions}), and tiles
+at the common leaf scale beat tiles at the native scale and tiles of Otsu-cleaned photos
+(Table~\ref{tab:final_ablations-test}): the leaf scale matters, not the raw pixel count alone. A plausible reading is that
+a small lesion fills a few pixels of a shrunk photo but a visible part of a tile. ConvNeXt-T at 448 px has the higher mean
+and the paired test finds no clear difference, so detail, rather than tiling itself, is the likely cause; what the tile
+pipeline offers is a different cost profile, a small head trained from cached descriptions instead of a network fine-tuned
+at a large input size.
 
-\textbf{H3, frozen features on field photos: not shown.} All methods score low on Paddy Doctor and none is clearly
-ahead of the fine-tuned models, so in-domain scores say little about field behaviour. Matching the zoom did not
-help. We did not test the likely causes, such as lighting, camera and field context, and the primary photos have plain
-backgrounds (Section~\ref{sec:setup:data}); we therefore do \emph{not} claim robustness to clutter.
+\textbf{Why attention works (H2).} The deletion test shows that the decision rests on the attended tiles
+(Table~\ref{tab:final_explain}), and most tiles are background (Section~\ref{sec:res:explain}). Mean pooling dilutes the few
+lesion tiles among many uninformative ones, which fits its low score. Max pooling keeps the single strongest tile and comes
+close: Attention MIL beats it on macro-F1 but not clearly on balanced accuracy, and not at all on the locked split
+(Tables~\ref{tab:final_paired-session} and \ref{tab:final_paired-locked}), so the advantage over max pooling is small. A
+fixed Otsu mask did not help whole-image models and lowered the tile model, so a learned weighting was more useful than hard
+background removal, which agrees with an earlier report that Otsu thresholding alone changed accuracy little
+\cite{ali2026}.
 
-\textbf{H4, heat maps point at symptoms: supported as a qualitative guide.} The deletion test shows that the decision
-rests on the attended tiles, but that alone does not show that those tiles are symptoms. The ratings are mixed, and about a
-quarter of the ratings in each set say no. The effect on field photos is small. We treat heat maps as an aid for a reader,
-not as a segmentation, and make no severity claim.
+\textbf{Why the committee helps, and how far.} Whole-photo input at 448 px and tiles see the photo in different ways, and
+the Committee beat both of its members. But two whole-image models together also beat Attention MIL, so part of the gain may
+come from averaging itself rather than from the tile view. The Committee's calibration error is higher
+(Section~\ref{sec:res:committee}), so its probabilities should be recalibrated before they are read as confidence.
 
-\textbf{H5, cost: a descriptive answer.} The pipeline is slower per photo than whole-image models because of its many
-encoder passes. Fewer tiles and a distilled head reduce the cost at little loss of validation score, but the 8-bit encoder
-fails, so an on-device build is not shown.
+\textbf{Why the method fails on field photos (H3).} On Paddy Doctor photos attention on background is close to the tile
+share, so the head no longer singles out the leaf, and the deletion effect is small (Section~\ref{sec:res:explain}).
+Matching the zoom did not help (Section~\ref{sec:res:paddy}), so scale alone is not the cause. The supervised-encoder variant
+is far below the self-supervised encoder in-domain (Table~\ref{tab:final_ablations}), yet on field photos the frozen-feature
+linear probes did no better than the fine-tuned CNNs, and several CNNs scored higher than Attention MIL. Self-supervised
+features therefore helped in-domain but did not buy field robustness here, and most models mostly predicted one class. We did
+not test the likely causes: lighting, camera, field context and label differences. For every method compared, in-domain
+scores on plain-background photos overstate what to expect in the field, and we do \emph{not} claim robustness to clutter.
 
-\textbf{What the shortcut and split checks mean for reading in-domain numbers.} The nearest-in-time baseline matches
-the models on the locked split, and the partition-order experiment shows that the order of augmenting and splitting
-moves a score more than most differences between methods. We therefore read differences between methods only on the
-session-blocked split and only through the paired rule, and we state the split beside every number. This is a general
-lesson for the field rather than a verdict on any study: the details of splitting are rarely reported
-\cite{xu2024}. The per-class results add that hispa and leaf blast are hard for every method, so a single accuracy figure
-hides the classes where errors concentrate; hispa photos are most often called healthy.
+\textbf{What the shortcut controls and the partition order mean.} The primary photos have plain backgrounds, yet the
+background-only control scores far above chance (Table~\ref{tab:final_shortcuts}). The likely route is the capture session
+(the same camera, light and place within a session); this is our interpretation, not a tested finding. A faulty partition
+raises scores by more than most differences between methods (Fig.~\ref{fig:partition-order}), and the nearest-in-time
+baseline comes within about 3 points of the models on the locked split. Grouped splits and shortcut checks are therefore
+needed before methods can be compared at all. This is a general lesson for the field \cite{xu2024}, not a verdict on any study.
 
-\textbf{Objectives.} Table~\ref{tab:objectives} relates the seven objectives to the evidence.
+\textbf{The hardest classes.} Hispa or leaf blast is the hardest class for every method
+(Table~\ref{tab:final_per-class}). Hispa photos are mostly called healthy and leaf-blast photos are spread over the other
+three classes (Fig.~\ref{fig:confusion}). This fits the visual overlap of pale scraped hispa streaks with healthy tissue and
+of leaf-blast lesions with the others; because the pattern holds across very different models, we read it as a property of
+the classes. A single accuracy figure would hide it.
+
+\textbf{Why the cost is high, and what is recoverable (H5).} Every photo needs about 79 encoder passes, so the pipeline is
+slow even though the trained head is small (Table~\ref{tab:final_cost}). The compression results show that part of this is
+recoverable: a model on 16 tiles and a head on the smaller encoder lose little on validation photos, and the Small model
+(16 tiles) is not clearly different from Attention MIL on test (Section~\ref{sec:res:cost}); the 8-bit encoder failed. The
+cost is acceptable for batch scoring and too high for a phone until the encoder passes are cut.
+
+\subsection{Relation to the objectives and hypotheses}
+Table~\ref{tab:objectives} lists the evidence for each objective.
+Objective 1, a two-dataset benchmark, was met: the primary photos and Paddy Doctor were both used.
+Objective 2, a leakage-free protocol, was met: splits were made first, augmented copies stayed with their source, and every
+result carries a spread and two ranges.
+Objective 3, whole-image baselines including Otsu, was met by four fine-tuned models at several input conditions.
+Objective 4, a tile-based weakly supervised model, was met by Attention MIL.
+Objective 5, ablations of resolution, aggregation and Otsu, was met in Tables~\ref{tab:final_conditions},
+\ref{tab:final_main} and~\ref{tab:final_ablations-test}.
+Objective 6, zero-shot evaluation and a comparison of the attention maps with symptoms, was met: both were run, and H3 not
+being shown is a result.
+Objective 7, cost and compressibility, was partly met: cost was measured and compression assessed, but no on-device build
+was made.
+For the hypotheses: H1 is supported on the headline split; H2 is supported against mean pooling and Otsu, and on macro-F1
+against max pooling; H3 is not shown; H4 is partly supported, as qualitative evidence; and H5 has a descriptive answer.
 
 \begin{table}[t]
 \caption{The seven objectives, the evidence and the status.}
@@ -56,10 +89,10 @@ Objective & Evidence & Status \\
 \midrule
 1 Two-dataset benchmark & Primary photos and Paddy Doctor (Section~\ref{sec:setup:data}) & met \\
 2 Leakage-free protocol & Grouped splits made first, mean $\pm$ SD, two ranges, one rule (Section~\ref{sec:setup}) & met \\
-3 Whole-image baselines, including Otsu & Four models at 128, 224 and 448 px, with and without Otsu (Tables~\ref{tab:final_main}, \ref{tab:final_conditions}) & met \\
+3 Whole-image baselines, including Otsu & Four models at 128 and 224 px, with and without Otsu; ConvNeXt-T at 448 px (Tables~\ref{tab:final_main}, \ref{tab:final_conditions}) & met \\
 4 Tile-based weakly supervised model & Attention MIL (Section~\ref{sec:method}) & met \\
 5 Ablations of resolution, aggregation, Otsu & Tables~\ref{tab:final_conditions}, \ref{tab:final_main}, \ref{tab:final_ablations-test}, \ref{tab:final_ablations} & met \\
-6 Zero-shot transfer; attention against symptoms & Paddy Doctor (H3 not shown); deletion test and model-rater ratings; no expert or outline check & partly met \\
+6 Zero-shot transfer; attention against symptoms & Paddy Doctor (H3 not shown); deletion test and ratings of heat maps (Sections~\ref{sec:res:paddy}, \ref{sec:res:explain}) & met (H3 not shown) \\
 7 Cost and compressibility & Table~\ref{tab:final_cost}; fewer tiles and distillation help, 8-bit fails; no on-device build & partly met \\
 \bottomrule
 \end{tabular}

@@ -17,8 +17,8 @@ A transformer attends across patches \emph{within} a 224-pixel input; it cannot 
 \cite{ali2026, fhwd2025, isola2017}, and diffusion models are the emerging alternative \cite{muhammad2023}.
 One study reports that Pix2Pix augmentation alone lowered accuracy and helped only together with Otsu thresholding
 \cite{ali2026}; this useful negative result is why we use class-balanced loss and conventional augmentation and do not
-generate images. Learned segmentation avoids the two-peak assumption of Otsu's method \cite{otsu1979} but needs
-expert pixel labels, as in joint staging with attention \cite{sudhesh2025} and UAV mapping \cite{logavitool2025}; the
+generate images. Otsu's global threshold \cite{otsu1979} assumes a clean two-peak histogram and uses grey values only; learned segmentation
+avoids that but needs expert pixel labels, as in joint staging with attention \cite{sudhesh2025} and UAV mapping \cite{logavitool2025}; the
 mask collection RiceSeg-5932 \cite{riceseg2025} covers another image set.
 
 \textbf{Patch-level and weakly supervised learning.} The closest precedents classify image regions and aggregate them.

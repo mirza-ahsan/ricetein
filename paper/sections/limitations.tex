@@ -1,28 +1,25 @@
 \section{Limitations and Future Work}
 \label{sec:limits}
 
-This section states what the study does not cover and what would extend it.
+Table~\ref{tab:limits} pairs each limitation with the finding it rests on and the next step that builds on it.
 
-\textbf{Data.} Labels come from a public set; one of 80 checked photos looked like another class, and no label was
-changed. Backgrounds are plain, so the results say nothing about cluttered field scenes. There are no severity labels, only
-four classes are shared with Paddy Doctor, bacterial leaf blight is absent, and all photos come from one region and three
-cameras.
-
-\textbf{Method.} The encoder is frozen and never adapted to rice. Each photo needs about 79 encoder passes, which
-costs time (Section~\ref{sec:results}) and, with the cached descriptions of eight versions per photo, disk space. Zero-shot
-scores depend on the zoom, and the leaf-scale rule rests on 29 measurements and is borderline.
-
-\textbf{Evidence.} Each round has one training seed, so the SD measures variation over folds. A photo that is a validation
-photo in one round is a test photo in another, so tuning is not fully independent of the pooled test photos. The
-session-blocked split and several paired tests were declared after related means were known, and tuning budgets differ
-across method families. Timing comes from one machine. The judgements listed in Section~\ref{sec:setup} come from model
-raters of one family.
-
-\textbf{Future work.}
-\begin{itemize}
-\item Check attention against lesion outlines (RiceSeg-5932 \cite{riceseg2025}) and run a rating study of the heat
-maps with plant-disease experts.
-\item Handle the other nine Paddy Doctor classes as unseen conditions (open-set), and add bacterial leaf blight.
-\item Fine-tune the encoder lightly, and build and time an on-device version.
-\item Use Dhan-Shomadhan \cite{hossain2021} as a further test set.
-\end{itemize}
+\begin{table}[t]
+\caption{Limitations, the findings they rest on, and the next steps.}
+\label{tab:limits}
+\centering
+\scriptsize
+\renewcommand{\arraystretch}{1.1}
+\begin{tabular}{@{}L{2.3cm}L{2.2cm}L{3.3cm}@{}}
+\toprule
+Limitation & Finding & Next step \\
+\midrule
+The encoder is frozen and never adapted to rice; field transfer fails & H3 not shown (Section~\ref{sec:res:paddy}) & Light fine-tuning of the encoder; open-set handling and adaptation using the other nine Paddy Doctor classes \\
+About 79 encoder passes per photo; timing from one machine & Cost, small model, 8-bit failure (Section~\ref{sec:res:cost}) & An on-device build, timed on more than one device \\
+Heat maps are qualitative; no severity labels & Deletion test and ratings of 50 maps (Section~\ref{sec:res:explain}) & Check attention against lesion outlines (RiceSeg-5932 \cite{riceseg2025}); a rating study with plant-disease experts \\
+One region, one set of cameras, four classes, no bacterial leaf blight & Setup (Section~\ref{sec:setup:data}) & Dhan-Shomadhan \cite{hossain2021} as a further test set; bacterial leaf blight from Paddy Doctor \\
+Labels may hold noise; plain backgrounds & Background audit and label check (Section~\ref{sec:setup:data}) & Data with cluttered backgrounds and severity scores \\
+The leaf-scale rule is borderline; zero-shot scores depend on the zoom & Leaf-width audit (Section~\ref{sec:setup:data}), zoom levels & More leaf-width measurements \\
+One training seed per round (compute limits); some comparisons were declared after the means were seen & Sections~\ref{sec:setup:metrics}, \ref{sec:results} & Several seeds per round; declare the committee and 448-px tests in advance on new photos \\
+\bottomrule
+\end{tabular}
+\end{table}

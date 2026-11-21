@@ -1,11 +1,15 @@
 \section{Conclusion}
 \label{sec:conclusion}
 
-We treated image resolution as a variable and the evaluation protocol as part of the method. A frozen DINOv3 encoder, high-detail
-tiles at a common leaf scale and a small attention head trained from photo labels gave a rice leaf disease classifier
-with a heat map. Under a protocol that groups near-duplicates and capture sessions, it was clearly better than
-whole-photo use of the same encoder and than simpler pooling, and not clearly different from a ConvNeXt-T fine-tuned at a larger input size; combining
-the two kinds of model helped. It did not transfer to field photos, and its price is many encoder passes per photo. The
-partition-order experiment and the controls that never see the leaf show that the split, not only the model, decides how
-good a score looks. Much published work reports a single downsampled view and leaves the split order unstated; stating
-both, with paired rules and negative results, is what we offer as a basis for future comparisons.
+Relative to the methods summarised in Section~\ref{sec:related}, which classify one downsampled view of the photo and often
+leave the split order unstated \cite{xu2024}, this work treated resolution as a variable and the evaluation protocol as part
+of the method. A frozen DINOv3 encoder \cite{simeoni2025dinov3}, high-detail tiles at a common leaf scale and a small
+attention head \cite{ilse2018} trained from photo labels gave a rice leaf disease classifier with a heat map. Under a
+protocol that groups near-duplicates and capture sessions, it was clearly better than whole-photo use of the same encoder and
+than simpler pooling, and not clearly different from a ConvNeXt-T fine-tuned at a larger input size; averaging the two kinds of
+model helped further.
+
+For a practitioner the lessons are these: keep lesion-scale detail, by tiles or by a larger input; split by capture session
+before augmenting, and run shortcut controls; and do not read in-domain scores on plain backgrounds as field performance. The
+open problem is transfer to field photos, where no method tested here held up, and the next steps are the encoder adaptation,
+open-set handling and on-device work listed in Table~\ref{tab:limits}.
