@@ -1,0 +1,13 @@
+{
+  "partition": "none",
+  "candidate": "e1_top16",
+  "max_abs_difference": {
+    "encoder": 3.039836883544922e-06,
+    "head": 1.7881393432617188e-07
+  },
+  "bytes": {
+    "encoder": 342934701,
+    "head": 924360
+  },
+  "opset": 17
+}

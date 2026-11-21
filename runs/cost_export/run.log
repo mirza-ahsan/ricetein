@@ -1,0 +1,8 @@
+[2026-11-21 20:00:02] [INFO] ============================================================
+[2026-11-21 20:00:02] [INFO] Run: cost_export
+[2026-11-21 20:00:02] [INFO] Folder: /home/aztrek/projects/ricetein/runs/cost_export
+[2026-11-21 20:00:02] [INFO] Code version: 6067f94
+[2026-11-21 20:00:02] [INFO] GPU: NVIDIA GeForce RTX 4060 (7.68 GB)
+[2026-11-21 20:00:02] [INFO] ============================================================
+[2026-11-21 20:00:02] [INFO] Saved metrics.json
+[2026-11-21 20:00:02] [INFO] Run finished in 0.14s (status: completed); saved record.json

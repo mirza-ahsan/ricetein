@@ -1,5 +1,5 @@
 {
-  "code_version": "78484bd",
+  "code_version": "165d494",
   "tables": {
     "main": {
       "status": "present",
@@ -209,11 +209,13 @@
       }
     },
     "cost": {
-      "status": "pending",
+      "status": "present",
       "stage": "Stage 13",
-      "reason": "missing results/tables/cost_results.csv",
-      "rows": 1,
-      "sources": {}
+      "reason": null,
+      "rows": 12,
+      "sources": {
+        "results/tables/cost_results.csv": "8ccc19c6637cb3ac2b34895975107233a6b4f8545e8732af9b7879aaf796d1f2"
+      }
     }
   }
 }
