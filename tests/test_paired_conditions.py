@@ -7,6 +7,8 @@ import pytest
 
 from src import paired_conditions as pc
 
+CLASSES = ["healthy", "leaf_blast", "brown_spot", "hispa"]
+
 
 @pytest.mark.parametrize("ahead, behind, expected", [
     ("A beats B", "no clear difference", pc.ATTENTION),
@@ -44,13 +46,13 @@ def _predictions(correct_share, seed):
             true = i % 4
             wrong = (i * 7 + seed + round_) % 10 >= correct_share * 10
             rows.append({"photo_id": f"p{round_}_{i}", "round": round_, "partition": "test",
-                         "true_class": ["healthy", "leaf_blast", "brown_spot", "hispa"][true],
-                         "pred_class": ["healthy", "leaf_blast", "brown_spot", "hispa"][(true + wrong) % 4]})
+                         "true_class": CLASSES[true],
+                         "pred_class": CLASSES[(true + wrong) % 4]})
     return pd.DataFrame(rows)
 
 
 def test_a_clearly_better_attention_is_reported_in_both_directions():
-    config = {"classes": ["healthy", "leaf_blast", "brown_spot", "hispa"], "seed": 0,
+    config = {"classes": CLASSES, "seed": 0,
               "evaluation": {"bootstrap": {"resamples": 50, "confidence": 0.95, "stratified": True},
                              "comparison": {"ci_excludes_zero": True, "min_round_wins": 4}}}
     blocks = pd.Series({f"p{r}_{i}": f"b{i % 8}" for r in range(1, 6) for i in range(40)})
@@ -68,8 +70,10 @@ def test_report_names_every_row_and_counts_the_verdicts():
            "block_low": -0.05, "block_high": 0.03, "attention_round_wins": 2, "condition_round_wins": 3, "rounds": 5,
            "verdict_photo": pc.NONE, "verdict_block": pc.NONE}
     paired = pd.DataFrame([{**row, "metric": "macro_f1"}, {**row, "metric": "balanced_accuracy"}])
-    means = pd.DataFrame([{"method": "attention", "macro_f1_mean": 0.779, "macro_f1_sd": 0.031,
-                           "balanced_accuracy_mean": 0.78, "balanced_accuracy_sd": 0.03}])
-    text = pc.build_report(paired, means)
+    scores = pd.DataFrame([{"method": "attention", "ece": 0.1} | {
+        f"{m}_{k}": v for m in pc.fr.METRICS for k, v in (
+            ("mean", 0.78), ("sd", 0.03), ("photo_low", 0.7), ("photo_high", 0.8), ("block_low", 0.6),
+            ("block_high", 0.85))}])
+    text = pc.build_report(paired, scores)
     assert "ConvNeXt-T, 448 px" in text and "post-hoc" in text
     assert "macro_f1, photo range: 0 attention beats it, 1 no clear difference, 0 it beats attention" in text
