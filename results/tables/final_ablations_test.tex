@@ -1,0 +1,22 @@
+% final_ablations_test.tex: built by src/make_tables.py; do not edit by hand.
+% source: docs/reports/session_ablation_report.md
+% source: runs/session_ablations_plan.json
+% source: results/tables/session_final.csv
+% source: 20 files runs/<run>/test_metrics.json (listed with their SHA-256 in final_provenance.json)
+\begin{table*}[t]
+\centering
+\caption{The two variants tested once on the session-blocked test photos: scores (\%, mean $\pm$ SD over 5 rounds) and the difference of the pooled scores, main minus variant, in points (so it can differ from the difference of the means).}
+\label{tab:final_ablations-test}
+\footnotesize
+\setlength{\tabcolsep}{3pt}
+\begin{tabular}{llrrrrrrll}
+\toprule
+Variant & Metric & Variant test score & Main test score & Main minus variant, pooled (points) & Photo range & Block range & Rounds won by main & Reading (photo range) & Verdict (block range) \\
+\midrule
+otsu\_on & macro-F1 & 72.5 $\pm$ 3.6 & 77.9 $\pm$ 3.1 & 5.2 & [3.8, 6.7] & [3.3, 7.3] & 5/5 & main beats variant & main beats variant \\
+otsu\_on & balanced accuracy & 73.9 $\pm$ 4.0 & 78.0 $\pm$ 3.6 & 4.1 & [2.7, 5.6] & [2.2, 6.4] & 5/5 & main beats variant & main beats variant \\
+native\_scale & macro-F1 & 74.7 $\pm$ 5.4 & 77.9 $\pm$ 3.1 & 2.9 & [1.5, 4.4] & [1.0, 5.5] & 4/5 & main beats variant & main beats variant \\
+native\_scale & balanced accuracy & 75.4 $\pm$ 5.5 & 78.0 $\pm$ 3.6 & 2.3 & [0.9, 3.8] & [0.3, 5.1] & 4/5 & main beats variant & main beats variant \\
+\bottomrule
+\end{tabular}
+\end{table*}

@@ -1,0 +1,17 @@
+Method,True class,pred. healthy,pred. leaf_blast,pred. brown_spot,pred. hispa
+Attention MIL (ours),healthy,1262,65,42,111
+Attention MIL (ours),leaf_blast,54,587,77,55
+Attention MIL (ours),brown_spot,34,24,455,4
+Attention MIL (ours),hispa,134,38,11,381
+Swin-T (224 px),healthy,1279,54,18,129
+Swin-T (224 px),leaf_blast,64,573,65,71
+Swin-T (224 px),brown_spot,44,28,437,8
+Swin-T (224 px),hispa,145,52,8,359
+ConvNeXt-T (224 px),healthy,1247,38,39,156
+ConvNeXt-T (224 px),leaf_blast,62,524,113,74
+ConvNeXt-T (224 px),brown_spot,36,28,443,10
+ConvNeXt-T (224 px),hispa,117,46,8,393
+ConvNeXt-T (448 px),healthy,1281,43,58,98
+ConvNeXt-T (448 px),leaf_blast,67,602,52,52
+ConvNeXt-T (448 px),brown_spot,39,25,443,10
+ConvNeXt-T (448 px),hispa,122,32,8,402

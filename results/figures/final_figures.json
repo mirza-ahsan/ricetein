@@ -1,0 +1,84 @@
+{
+  "code_version": "fc8a293",
+  "figures": {
+    "samples": {
+      "status": "pending",
+      "stage": "Stage 1 data (main checkout only)",
+      "reason": "missing data/raw/rice_diseases/LabelledRice/Labelled (photos exist only in the main checkout)"
+    },
+    "confusion": {
+      "status": "present",
+      "stage": "Stage 7",
+      "files": [
+        "final_confusion.png",
+        "final_confusion.pdf"
+      ],
+      "sources": {
+        "runs/stage5_convnext_tiny_session_224_lr0.0003_r1/test_predictions.csv": "c32ffd869dd3d0e1a6b75b5efa99f70d944401fe0feae310efa11e4c1413b347",
+        "runs/stage5_convnext_tiny_session_224_lr0.0003_r2/test_predictions.csv": "021fa62c894e39d09db933a9b535dd9d82eebc19bb7e7580f117f8c407338a12",
+        "runs/stage5_convnext_tiny_session_224_lr0.0003_r3/test_predictions.csv": "cb06b71531a249773af124e90b957e77d271ecbf561a665611a18456e4ac3fca",
+        "runs/stage5_convnext_tiny_session_224_lr0.0003_r4/test_predictions.csv": "5610c7ce2219c3ddfed03a4fe27ad2db1e127fcff07144ab5622b8c87004a527",
+        "runs/stage5_convnext_tiny_session_224_lr0.0003_r5/test_predictions.csv": "74ef149c716de98df5b4107a2d2e4834cf93fcf7060f700b99ff27d9ee526561",
+        "runs/stage5_convnext_tiny_session_448_lr0.0003_r1/test_predictions.csv": "66311c2087b4127b9d91f55ba62ecb82a23041faf26ec92e6fdc7b48e44f7467",
+        "runs/stage5_convnext_tiny_session_448_lr0.0003_r2/test_predictions.csv": "15ca5fcb9867624e212d5d0ef53ef532bea18925941960a9cf15d3b1f62d088d",
+        "runs/stage5_convnext_tiny_session_448_lr0.0003_r3/test_predictions.csv": "c23e0faacb73c98266b62da651581bea642f794d7f8cbba45fa14d0b7d34b72f",
+        "runs/stage5_convnext_tiny_session_448_lr0.0003_r4/test_predictions.csv": "281579c7d7a212220d69766c2ad992ca24f21e407e4a536ed4f4a9d430dadd87",
+        "runs/stage5_convnext_tiny_session_448_lr0.0003_r5/test_predictions.csv": "ec158d5055bd174a5389b777414d90a4a78ce07ebdf800b77535f2dc0757e1a0",
+        "runs/stage5_swin_tiny_session_224_lr0.0001_r1/test_predictions.csv": "6bdfef2ea4719aff792b7e2e269e889e5f585c6cf340fbd4eff8061c68771694",
+        "runs/stage5_swin_tiny_session_224_lr0.0001_r2/test_predictions.csv": "fb344410d6debf3f9b22686285e309d8279e222a42ff18326f76a44925d94917",
+        "runs/stage5_swin_tiny_session_224_lr0.0001_r3/test_predictions.csv": "2bd01fe0b26133d3a5ef01d425af85b705e674de82d6095037c4183109cf8cda",
+        "runs/stage5_swin_tiny_session_224_lr0.0001_r4/test_predictions.csv": "f98ab3fcd8810bc9c5290a97ec230e9ba5685fea5098a4520bf0ed836c8d5b43",
+        "runs/stage5_swin_tiny_session_224_lr0.0001_r5/test_predictions.csv": "78df86af2d8000864701b527270e0e90378e65ecf5af1d52dd34964ab5395099",
+        "runs/stage7_session_attention_r1/test_predictions.csv": "d081b8b29cc5b46bcc1a8073d8b6ff46a1caf40c6a5163b55eae72c29212ad9a",
+        "runs/stage7_session_attention_r2/test_predictions.csv": "0544e145896baccbe6a5c552172ae09b36e2d674462a68e7236741260a0c19ab",
+        "runs/stage7_session_attention_r3/test_predictions.csv": "a554ca473c0a3ab69a77081d2eec92168b6c889f5312f12f97343866fed1643a",
+        "runs/stage7_session_attention_r4/test_predictions.csv": "6d7952814a372a3f0606e97b81a32ecd9a2c9eddcdd91da4f511605592631e1d",
+        "runs/stage7_session_attention_r5/test_predictions.csv": "3c3bba1e9bb3f2389f51536ad6b2209527b742fce6447cbbbb56adf68c2f4d71"
+      },
+      "note": "Row-normalised (% of the true class); the bold row is hispa, the pre-declared diagnostic."
+    },
+    "partition_order": {
+      "status": "present",
+      "stage": "Stage 9",
+      "files": [
+        "final_partition_order.png",
+        "final_partition_order.pdf"
+      ],
+      "sources": {
+        "results/tables/partition_order_inflation.csv": "3fdf3de768e9aa9a70e2f89e344ea6e0204e5f26284609bbd5870e66cbfdc9c9"
+      }
+    },
+    "ablations": {
+      "status": "present",
+      "stage": "Stage 8",
+      "files": [
+        "final_ablations.png",
+        "final_ablations.pdf"
+      ],
+      "sources": {
+        "docs/reports/session_ablation_report.md": "8077005d69b87e40df55c9681f9b91e2e167ca9d853b1cdbcbf499e6bb06c290",
+        "results/tables/session_ablations.csv": "0fbd8e2b5b3fc6e86ee0b1a447fa3ce878e9c3042c3a9a31c3e8fd8c587db8d7"
+      }
+    },
+    "paddy_zoom": {
+      "status": "pending",
+      "stage": "Stage 10",
+      "reason": "missing results/tables/paddy_results.csv"
+    },
+    "deletion": {
+      "status": "pending",
+      "stage": "Stage 12",
+      "reason": "missing results/tables/explain_deletion_test.csv"
+    },
+    "heatmaps": {
+      "status": "pending",
+      "stage": "Stage 12",
+      "reason": "missing results/explain/heatmaps/test/*.png"
+    },
+    "cost": {
+      "status": "pending",
+      "stage": "Stage 13",
+      "reason": "missing results/tables/cost_results.csv"
+    }
+  }
+}

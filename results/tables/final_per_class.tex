@@ -1,0 +1,29 @@
+% final_per_class.tex: built by src/make_tables.py; do not edit by hand.
+% source: runs/session_selection.json
+% source: runs/session_evaluation_plan.json
+% source: 55 files runs/<run>/test_predictions.csv (listed with their SHA-256 in final_provenance.json)
+\begin{table}[t]
+\centering
+\caption{Per-class recall (\%) on the session-blocked test photos, pooled over the 5 rounds (every test photo once). Hispa is the pre-declared diagnostic class (P1-10).}
+\label{tab:final_per-class}
+\footnotesize
+\setlength{\tabcolsep}{3pt}
+\begin{tabular}{lrrrr}
+\toprule
+Method & healthy & leaf\_blast & brown\_spot & hispa (diagnostic) \\
+\midrule
+InceptionV3 (224 px) & 79.2 & 68.4 & 77.4 & \textbf{69.1} \\
+EfficientNetV2-S (224 px) & 83.7 & 73.5 & 80.1 & \textbf{66.5} \\
+ConvNeXt-T (224 px) & 84.3 & 67.8 & 85.7 & \textbf{69.7} \\
+Swin-T (224 px) & 86.4 & 74.1 & 84.5 & \textbf{63.7} \\
+Linear probe (224 px) & 81.6 & 69.2 & 81.6 & \textbf{67.2} \\
+Linear probe (512 px) & 83.1 & 73.5 & 75.6 & \textbf{72.2} \\
+Mean pooling over tiles & 79.7 & 74.0 & 68.9 & \textbf{63.1} \\
+Max pooling over tiles & 79.9 & 77.2 & 74.1 & \textbf{73.0} \\
+Attention MIL (ours) & 85.3 & 75.9 & 88.0 & \textbf{67.6} \\
+Same head, whole photo (224 px) & 82.1 & 67.8 & 75.6 & \textbf{57.8} \\
+Same head, whole photo (512 px) & 83.1 & 68.8 & 78.7 & \textbf{70.9} \\
+Test photos (n) & 1480 & 773 & 517 & \textbf{564} \\
+\bottomrule
+\end{tabular}
+\end{table}

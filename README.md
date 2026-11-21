@@ -126,7 +126,21 @@ Today's agreed scope is the core study, with original training/search budgets re
   ```
   Kaggle notebooks are thin launchers that run the project code in an isolated environment with the exact locked package versions.
 
-Setup and the everyday Kaggle loop are in [`docs/KAGGLE_WORKFLOW.md`](docs/KAGGLE_WORKFLOW.md); the current state and next steps are in [`manuals/HANDOFF.md`](manuals/HANDOFF.md). Step-by-step instructions to reproduce every table will be added here once the results exist.
+Setup and the everyday Kaggle loop are in [`docs/KAGGLE_WORKFLOW.md`](docs/KAGGLE_WORKFLOW.md); the current state and next steps are in [`manuals/HANDOFF.md`](manuals/HANDOFF.md). How to rebuild every table and figure is in the next section.
+
+## How to reproduce each table
+
+Every final table and figure is generated from the run records in `runs/` and the per-stage tables that were themselves generated from them; nothing is typed by hand. A result whose stage is not finished is written as *pending: <stage>*.
+
+| Output | Command | Reads |
+|---|---|---|
+| All final tables, `results/tables/final_*.csv` and `final_*.tex` (main, conditions, per-class recall with hispa, confusion, paired tests, ablations, partition order, shortcut controls, committee, deletion test, cost) and `final_provenance.json` (source files with SHA-256) | `uv run python -m src.make_tables` | `runs/`, `results/tables/` |
+| All final figures, `results/figures/final_*.{png,pdf}` and `final_figures.json` (sample photos need `data/raw/`, so they are built only in a checkout that has the photos) | `uv run python -m src.make_figures` | `runs/`, `results/tables/`, `results/explain/` |
+| What is present and what is pending (tables, figures, dataset reports, every written commitment of `docs/DELIVERABLES.md` §6), `final_readiness.json` | `uv run python -m src.make_tables --check` | the two outputs above |
+| The final submission notebook `submission/final/ricetein_final.ipynb` (git-ignored; heavy steps are shown, not re-run) | `uv run python -m src.build_submission_notebook` | `src/`, `notebooks/`, `results/`, `docs/reports/` |
+| The per-stage reports and tables the final tables read | `python -m src.followup_report`, `session_report`, `session_conditions_report`, `session_ablations report`, `partition_report`, `paddy_zero_shot report`, `explain report` | `runs/` |
+
+`notebooks/14_results.ipynb` runs the first three in order.
 
 ---
 
