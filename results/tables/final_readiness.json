@@ -146,7 +146,7 @@
       "id": "P1-4",
       "commitment": "Leakage rules enforced **in code**: no augmentation before the split; variants stay with their source; test used once per model after tuning",
       "delivered_by": "Golden rules; `tests/test_split.py`, `test_leakage.py`, `test_mil_leakage.py`",
-      "document_status": "\ud83d\udfe1 Implemented and tested; full experimental execution pending The session-blocked sensitivity split follows the same rules",
+      "document_status": "\u2705 Implemented and tested (`tests/test_split.py`, `test_leakage.py`, `test_mil_leakage.py`); every experiment ran under these rules, and the session-blocked split follows the same rules. Development closed 2026-11-21 Stated in the paper (Section IV-B: automated tests enforce it; review edit 2026-11-22).",
       "status": "present",
       "missing": []
     },
@@ -154,7 +154,7 @@
       "id": "P1-5",
       "commitment": "Paddy Doctor 4-class subset held out entirely; full release used; version and download date stated",
       "delivered_by": "Stages 1, 10",
-      "document_status": "\u2705 2026-11-21: the four tested classes (`splits/paddy4.csv`, 8,086 photos, 78 byte-identical copies removed) were scored zero-shot only, nothing trained, tuned or chosen on them; full release (CC BY 4.0), version and download date in `data/DATASETS.md`; `docs/reports/paddy_report.md`",
+      "document_status": "\u2705 2026-11-21: the four tested classes (`splits/paddy4.csv`, 8,086 photos, 78 byte-identical copies removed) were scored zero-shot only, nothing trained, tuned or chosen on them; full release (CC BY 4.0), version and download date in `data/DATASETS.md`; `docs/reports/paddy_report.md` Source and version of both datasets are in the paper (Section IV-A; review edit 2026-11-22).",
       "status": "present",
       "missing": []
     },
@@ -162,7 +162,7 @@
       "id": "P1-6",
       "commitment": "Five repetitions; every metric reported as mean \u00b1 std",
       "delivered_by": "All stages (5 rounds)",
-      "document_status": "\u2b1c",
+      "document_status": "\u2705 Five rounds for every method and ablation; every table shows mean \u00b1 SD (development closed 2026-11-21)",
       "status": "present",
       "missing": []
     },
@@ -178,7 +178,7 @@
       "id": "P1-8",
       "commitment": "Accuracy for continuity; macro-F1 and balanced accuracy primary; per-class precision/recall; confusion matrix on test only; partition stated for every number",
       "delivered_by": "Stage 4a, Stage 14",
-      "document_status": "\u2b1c",
+      "document_status": "\u2705 Final tables `final_main`, `final_per_class`, `final_confusion` (confusion on test photos only; partition stated in every table). Development closed 2026-11-21 Paper (Section IV-E): plain accuracy is kept in every run record and per-class precision follows from the confusion counts in the appendix table.",
       "status": "present",
       "missing": []
     },
@@ -186,7 +186,7 @@
       "id": "P1-9",
       "commitment": "No generative oversampling; class-balanced loss instead",
       "delivered_by": "Stages 5, 7",
-      "document_status": "\u2b1c",
+      "document_status": "\u2705 No generative oversampling; inverse-frequency class weights in the loss (`configs/base.yaml`). Development closed 2026-11-21",
       "status": "manual",
       "missing": []
     },
@@ -194,7 +194,7 @@
       "id": "P1-10",
       "commitment": "Hispa recall reported and discussed as a pre-declared diagnostic",
       "delivered_by": "Stages 7, 14",
-      "document_status": "\u2b1c",
+      "document_status": "\u2705 Hispa recall is a labelled diagnostic column of `results/tables/final_per_class.csv`; discussed in Section V-E of the paper (2026-11-22)",
       "status": "present",
       "missing": []
     },
@@ -202,7 +202,7 @@
       "id": "P1-11",
       "commitment": "If a class shows anomalous recall, report a manual inspection of its misclassified images",
       "delivered_by": "Stages 2d, 7, 12",
-      "document_status": "\u2b1c",
+      "document_status": "\u2705 Addressed in paper text (Ahsan, 2026-11-22): hispa or leaf blast is the lowest-recall class for every method (hispa for 8 of 11), so it is a class pattern, not one method's anomaly; the confusion table shows which classes they are mistaken for (Section V-E, `final_per_class`, `final_confusion`). No manual inspection is claimed",
       "status": "manual",
       "missing": []
     },
@@ -210,7 +210,7 @@
       "id": "P1-12",
       "commitment": "Record each dataset's licence terms at download; reproduce them in the final paper",
       "delivered_by": "Stage 1 (`data/DATASETS.md`), final paper",
-      "document_status": "\ud83d\udfe1 recorded (primary: MIT; Paddy Doctor: CC BY 4.0); still to reproduce in the paper",
+      "document_status": "\u2705 Licence terms recorded (primary: MIT; Paddy Doctor: CC BY 4.0); reproduced in the paper (Section IV-A, Acknowledgements, 2026-11-22)",
       "status": "manual",
       "missing": []
     },
@@ -218,7 +218,7 @@
       "id": "P1-13",
       "commitment": "No images redistributed",
       "delivered_by": "Always (`.gitignore`; Paddy Doctor on Kaggle is private). **2026-11-21:** the 122 per-photo heat-map and blind-rating PNGs of `results/explain/` are no longer tracked (they show the photos at 900 px); the files stay on disk. The final figures that show dataset photos (`final_samples`, `final_heatmaps`) stay tracked and are the only photo images the paper uses. Git history still holds the old files because the repository is private (Ahsan, 2026-11-21)",
-      "document_status": "\ud83d\udfe1 ongoing",
+      "document_status": "\u2705 At close, the tracked images are the final figures (`results/figures/`), the Phase 3 sample figure and the two paper copies of `samples.jpg`; no per-photo images. Standing rule for the packaging step",
       "status": "manual",
       "missing": []
     },
@@ -226,7 +226,7 @@
       "id": "P1-14",
       "commitment": "Publish dataset versions and download dates, split files, background audit, re-derived counts",
       "delivered_by": "Stage 14 reproducibility package",
-      "document_status": "\u2b1c",
+      "document_status": "\ud83d\udce6 Packaging: the data are final; the reproducibility package (dataset versions, split files, audit, counts) is assembled at packaging",
       "status": "present",
       "missing": []
     },
@@ -234,7 +234,7 @@
       "id": "P1-15",
       "commitment": "Attention reported as qualitative interpretability; no severity claims",
       "delivered_by": "Stage 12",
-      "document_status": "\ud83d\udfe1 2026-11-21 runs done (`docs/reports/explain_report.md`); the paper wording (qualitative interpretability, no severity claims, the limits listed in the logbook) is still to do",
+      "document_status": "\u2705 Runs done (`docs/reports/explain_report.md`). Maps rated by two sets of model raters, no person rated them; paper wording (qualitative interpretability, no severity claims) is in Sections V-G, VI and VII (2026-11-22)",
       "status": "present",
       "missing": []
     },
@@ -250,7 +250,7 @@
       "id": "P1-17",
       "commitment": "Dhan-Shomadhan only if the main programme is complete",
       "delivered_by": "Optional",
-      "document_status": "\u2b1c",
+      "document_status": "\ud83d\udd2d Future work: skipped by Ahsan (2026-11-21); named as future work in the paper",
       "status": "manual",
       "missing": []
     },
@@ -266,7 +266,7 @@
       "id": "O2",
       "commitment": "Leakage-free protocol: split before augmentation, published splits, macro-F1 + balanced accuracy + accuracy, mean \u00b1 std",
       "delivered_by": "Stages 3, 4",
-      "document_status": "\u2b1c",
+      "document_status": "\u2705 Protocol applied in every stage (split before augmentation, published splits, macro-F1, balanced accuracy and accuracy, mean \u00b1 SD). Development closed 2026-11-21",
       "status": "present",
       "missing": []
     },
@@ -282,7 +282,7 @@
       "id": "O4",
       "commitment": "Tile-based weakly supervised model: tiling, frozen-encoder descriptions, attention combining from image-level labels",
       "delivered_by": "Stages 6, 7",
-      "document_status": "\u2b1c",
+      "document_status": "\u2705 Stages 6 and 7 (tile descriptions cached, attention head trained from photo labels); development closed 2026-11-21",
       "status": "present",
       "missing": []
     },
@@ -298,7 +298,7 @@
       "id": "O6",
       "commitment": "Zero-shot evaluation of **all** models on the secondary dataset; compare attention maps with visible symptoms",
       "delivered_by": "Stages 10, 12",
-      "document_status": "\ud83d\udfe1 2026-11-21 first half done: all 130 round-models (11 headline methods and 9 Stage 5 conditions, 5 rounds each) scored zero-shot on Paddy Doctor, `docs/reports/paddy_report.md`; H3 not shown. The comparison of attention maps with visible symptoms (Stage 12, 2026-11-21, `docs/reports/explain_report.md`): 50 blind heat maps rated by three disclosed model raters, yes 39.3%, partly 32.0%, no 28.7%, all agree on 88.0% (Fleiss' kappa 0.88); deletion test on test photos shows the attended tiles matter (gap 25.4 points at k=16, both ranges); on Paddy photos the effect is small (2.2 points, photo range only). \ud83d\udfe2 second half done with model raters. A second set of three agent ratings was imported on 2026-11-21 under the kind `human` (Ahsan's decision; `docs/reports/heatmap_ratings_report.md`: yes 49.3%, partly 24.0%, no 26.7%, all agree 76.0%, kappa 0.75; majority equals the model majority on 84.0% of maps); **no person has rated the maps**, so write them as model ratings",
+      "document_status": "\u2705 Done 2026-11-21. First half: all 130 round-models (11 headline methods and 9 Stage 5 conditions, 5 rounds each) scored zero-shot on Paddy Doctor, `docs/reports/paddy_report.md`; H3 not shown. The comparison of attention maps with visible symptoms (Stage 12, 2026-11-21, `docs/reports/explain_report.md`): 50 blind heat maps rated by three disclosed model raters, yes 39.3%, partly 32.0%, no 28.7%, all agree on 88.0% (Fleiss' kappa 0.88); deletion test on test photos shows the attended tiles matter (gap 25.4 points at k=16, both ranges); on Paddy photos the effect is small (2.2 points, photo range only). Second half done with model raters (set 1). A second set of three agent ratings (set 2) was imported on 2026-11-21 under the importer's kind label `human` (Ahsan's decision; `docs/reports/heatmap_ratings_report.md`: yes 49.3%, partly 24.0%, no 26.7%, all agree 76.0%, kappa 0.75; majority equals the model majority on 84.0% of maps); **no person has rated the maps**, so write both sets as model ratings (\"Model raters, set 1\" and \"set 2\", as in `final_explain_ratings`) **Paper verdict (2026-11-22): met (H3 not shown)**: both evaluations were run; H3 not being shown is a result.",
       "status": "present",
       "missing": []
     },

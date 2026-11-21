@@ -192,6 +192,10 @@ def heatmaps(root: Path) -> Result:
     return figure, chosen
 
 
+# the two linear-probe points are close together: the 224 px label goes below its point so the labels do not overlap
+COST_LABEL_OFFSETS = {"probe_224": (3, -12)}
+
+
 def cost(root: Path) -> Result:
     path = f"{mt.TABLES}/cost_results.csv"
     c = mt.read_table(root, path)
@@ -202,8 +206,8 @@ def cost(root: Path) -> Result:
     for k, row in enumerate(c.itertuples()):
         axis.plot(row.seconds_per_photo, 100 * row.macro_f1, MARKERS[k % len(MARKERS)], color=INK,
                   mfc=INK if k % 2 == 0 else "white")
-        axis.annotate(mt.name_of(row.method), (row.seconds_per_photo, 100 * row.macro_f1), fontsize=5, xytext=(3, 2),
-                      textcoords="offset points")
+        axis.annotate(mt.name_of(row.method), (row.seconds_per_photo, 100 * row.macro_f1), fontsize=5,
+                      xytext=COST_LABEL_OFFSETS.get(row.method, (3, 2)), textcoords="offset points")
     axis.set(xscale="log", xlabel="time per photo, end to end (s)", ylabel="test macro-F1 (%)")
     axis.grid(color=LIGHT, lw=0.4)
     figure.tight_layout(pad=0.5)
