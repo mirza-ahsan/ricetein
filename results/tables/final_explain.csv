@@ -1,2 +1,6 @@
-status
-pending: Stage 12
+Tiles removed (k),"Macro-F1, nothing removed","Macro-F1, top-k attended removed","Macro-F1, random k removed","True-class probability, random minus top-k removed (points)",Photo range,Block range,Rounds won,Verdict
+1,77.9,65.8,77.8,+6.5,"[5.8, 7.3]","[4.4, 8.5]",5/5,top-k matters more than random-k
+2,77.9,54.5,77.6,+12.3,"[11.4, 13.1]","[8.8, 15.6]",5/5,top-k matters more than random-k
+4,77.9,39.2,77.3,+18.3,"[17.4, 19.2]","[13.1, 23.3]",5/5,top-k matters more than random-k
+8,77.9,23.1,76.6,+23.7,"[22.8, 24.6]","[16.9, 30.6]",5/5,top-k matters more than random-k
+16,77.9,15.6,75.3,+25.4,"[24.5, 26.2]","[18.2, 32.8]",5/5,top-k matters more than random-k

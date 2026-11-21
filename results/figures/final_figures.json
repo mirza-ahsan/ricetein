@@ -1,5 +1,5 @@
 {
-  "code_version": "61415fe",
+  "code_version": "f3b71e5",
   "figures": {
     "samples": {
       "status": "present",
@@ -90,14 +90,30 @@
       }
     },
     "deletion": {
-      "status": "pending",
+      "status": "present",
       "stage": "Stage 12",
-      "reason": "missing results/tables/explain_deletion_test.csv"
+      "files": [
+        "final_deletion.png",
+        "final_deletion.pdf"
+      ],
+      "sources": {
+        "results/tables/explain_deletion_test.csv": "e60b8761708c8bd125429709cc25423646d6d36f66d2dfa453c80c45f772f8e5"
+      }
     },
     "heatmaps": {
-      "status": "pending",
+      "status": "present",
       "stage": "Stage 12",
-      "reason": "missing results/explain/heatmaps/test/*.png"
+      "files": [
+        "final_heatmaps.png",
+        "final_heatmaps.pdf"
+      ],
+      "sources": {
+        "results/explain/heatmaps/val/brown_spot_correct_1_BrownSpot__IMG_5511.png": "51d9c393e2746c8834c17617cfcbda2b0c7f0f1a879a28c6404edb2b59529dfc",
+        "results/explain/heatmaps/val/healthy_correct_1_Healthy__IMG_20190419_162827.png": "b63c1bc99492852ef1d21612adcb67453133a1d9716837972fa862f0290b0fed",
+        "results/explain/heatmaps/val/hispa_correct_1_Hispa__IMG_20190419_163137.png": "a5db2200a948020279c9a7d12883df572774aae96cbd59e5b45b0eddb4a65968",
+        "results/explain/heatmaps/val/leaf_blast_correct_1_LeafBlast__IMG_4926.png": "5e1bec5fa54a506fc5fe018e8303467a90cee999225d367edf499168c966e647"
+      },
+      "note": "One example per class: the most confident correct photo ('correct, rank 1') of the Stage 12 example rule, chosen from the validation predictions and drawn from validation photos. It is the best case of each class, not a typical one; say so in the caption."
     },
     "cost": {
       "status": "pending",
