@@ -5,11 +5,13 @@ are tested (and only when all are trained), and the validation table is computed
 import json
 from types import SimpleNamespace
 
+import numpy as np
 import pandas as pd
 import pytest
 
 from src import session_ablations as sa
 from src.config import load_config
+from src.embed import photo_key
 
 
 def test_every_variant_changes_only_what_it_names_and_reuses_the_main_settings():
@@ -57,6 +59,23 @@ def test_packed_files_are_built_one_kind_at_a_time_for_training_and_for_test(tmp
     calls.clear()
     sa.pack_one_key_at_a_time(sa.variant_config("single_version"))               # one version for training and test
     assert {v for _, v, _ in calls} == {1}
+
+
+def test_packing_into_a_cache_whose_packed_folder_does_not_exist_yet_works(tmp_runs, monkeypatch):
+    (tmp_runs / "stage7_tune_session_attention").mkdir()
+    (tmp_runs / "stage7_tune_session_attention" / "metrics.json").write_text(json.dumps({"best_params": {"descriptor": "c"}}))
+    config = sa.variant_config("single_version")                                 # one version, class token only
+    source = tmp_runs / "cache" / config["mil"]["cache"] / "v0"
+    source.mkdir(parents=True)
+    for photo_id in ("a.jpg", "b.jpg"):
+        np.savez(source / f"{photo_key(photo_id)}.npz", cls=np.ones((3, 4), dtype=np.float32))
+    monkeypatch.setattr(sa, "read_folds", lambda config: (SimpleNamespace(photo_id=["b.jpg", "a.jpg"]), "sum"))
+    monkeypatch.setattr(sa, "completed_cache", lambda config, name: {"spec_sha256": "abc"})
+    target = tmp_runs / "cache" / "packed" / config["mil"]["cache"]
+    assert not target.exists()
+    sa.pack_one_key_at_a_time(config)
+    assert len(list(target.glob("cls_*.f16"))) == 1
+    sa.pack_one_key_at_a_time(config)                                            # a second start finds the folder
 
 
 def test_fit_trains_the_ready_variants_and_ends_with_an_error_for_the_waiting_ones(tmp_runs, monkeypatch):
