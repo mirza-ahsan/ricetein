@@ -22,8 +22,8 @@ cost:
     max_total_cpu_percent: 20
     max_gpu_mib: 1500
   committee:                # Stage 11 members, as keys of src/cost.py METHODS (empty: no committee row)
-    members: []
-    test_macro_f1: null     # the committee's test macro-F1 as Stage 11 reports it (Stage 13 tests nothing for it)
+    members: [convnext_tiny_448, attention]   # Stage 11 `row2_plain` (runs/committee_selection.json), weights [1, 1]
+    test_macro_f1: 0.8155888862792725         # its test macro-F1 as Stage 11 reports it (Stage 13 tests nothing for it)
 
 compress:
   tiles: 16                 # tiles kept by the "fewer tiles" rule
@@ -37,6 +37,6 @@ compress:
 
 distill:
   temperature: 1.0
-  teacher:                  # the Stage 11 committee, copied here before the first distillation run;
-    members: [mean, max, attention]   # fallback if Stage 11 gives none: the selected tile heads on E1
-    soft_answers_file: null # or a CSV from Stage 11 (photo_id, round, prob_<class>) with the training photos' answers
+  teacher:                  # the Stage 11 committee `row2_plain` (handbook §24, second Stage 13 row of 2026-11-21)
+    members: [convnext_tiny_448, attention]   # mean probability, weights [1, 1]; each is the round-r model of that round
+    soft_answers_file: null # or a CSV (photo_id, round, prob_<class>) with the training photos' answers

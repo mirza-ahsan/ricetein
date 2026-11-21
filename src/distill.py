@@ -11,7 +11,9 @@ from ``configs/cost.yaml``, no hard labels, no class weights.
 
 The teacher is the Stage 11 committee: its answers on the training photos come from ``distill.teacher.soft_answers_file``
 when Stage 11 saved them, else they are computed here as the mean probability of ``distill.teacher.members``
-(selected tile heads on E1, or probes) with each member's own round-model. The temperature softens the teacher's answers
+(selected tile heads on E1, probes, or fine-tuned whole-image models) with each member's own round-model. A
+whole-image member is scored on the clean training photos of the round only (evaluation preprocessing, no
+augmentation); its answers, like the heads', are in-sample. The temperature softens the teacher's answers
 only. Run all five rounds in one go: ``reusable_run`` compares every file under ``src/`` and ``configs/``, so a resume
 after an unrelated commit asks for the unfinished rounds to be archived.
 """
@@ -84,6 +86,46 @@ def probe_member(method: str, round_: int, folds: pd.DataFrame, shared: dict) ->
     return lambda rows: model.predict_proba(x[rows])[:, order]
 
 
+CNN_MEMBERS = ("inceptionv3_224", "efficientnetv2s_224", "convnext_tiny_224", "swin_tiny_224", "convnext_tiny_448")
+
+
+def cnn_answers(model, config: dict[str, Any], folds: pd.DataFrame, round_: int, images: np.ndarray, ids: list[str],
+                device: torch.device) -> tuple[np.ndarray, np.ndarray]:
+    """(rows, probabilities) of one round's whole-image model on the CLEAN TRAINING photos of the round: the
+    evaluation preprocessing (resize only), no augmentation. No validation or test photo is in the dataset."""
+    from src import photo_dataset
+    from src import train_wholeimage as tw
+
+    w = config["wholeimage"]
+    data = photo_dataset.PhotoDataset(folds, images, ids, round_, "train", w["size"], config["classes"], augmented=False)
+    loader = torch.utils.data.DataLoader(data, batch_size=w["batch_size"][w["size"]], shuffle=False,
+                                         num_workers=w["workers"])
+    return tw.predict(model.to(device), loader, config, device)
+
+
+def cnn_member(method: str, round_: int, folds: pd.DataFrame) -> Callable[[np.ndarray], np.ndarray]:
+    """A fine-tuned whole-image member: its round-r checkpoint, asked about the training photos of the round only."""
+    from src import evaluate, photo_dataset
+    from src import train_wholeimage as tw
+
+    def member(rows: np.ndarray) -> np.ndarray:
+        if not np.array_equal(rows, role_rows(folds, "train")[round_]):
+            raise ValueError(f"{method}: asked about photos that are not exactly the training photos of round {round_}")
+        run = selected_runs(method)[round_ - 1]
+        config = evaluate.restore_size_keys(read_json(get_default_runs_dir() / run / "record.json")["config"])
+        w, device = config["wholeimage"], torch.device("cuda")
+        model = tw.build_model(config, w["size"])
+        model.load_state_dict(torch.load(get_default_runs_dir() / run / "model.pt", map_location="cpu", weights_only=True))
+        scored, probs = cnn_answers(model, config, folds, round_, photo_dataset.photo_cache(config, w["size"], w["otsu"]),
+                                    photo_dataset.photo_ids(config), device)
+        del model
+        torch.cuda.empty_cache()
+        if not np.array_equal(scored, rows):
+            raise RuntimeError(f"{method}: the scored photos differ from the training photos of round {round_}")
+        return probs
+    return member
+
+
 def tile_member(method: str, round_: int, config: dict[str, Any], folds: pd.DataFrame, shared: dict) -> Callable:
     model, params = load_head(selected_runs(method)[round_ - 1])
     bag_of, ids = cached_bags(config, "E1", params["descriptor"], folds, shared), folds["photo_id"].to_numpy()
@@ -93,7 +135,8 @@ def tile_member(method: str, round_: int, config: dict[str, Any], folds: pd.Data
 def build_members(names: list[str], round_: int, config: dict[str, Any], folds: pd.DataFrame,
                   shared: dict) -> list[Callable]:
     """``shared`` keeps what does not depend on the round (descriptions, packed stores) across the five rounds."""
-    return [probe_member(n, round_, folds, shared) if n.startswith("probe") else tile_member(n, round_, config, folds, shared)
+    return [probe_member(n, round_, folds, shared) if n.startswith("probe")
+            else cnn_member(n, round_, folds) if n in CNN_MEMBERS else tile_member(n, round_, config, folds, shared)
             for n in names]
 
 

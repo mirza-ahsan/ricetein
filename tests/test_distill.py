@@ -9,6 +9,7 @@ import torch
 
 from src import distill
 from src.compress import role_rows
+from src.config import load_config
 
 CLASSES = ["healthy", "leaf_blast", "brown_spot", "hispa"]
 PARAMS = {"lr": 0.01, "weight_decay": 0.0, "width": 8, "dropout": 0.0, "tile_dropout": 0.0, "descriptor": "cm"}
@@ -110,3 +111,39 @@ def test_the_soft_answer_file_must_hold_exactly_the_training_photos_of_the_round
     pd.DataFrame(rows[:-1]).to_csv(short, index=False)
     with pytest.raises(ValueError, match="exactly the training photos"):
         distill.file_targets(short, table, 1, CLASSES, 1.0)
+
+
+def test_a_whole_image_teacher_member_scores_only_clean_training_photos():
+    """The whole-image member sees every training photo of the round, each exactly as stored (no augmentation), and no
+    validation or test photo; asking it about other photos stops before anything is loaded."""
+    from src.photo_dataset import cache_size
+
+    table, size = folds(), 14
+    side = cache_size(size)
+    images = np.stack([np.full((side, side, 3), 10 * (k + 1), np.uint8) for k in range(24)])   # photo k is the constant 10(k+1)
+    seen = []
+
+    class Spy(torch.nn.Module):
+        def forward(self, x):
+            raw = (x * torch.tensor([0.229, 0.224, 0.225]).view(1, 3, 1, 1) + torch.tensor([0.485, 0.456, 0.406]).view(1, 3, 1, 1)) * 255
+            for image in raw:
+                assert float(image.max() - image.min()) < 1e-3     # a constant image stays constant: nothing was augmented
+                seen.append(int(round(float(image.mean()) / 10)) - 1)
+            return torch.zeros(len(x), 4)
+
+    config = {"classes": CLASSES, "normalisation": {"mean": [0.485, 0.456, 0.406], "std": [0.229, 0.224, 0.225]},
+              "wholeimage": {"size": size, "batch_size": {size: 5}, "workers": 0}}
+    rows, probs = distill.cnn_answers(Spy(), config, table, 1, images, [str(k) for k in range(24)], torch.device("cpu"))
+    assert sorted(seen) == list(range(12)) and rows.tolist() == list(range(12)) and probs.shape == (12, 4)
+    with pytest.raises(ValueError, match="exactly the training photos"):
+        distill.cnn_member("convnext_tiny_448", 1, table)(np.arange(18))      # includes validation photos
+    with pytest.raises(ValueError, match="exactly the training photos"):
+        distill.cnn_member("convnext_tiny_448", 1, table)(np.arange(12, 24))  # validation and test photos only
+
+
+def test_committee_members_are_dispatched_by_kind():
+    assert "convnext_tiny_448" in distill.CNN_MEMBERS and "attention" not in distill.CNN_MEMBERS
+    config = load_config("configs/cost.yaml")
+    assert config["distill"]["teacher"]["members"] == ["convnext_tiny_448", "attention"]
+    assert config["cost"]["committee"]["members"] == config["distill"]["teacher"]["members"]
+    assert config["cost"]["committee"]["test_macro_f1"] == pytest.approx(0.8155888862792725)
