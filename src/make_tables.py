@@ -444,6 +444,22 @@ def deletion_table(root: Path) -> Built:
     return frame, [root / path]
 
 
+def ratings_table(root: Path) -> Built:
+    """Human and model heat-map ratings side by side, from Stage 12's ``explain_ratings_by_kind.csv`` (written by
+    ``src.heatmap_ratings report`` once the human ratings are in)."""
+    path = f"{TABLES}/explain_ratings_by_kind.csv"
+    d = read_table(root, path)
+    frame = pd.DataFrame({
+        "Raters": [f"{k} ({n})" for k, n in zip(d.kind, d.raters)],
+        "Maps": d.maps.astype(str),
+        "Yes (%)": [pct(v) for v in d.yes],
+        "Partly (%)": [pct(v) for v in d.partly],
+        "No (%)": [pct(v) for v in d.no],
+        "All raters agree (%)": [pct(v) for v in d.all_agree],
+        "Fleiss' kappa": [f"{v:.2f}" for v in d.kappa]})
+    return frame, [root / path]
+
+
 @dataclass(frozen=True)
 class Spec:
     name: str
@@ -499,6 +515,9 @@ SPECS = [
     Spec("explain", "Stage 12",
          "Deletion test on the session-blocked test photos: removing the most attended tiles against removing "
          "random tiles.", deletion_table, wide=True),
+    Spec("explain_ratings", "Stage 12 (human ratings)",
+         "Blind ratings of 50 heat maps (does the hot area cover visible symptoms?): share of each answer over all "
+         "ratings, and how often all three raters of a kind gave the same answer.", ratings_table),
     Spec("cost", "Stage 13", "Parameters, storage, time per photo and peak memory.",
          passthrough(("results/tables/cost_results.csv", "results/tables/cost.csv"))),
 ]
@@ -621,7 +640,7 @@ EVIDENCE = {   # commitment -> what must exist; "table:x" needs a built table, "
     "O3": ["results/tables/session_conditions_scores.csv", "table:main"],
     "O4": ["table:main"],
     "O5": ["table:ablations", "table:ablations_test", "table:conditions"],
-    "O6": ["docs/reports/paddy_report.md", "docs/reports/explain_report.md", "table:explain"],
+    "O6": ["docs/reports/paddy_report.md", "docs/reports/explain_report.md", "table:explain", "table:explain_ratings"],
     "O7": ["table:cost", "figure:cost"],
 }   # P1-9, P1-11, P1-12, P1-13 and P1-17 are checked by a person ("manual")
 

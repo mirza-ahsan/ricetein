@@ -74,7 +74,7 @@ def test_a_missing_source_gives_a_pending_table_never_no_table(fixture):
     pending = table(fixture, "ablations")
     assert list(pending.columns) == ["status"] and pending.status[0].startswith("pending: Stage 8")
     assert "pending: Stage 8" in (fixture / "results/tables/final_ablations.tex").read_text()
-    for name in ("committee", "explain", "cost", "paired_conditions", "paired_committee"):
+    for name in ("committee", "explain", "explain_ratings", "cost", "paired_conditions", "paired_committee"):
         assert provenance[name]["status"] == "pending"
     assert table(fixture, "committee").status[0] == "pending: Stage 11"
 
@@ -87,6 +87,20 @@ def test_later_stage_tables_appear_when_their_source_exists(tmp_path):
     assert {provenance[n]["status"] for n in ("committee", "explain", "cost")} == {"present"}
     assert table(root, "committee").loc[0, "macro_f1"] == "50.0"
     assert table(root, "explain")["Verdict"].iloc[0] == "top-k matters more than random-k"
+
+
+def test_the_ratings_table_is_pending_until_the_human_ratings_report_exists_then_shows_both_kinds(tmp_path):
+    root = make_fixture(tmp_path, explain=True)
+    assert mt.build_all(root)["tables"]["explain_ratings"]["status"] == "pending"
+    assert table(root, "explain_ratings").status[0] == "pending: Stage 12 (human ratings)"
+    pd.DataFrame({"kind": ["human", "model"], "raters": [3, 3], "maps": [50, 50], "yes": [0.4, 0.393], "partly": [0.3, 0.32],
+                  "no": [0.3, 0.287], "all_agree": [0.7, 0.88], "kappa": [0.55, 0.88]}).to_csv(
+        root / "results/tables/explain_ratings_by_kind.csv", index=False)
+    assert mt.build_all(root)["tables"]["explain_ratings"]["status"] == "present"
+    shown = table(root, "explain_ratings")
+    assert shown["Raters"].tolist() == ["human (3)", "model (3)"]
+    assert shown.loc[0, ["Yes (%)", "All raters agree (%)", "Fleiss' kappa"]].tolist() == ["40.0", "70.0", "0.55"]
+    assert shown.loc[1, "Yes (%)"] == "39.3"
 
 
 def test_committee_cost_comes_from_the_stage_13_table(tmp_path):
