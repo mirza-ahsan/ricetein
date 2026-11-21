@@ -372,7 +372,8 @@ def declaration_for(partition: str) -> dict:
     declaration = json.loads(require_plan().read_text())
     if partition == "paddy" and "paddy" not in declaration:
         raise RuntimeError(
-            "the declaration has no Paddy extension (handbook §24, 2026-11-21): plan came too early"
+            "the declaration has no Paddy extension (handbook §24, 2026-11-21): it was written before it; "
+            "a new dated declaration is needed, because the plan file is never rewritten"
         )
     return declaration
 
@@ -436,8 +437,16 @@ class PaddyBags:
             yield tiles, mask, self.labels[rows], rows
 
 
+def check_paddy_predictions(declaration: dict) -> None:
+    """The saved Stage 10 predictions (they pick examples, check deletion) are the declared ones."""
+    for name, saved in declaration["paddy"]["predictions_sha256"].items():
+        if digest(get_default_runs_dir() / name / f"paddy_predictions_{PADDY_ZOOM}.csv") != saved:
+            raise ValueError(f"{name}: Paddy predictions changed after the declaration")
+
+
 def paddy_setup(declaration: dict) -> dict:
-    """The Paddy settings, after checking that the cache is the declared one."""
+    """The Paddy settings, after checking that the cache and the saved predictions are the declared ones."""
+    check_paddy_predictions(declaration)
     config = load_config(PADDY_CONFIG)
     manifest = verify_paddy_cache(config, config["paddy"]["caches"]["tiles"][PADDY_ZOOM])
     if manifest["spec_sha256"] != declaration["paddy"]["cache_spec_sha256"]:
@@ -486,14 +495,12 @@ def select(partition: str) -> None:
         declaration = declaration_for(partition)
     config = load_config(EMBED_CONFIG)
     classes = config["classes"]
+    if partition == "paddy":
+        check_paddy_predictions(declaration)
     predictions = read_run_predictions(partition)
     extra = 0 if partition == "paddy" else EXTRA_ITEMS  # Paddy: the 36 labelled examples only, no blind sheet
     examples = rank_examples(predictions, classes, PER_CELL, SELECT_SEED)
-    if partition == "paddy":
-        for name, saved in declaration["paddy"]["predictions_sha256"].items():
-            if digest(get_default_runs_dir() / name / f"paddy_predictions_{PADDY_ZOOM}.csv") != saved:
-                raise ValueError(f"{name}: Paddy predictions changed after the declaration")
-    else:
+    if partition != "paddy":
         examples = add_extras(examples, predictions, extra, SELECT_SEED)
     path = OUT / f"examples_{partition}.csv"
     if path.exists():
@@ -512,6 +519,8 @@ def heatmaps(partition: str) -> None:
     paddy = partition == "paddy"
     if partition in ("test", "paddy"):
         declaration = declaration_for(partition)
+    if paddy:
+        select(partition)  # the list on disk must be the one the rule gives from the declared predictions
     examples = pd.read_csv(OUT / f"examples_{partition}.csv")
     photos = Photos(partition)
     if paddy:  # no saved attention for Paddy photos: the declared model is run on the chosen photos' bags
@@ -834,7 +843,8 @@ def deletion_summary(
                 **ranges,
                 "round_wins": wins,
                 "rounds": len(t),
-                "verdict": "top-k matters more than random-k" if better else "no clear difference",
+                "verdict": ("top-k matters more than random-k" if better else "no clear difference")
+                + ("" if blocks is not None else " (photo range only)"),
             }
         )
     return pd.DataFrame(rows)
@@ -902,7 +912,8 @@ def deletion_section(partition: str, settings: dict, comparison: dict) -> list[s
         "ranges = "
         + (
             "95% paired bootstrap over photos only (Paddy Doctor has no capture blocks; each photo's five "
-            "round-model values are averaged first). Rule: top-k matters more than random-k only if the "
+            "round-model values are averaged first; near-duplicate photos are not grouped, so the range is "
+            "narrower than it would be with groups). Rule: top-k matters more than random-k only if the "
             "photo range is above 0 and the gap is positive in at least "
             if partition == "paddy"
             else "95% paired bootstrap over photos and over whole capture blocks (decision D9). Rule: top-k "

@@ -397,8 +397,6 @@ def test_paddy_photos_need_a_plan_that_has_the_extension_and_their_own_run_once_
     plan.write_text(json.dumps({"test_runs": ["changed"], "paddy": {}}))
     with pytest.raises(ValueError, match="another plan"):
         ex.start_marker("paddy", "deletion")
-    with pytest.raises(ValueError, match="another plan"):
-        ex.start_marker("paddy", "deletion")
 
 
 def test_paddy_examples_follow_the_rule_on_the_saved_stage_10_predictions_only(tmp_path, monkeypatch):
@@ -511,12 +509,31 @@ def test_photo_only_verdict_averages_the_round_models_per_photo_and_needs_no_blo
         photo_id=photos["photo_id"].str.split("_").str[1]
     )  # the same 40 photos in every round
     summary = ex.deletion_summary(scores, photos, None, SETTINGS, RULE).iloc[0]
-    assert "gap_block_low" not in summary and summary["verdict"] == "top-k matters more than random-k"
+    assert "gap_block_low" not in summary
+    assert summary["verdict"] == "top-k matters more than random-k (photo range only)"
     assert summary["gap_low"] > 0 and abs(summary["gap_p_true"] - 0.3) < 0.02
     few = ex.deletion_summary(*synthetic_deletion([0.3] * 8, 3)[:2], None, SETTINGS, RULE).iloc[0]
-    assert few["verdict"] == "no clear difference"  # a clear range still needs the round wins
+    assert (
+        few["verdict"] == "no clear difference (photo range only)"
+    )  # a clear range still needs the round wins
     none = ex.deletion_summary(*synthetic_deletion([0.0] * 8, 5)[:2], None, SETTINGS, RULE).iloc[0]
-    assert none["verdict"] == "no clear difference"
+    assert none["verdict"] == "no clear difference (photo range only)"
+
+
+def test_photo_only_range_resamples_photos_not_rows():
+    """Each round-model sees every photo; rows of one photo must stay together and be averaged first."""
+    scores, photos, _ = synthetic_deletion([0.3] * 8, 5)
+    photos = photos.assign(photo_id=photos["photo_id"].str.split("_").str[1])
+    offset = photos["round"].map({1: 0.2, 2: -0.2, 3: 0.1, 4: -0.1, 5: 0.0})  # cancels in the photo mean
+    photos = photos.assign(p_random=photos["p_random"] + offset)
+    sizes = []
+    real = ex.stats.resample_indices
+    ex.stats.resample_indices = lambda *a: sizes.append(len(a[0])) or real(*a)
+    try:
+        summary = ex.deletion_summary(scores, photos, None, SETTINGS, RULE).iloc[0]
+    finally:
+        ex.stats.resample_indices = real
+    assert sizes == [40] and abs(summary["gap_p_true"] - 0.3) < 0.02  # 40 photos, not 200 rows
 
 
 class FakePhotos:
@@ -610,7 +627,7 @@ def test_paddy_deletion_runs_end_to_end_resumes_and_feeds_the_report(tmp_path, m
     assert "## Deletion test, Paddy Doctor photos at native zoom" in text and "photos only" in text
     summary = pd.read_csv(tmp_path / "tables" / "explain_deletion_paddy.csv")
     assert list(summary["k"]) == list(ex.KS) and "gap_block_low" not in summary
-    assert summary["verdict"].isin(["top-k matters more than random-k", "no clear difference"]).all()
+    assert summary["verdict"].str.endswith("(photo range only)").all()
     assert (
         "## Deletion test, test photos" in text and "Not run yet" in text
     )  # the primary sections are untouched
@@ -639,9 +656,37 @@ def test_paddy_background_and_heat_maps_run_end_to_end(tmp_path, monkeypatch):
     ex.select("paddy")
     ex.heatmaps("paddy")
     drawn = list((tmp_path / "explain" / "heatmaps" / "paddy").glob("*.png"))
-    assert drawn and not (tmp_path / "explain" / "blind").exists()
+    examples = pd.read_csv(tmp_path / "explain" / "examples_paddy.csv")
+    assert len(drawn) == len(examples) and not (tmp_path / "explain" / "blind").exists()
     ex.report()
     assert (
         "## Attention on background tiles, Paddy Doctor photos at native zoom"
         in (tmp_path / "explain_report.md").read_text()
     )
+
+
+def test_paddy_deletion_stops_when_the_saved_predictions_changed_and_writes_nothing(tmp_path, monkeypatch):
+    paddy_world(tmp_path, monkeypatch)
+    ex.plan()
+    saved = tmp_path / ex.run_name(0, 2) / "paddy_predictions_native.csv"
+    frame = pd.read_csv(saved)
+    columns = [f"prob_{c}" for c in CLASSES]
+    frame[columns] = frame[columns].iloc[::-1].to_numpy()
+    frame.to_csv(saved, index=False)
+    with pytest.raises(ValueError, match="changed after the declaration"):
+        ex.deletion("paddy")
+    assert not list((tmp_path / "explain").glob("deletion_*paddy_*.csv"))
+    with pytest.raises(ValueError, match="changed after the declaration"):
+        ex.background("paddy")
+    with pytest.raises(ValueError, match="changed after the declaration"):
+        ex.select("paddy")
+
+
+def test_the_deletion_check_against_stage_10_is_called(tmp_path, monkeypatch):
+    paddy_world(tmp_path, monkeypatch)
+    ex.plan()
+    called = []
+    real = ex.check_against_stage10
+    monkeypatch.setattr(ex, "check_against_stage10", lambda *a: called.append(a[1]) or real(*a))
+    ex.deletion("paddy")
+    assert called == ex.runs_for("paddy")
