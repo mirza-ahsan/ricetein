@@ -111,3 +111,15 @@ def test_final_tables_and_figures_are_shown_for_every_generator_spec(tmp_path):
         assert f"final_{spec.name}.csv" in shown
     for spec in bn.FIGURE_SPECS:
         assert f"{bn.PROMISED_FIGURES[spec.name][1]}.png" in shown
+
+
+def test_every_module_is_in_a_stage_not_only_in_the_other_modules_list():
+    on_disk = {p.stem for p in (REPO / "src").glob("*.py") if p.stem != "__init__"}
+    assert on_disk <= {m for stage in bn.STAGES.values() for m in stage[2]}
+
+
+def test_the_wording_agrees_with_the_paper(tmp_path):
+    notebook, _ = build(tmp_path)
+    markdown = "\n".join(c.source for c in notebook.cells if c.cell_type == "markdown" and "bundle_path" not in c.metadata)
+    assert "never human ratings" in markdown and "post-hoc" in markdown and "no person rated the maps" in markdown
+    assert "grant" not in markdown.lower().replace("granted", "")
