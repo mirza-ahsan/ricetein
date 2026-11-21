@@ -17,6 +17,7 @@ It only points to files that exist in this repository.
 | Label check | `data/label_check/`, `data/label_conflicts.csv`, `data/suspect_labels.csv` | Disclosed AI model raters |
 | Leaf width and the common leaf scale | `data/leaf_width_measurements.csv`, `data/leaf_width_selection.csv`, `data/pixel_scale_decision.json` | `rescale_factor()` in `src/leaf_width.py` |
 | Run records | `runs/<run>/` (config, commit, split checksum, data version, per-photo predictions; no checkpoints) | Every number in the paper traces to one |
+| Commit map | `docs/commit_map.csv` | Run records cite the commit ids of the history before its public release; this file maps each of them to its commit in this repository |
 | Reports | `docs/reports/` | One per stage, generated from `runs/` |
 | Final tables and figures | `results/tables/final_*.csv|tex`, `results/figures/final_*`, `results/tables/final_provenance.json`, `results/figures/final_figures.json` | Each lists the source files and their SHA-256 |
 | Declarations made before the tests | `docs/commitments.md` (written before any experiment), `docs/reports/paddy_pre_declaration.md`, `runs/*_plan.json`, `runs/*_declared.json`; each report names the date its plan was declared | Comparisons declared after the means were seen are marked post-hoc |
@@ -28,7 +29,7 @@ Everything below runs from the repository root. `uv sync` installs the locked en
 | What | Command |
 |---|---|
 | Tests | `uv run --locked pytest -q` |
-| Frozen files unchanged | `git diff --stat d44f65f -- src/augment.py src/config.py src/embed.py src/encoders.py src/inventory.py src/inventory_report.py src/kaggle_bootstrap.py src/leaf_width.py src/linear_probe.py src/metrics.py src/mil_models.py src/otsu.py src/photo_dataset.py src/review_tool.py src/sanity_baselines.py src/seeding.py src/split.py src/stats.py src/tiling.py src/train_mil.py src/train_wholeimage.py pyproject.toml uv.lock` (prints nothing) |
+| Frozen files unchanged (since the methodology code was frozen) | `git diff --stat e58a219 -- src/augment.py src/config.py src/embed.py src/encoders.py src/inventory.py src/inventory_report.py src/kaggle_bootstrap.py src/leaf_width.py src/linear_probe.py src/metrics.py src/mil_models.py src/otsu.py src/photo_dataset.py src/review_tool.py src/sanity_baselines.py src/seeding.py src/split.py src/stats.py src/tiling.py src/train_mil.py src/train_wholeimage.py pyproject.toml uv.lock` (prints nothing) |
 | Final tables | `uv run --locked python -m src.make_tables` |
 | Final figures | `uv run --locked python -m src.make_figures` |
 | Readiness of every promised table, figure and commitment | `uv run --locked python -m src.make_tables --check` (nothing is pending) |
@@ -50,6 +51,8 @@ To re-run the experiments themselves (hours of GPU time; needs the photos, the e
 | 11 | `uv run python -m src.committee select`, `plan`, `evaluate` |
 | 12 | `uv run python -m src.explain select`, `heatmaps`, `plan` |
 | 13 | `uv run python -m src.cost sizes`, `time --device gpu`, `time --device cpu` |
+
+Run records name the commit that produced them by its id before the public release (the history was rewritten then to remove internal notes); `docs/commit_map.csv` gives the matching commit here, so `git checkout <new_commit>` shows the code of a run. That code is the same except for the rewording: the AI model raters carry neutral ids (`model_rater_a`, `model_rater_b`, `model_rater_c`), and comments no longer point to the removed notes.
 
 Test-set files are evaluated once per frozen configuration; a `test_started.json` in a run folder marks that it was done and must not be deleted.
 
