@@ -1,0 +1,45 @@
+{
+  "id": "row3_plain",
+  "members": [
+    "convnext_tiny_448",
+    "swin_tiny_224"
+  ],
+  "weights": [
+    1,
+    1
+  ],
+  "runs": {
+    "convnext_tiny_448": [
+      "stage5_convnext_tiny_session_448_lr0.0003_r1",
+      "stage5_convnext_tiny_session_448_lr0.0003_r2",
+      "stage5_convnext_tiny_session_448_lr0.0003_r3",
+      "stage5_convnext_tiny_session_448_lr0.0003_r4",
+      "stage5_convnext_tiny_session_448_lr0.0003_r5"
+    ],
+    "swin_tiny_224": [
+      "stage5_swin_tiny_session_224_lr0.0001_r1",
+      "stage5_swin_tiny_session_224_lr0.0001_r2",
+      "stage5_swin_tiny_session_224_lr0.0001_r3",
+      "stage5_swin_tiny_session_224_lr0.0001_r4",
+      "stage5_swin_tiny_session_224_lr0.0001_r5"
+    ]
+  },
+  "split_checksum": [
+    "28fa6372f49bb5ff1b082c4ff7ae2b2709a6a70c59f6de1f768b15f3e09aa8f8"
+  ],
+  "record_sha256": {
+    "stage5_convnext_tiny_session_448_lr0.0003_r1": "798ba37c97a63ed01bebe965e9f91fe42a03725a452b7b573ba96c064ae16ee8",
+    "stage5_convnext_tiny_session_448_lr0.0003_r2": "a04837a3be4187eae26d78639d5d747d0bd2d9ac972b1b9864f54ddeab1234da",
+    "stage5_convnext_tiny_session_448_lr0.0003_r3": "79a0511497d26acd8574eeb3ab84bbe8362d013c465fc42237fd3088ac7bb9ed",
+    "stage5_convnext_tiny_session_448_lr0.0003_r4": "0a82579dbdda8446c47a8b0b77294e895f43bb04453368b615ec49109bfd3f85",
+    "stage5_convnext_tiny_session_448_lr0.0003_r5": "e4283776ad398464a87c675e55011cd72bfad64bedc822d19e57f86ca5a9dad1",
+    "stage5_swin_tiny_session_224_lr0.0001_r1": "a8faa18234282c8fd80114f577481f1307ff616887e351b14ee68c62055370df",
+    "stage5_swin_tiny_session_224_lr0.0001_r2": "9260589e59eb65cebc33694ab8824999bd7de663dc1adccc09953910bd33de01",
+    "stage5_swin_tiny_session_224_lr0.0001_r3": "ad7f49c0d7c852a37830b0ac6a27b8d4d68aff8615178e709f61e149f3041b8d",
+    "stage5_swin_tiny_session_224_lr0.0001_r4": "13a7febd3ac99f9005a48550ecee5cc0aa6963b623091c46149558a8d171af63",
+    "stage5_swin_tiny_session_224_lr0.0001_r5": "f838641a928ca2d8395cd2ccd9bd5b602e4ef944535d46dd0651def6b0ea77ee"
+  },
+  "plan_sha256": "7f25f73fedce13a6a8df0a2d194fdf5dab437fec89cf9c7028d6a0fb4392437a",
+  "selection_sha256": "c977748bdabfd09e09dacee4fabaa3756498aac5633016494099ae669909663b",
+  "evaluation_code": "d8226d5"
+}
