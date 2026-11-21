@@ -1,0 +1,212 @@
+{
+  "code_version": "fc8a293",
+  "tables": {
+    "main": {
+      "status": "partly pending",
+      "stage": "Stage 10 (Paddy Doctor columns)",
+      "reason": null,
+      "rows": 12,
+      "sources": {
+        "results/tables/followup_final.csv": "ee8818f920f57cb96ad8c6ccedb78f13879af769008327f0ec967b59e42326b8",
+        "results/tables/session_conditions_scores.csv": "0b8c82f00e4c72a03e6693f4fe4e37734514d3967579b60302f1d8ab9a4a3e6f",
+        "results/tables/session_final.csv": "e12b414cd4b55b0dae937cfa7f640615f68c0c0b2f2cfdc1d01105842c8e8a84"
+      }
+    },
+    "conditions": {
+      "status": "present",
+      "stage": "Stage 5",
+      "reason": null,
+      "rows": 13,
+      "sources": {
+        "results/tables/session_conditions_scores.csv": "0b8c82f00e4c72a03e6693f4fe4e37734514d3967579b60302f1d8ab9a4a3e6f"
+      }
+    },
+    "per_class": {
+      "status": "present",
+      "stage": "Stage 7 (session evaluation)",
+      "reason": null,
+      "rows": 12,
+      "sources": {
+        "runs/session_evaluation_plan.json": "7a28469237a6814b47756249518da5254a7f23d4be35edf7fbfcbcdf80929f84",
+        "runs/session_selection.json": "340b1a3b08f5f5f7c5f372c50ab5fb926f2d8a9cd6818a541049a32e0ec5cfe4",
+        "runs/stage5_convnext_tiny_session_224_lr0.0003_r1/test_predictions.csv": "c32ffd869dd3d0e1a6b75b5efa99f70d944401fe0feae310efa11e4c1413b347",
+        "runs/stage5_convnext_tiny_session_224_lr0.0003_r2/test_predictions.csv": "021fa62c894e39d09db933a9b535dd9d82eebc19bb7e7580f117f8c407338a12",
+        "runs/stage5_convnext_tiny_session_224_lr0.0003_r3/test_predictions.csv": "cb06b71531a249773af124e90b957e77d271ecbf561a665611a18456e4ac3fca",
+        "runs/stage5_convnext_tiny_session_224_lr0.0003_r4/test_predictions.csv": "5610c7ce2219c3ddfed03a4fe27ad2db1e127fcff07144ab5622b8c87004a527",
+        "runs/stage5_convnext_tiny_session_224_lr0.0003_r5/test_predictions.csv": "74ef149c716de98df5b4107a2d2e4834cf93fcf7060f700b99ff27d9ee526561",
+        "runs/stage5_efficientnetv2s_session_224_lr0.001_r1/test_predictions.csv": "1727c08e583adf28bba984412a86ec1adc469fd81bddf29a0029a8376c0070d2",
+        "runs/stage5_efficientnetv2s_session_224_lr0.001_r2/test_predictions.csv": "c16b133d53d348556a585d055d49f3c369359a1fa118635303df913269a53ca8",
+        "runs/stage5_efficientnetv2s_session_224_lr0.001_r3/test_predictions.csv": "49d5fb3d8a2e5513194e14ef05463d3748476d90ae6df917a2a362de513a61e8",
+        "runs/stage5_efficientnetv2s_session_224_lr0.001_r4/test_predictions.csv": "97f522f53d9803c7351316084ba09dca7d3810d15f8b9aaf67afc8e429935b5e",
+        "runs/stage5_efficientnetv2s_session_224_lr0.001_r5/test_predictions.csv": "8992cbca25107f63511fd4aedb5b4461ca7b542468d80f297e52fbd84c421233",
+        "runs/stage5_inceptionv3_session_224_lr0.001_r1/test_predictions.csv": "5cf5bb858e5c149a1ea4c32443d379f702e6179d65c329496f121156b09be880",
+        "runs/stage5_inceptionv3_session_224_lr0.001_r2/test_predictions.csv": "f9bfe87eb1c7d06ae0eb7c3b8665d53e74f70ef81342ff9b8745fb6c92ff610d",
+        "runs/stage5_inceptionv3_session_224_lr0.001_r3/test_predictions.csv": "f2e602e358151a587a3a20949557fdff6f1dddc686a8722a7d425c6404c7ab30",
+        "runs/stage5_inceptionv3_session_224_lr0.001_r4/test_predictions.csv": "234030b2d13b8829f2d1c1530aae39b6321fa2c041cd229cc0dac6be227cf21c",
+        "runs/stage5_inceptionv3_session_224_lr0.001_r5/test_predictions.csv": "a38d6748e6a9ae375d17fe5585678d2c8efa42646b04dda6b9da34e86c2b2f64",
+        "runs/stage5_swin_tiny_session_224_lr0.0001_r1/test_predictions.csv": "6bdfef2ea4719aff792b7e2e269e889e5f585c6cf340fbd4eff8061c68771694",
+        "runs/stage5_swin_tiny_session_224_lr0.0001_r2/test_predictions.csv": "fb344410d6debf3f9b22686285e309d8279e222a42ff18326f76a44925d94917",
+        "runs/stage5_swin_tiny_session_224_lr0.0001_r3/test_predictions.csv": "2bd01fe0b26133d3a5ef01d425af85b705e674de82d6095037c4183109cf8cda",
+        "runs/stage5_swin_tiny_session_224_lr0.0001_r4/test_predictions.csv": "f98ab3fcd8810bc9c5290a97ec230e9ba5685fea5098a4520bf0ed836c8d5b43",
+        "runs/stage5_swin_tiny_session_224_lr0.0001_r5/test_predictions.csv": "78df86af2d8000864701b527270e0e90378e65ecf5af1d52dd34964ab5395099",
+        "runs/stage7_session_attention_r1/test_predictions.csv": "d081b8b29cc5b46bcc1a8073d8b6ff46a1caf40c6a5163b55eae72c29212ad9a",
+        "runs/stage7_session_attention_r2/test_predictions.csv": "0544e145896baccbe6a5c552172ae09b36e2d674462a68e7236741260a0c19ab",
+        "runs/stage7_session_attention_r3/test_predictions.csv": "a554ca473c0a3ab69a77081d2eec92168b6c889f5312f12f97343866fed1643a",
+        "runs/stage7_session_attention_r4/test_predictions.csv": "6d7952814a372a3f0606e97b81a32ecd9a2c9eddcdd91da4f511605592631e1d",
+        "runs/stage7_session_attention_r5/test_predictions.csv": "3c3bba1e9bb3f2389f51536ad6b2209527b742fce6447cbbbb56adf68c2f4d71",
+        "runs/stage7_session_max_wide_r1/test_predictions.csv": "ef6a9c21336b6c641a1b6bbc8f1ce7f810caab84e5c96aed6742686f1d9a8420",
+        "runs/stage7_session_max_wide_r2/test_predictions.csv": "51de303102ae682ec2042230e2796b20babbc31e1a32bb7540aae8de9a92e131",
+        "runs/stage7_session_max_wide_r3/test_predictions.csv": "117cb8cbf9822782c7ef977af34312754158503a678330ed7065cf2bb50c129d",
+        "runs/stage7_session_max_wide_r4/test_predictions.csv": "bd6527fdf2b81ea52a5065e94c8907e5053976ca4c95d811eb9e9331b86bf0ce",
+        "runs/stage7_session_max_wide_r5/test_predictions.csv": "5a1ea71370a5d38b74a149eed367c13ea6de39ed907978265d47c8b866fff475",
+        "runs/stage7_session_mean_wide_r1/test_predictions.csv": "f328b7cd0141df81311e4c3f4f55a8b2336ab874a863494dc63682d156168af0",
+        "runs/stage7_session_mean_wide_r2/test_predictions.csv": "a10aeb0e49b726d52fac6b532646a3ec1309fbcf5ec5b922b33d9c38c5bd82b5",
+        "runs/stage7_session_mean_wide_r3/test_predictions.csv": "0c5fd977108e8252892defc9ae67de8f5eb7b99949e6d870c0f12c7390d7b45c",
+        "runs/stage7_session_mean_wide_r4/test_predictions.csv": "e3e756afddfab2ccf773998549fcde033324b1caad507ecefc31fc135cc0b6b5",
+        "runs/stage7_session_mean_wide_r5/test_predictions.csv": "5a0261c522d7fcf5788bf6c1f03ca166cd574520b82edc0b84c2e434efdbce73",
+        "runs/stage7_session_whole224_wide_r1/test_predictions.csv": "1d2b20dece2216d07f5dd0ee3f50a92b9a185a612d3b42efb6a07ef01ea944f0",
+        "runs/stage7_session_whole224_wide_r2/test_predictions.csv": "6f221a6c779b93383a9db05adb81919c16dd6404bb7833d5fabb09e0bfb07053",
+        "runs/stage7_session_whole224_wide_r3/test_predictions.csv": "32d7c4690fb5212311edbc2c31d3db1ab4acac4e5858b9b596cecfbde2d937c5",
+        "runs/stage7_session_whole224_wide_r4/test_predictions.csv": "0da97c9bf1c9e377453e7f07aa027eff368d4fe3d725bc132af857762e3075ad",
+        "runs/stage7_session_whole224_wide_r5/test_predictions.csv": "eaad089101bc320391349a3d5ad5b2403b66567e57108b2173cb1cc0af30e105",
+        "runs/stage7_session_whole512_r1/test_predictions.csv": "890bd90078d51cdba91fc5a8d9e61d1695ebfbfb4fe9ee2031d927e873ef29ef",
+        "runs/stage7_session_whole512_r2/test_predictions.csv": "d85176f82525bd60722db8920a7d628e1435c89774d15b119fe5a89d2aa24ab8",
+        "runs/stage7_session_whole512_r3/test_predictions.csv": "2f171dae70cdd74c015195c22de0f8e44ff6b840c1a623d33dd65ba876ed50d7",
+        "runs/stage7_session_whole512_r4/test_predictions.csv": "395ac952915c9dc4dccda3852562ededf8d3304255b1e86fa60ca14896878127",
+        "runs/stage7_session_whole512_r5/test_predictions.csv": "5ef89639dd0cc401e54675210bb89b3f0859c5ed2dd88eeadea4f7fc6369032f",
+        "runs/stage7a_probe_e1_224_session_l21000_r1/test_predictions.csv": "c896ab0ae92dc231db2b13115e19501bbe03ef0aab990735083195f075bb3951",
+        "runs/stage7a_probe_e1_224_session_l21000_r2/test_predictions.csv": "27ddb994f0301a2fead1f120c53a4a14f7e7bb92c70c9370463b82174f17e309",
+        "runs/stage7a_probe_e1_224_session_l21000_r3/test_predictions.csv": "6f2caef64b20b1a83e50772789eeb80321dc43704773947bd384716c2f096935",
+        "runs/stage7a_probe_e1_224_session_l21000_r4/test_predictions.csv": "fb7507c4ecd4d81d0f1f32d001242b904d271827f0261f11ea5e137f2697074b",
+        "runs/stage7a_probe_e1_224_session_l21000_r5/test_predictions.csv": "03b98f2c4482d085df59fcc95091408ee4d57f17720f627b4523b350883d8217",
+        "runs/stage7a_probe_e1_512_session_l2100_r1/test_predictions.csv": "de9c5100dc8242609f610e3eec186122a488feef0a34b90a882c3a42cada9489",
+        "runs/stage7a_probe_e1_512_session_l2100_r2/test_predictions.csv": "c9bc14320e89117c5fb77ffe61072d2ee3b23ae3a69e0a61f518b558222b2258",
+        "runs/stage7a_probe_e1_512_session_l2100_r3/test_predictions.csv": "b09de3e295dc02cb0076672b10e6c59663e17425f080e808e8b4b71af1f898d6",
+        "runs/stage7a_probe_e1_512_session_l2100_r4/test_predictions.csv": "6206dc6137f1227ed8c6b24b80a6f5e072ff671e104736bb44b0da3d8250aeae",
+        "runs/stage7a_probe_e1_512_session_l2100_r5/test_predictions.csv": "4de31c72d4414760dd4d673a9587dd8c5c2a99cb57dd78b7e91d85cc8d486d7b"
+      }
+    },
+    "confusion": {
+      "status": "present",
+      "stage": "Stage 7 (session evaluation)",
+      "reason": null,
+      "rows": 16,
+      "sources": {
+        "runs/stage5_convnext_tiny_session_224_lr0.0003_r1/test_predictions.csv": "c32ffd869dd3d0e1a6b75b5efa99f70d944401fe0feae310efa11e4c1413b347",
+        "runs/stage5_convnext_tiny_session_224_lr0.0003_r2/test_predictions.csv": "021fa62c894e39d09db933a9b535dd9d82eebc19bb7e7580f117f8c407338a12",
+        "runs/stage5_convnext_tiny_session_224_lr0.0003_r3/test_predictions.csv": "cb06b71531a249773af124e90b957e77d271ecbf561a665611a18456e4ac3fca",
+        "runs/stage5_convnext_tiny_session_224_lr0.0003_r4/test_predictions.csv": "5610c7ce2219c3ddfed03a4fe27ad2db1e127fcff07144ab5622b8c87004a527",
+        "runs/stage5_convnext_tiny_session_224_lr0.0003_r5/test_predictions.csv": "74ef149c716de98df5b4107a2d2e4834cf93fcf7060f700b99ff27d9ee526561",
+        "runs/stage5_convnext_tiny_session_448_lr0.0003_r1/test_predictions.csv": "66311c2087b4127b9d91f55ba62ecb82a23041faf26ec92e6fdc7b48e44f7467",
+        "runs/stage5_convnext_tiny_session_448_lr0.0003_r2/test_predictions.csv": "15ca5fcb9867624e212d5d0ef53ef532bea18925941960a9cf15d3b1f62d088d",
+        "runs/stage5_convnext_tiny_session_448_lr0.0003_r3/test_predictions.csv": "c23e0faacb73c98266b62da651581bea642f794d7f8cbba45fa14d0b7d34b72f",
+        "runs/stage5_convnext_tiny_session_448_lr0.0003_r4/test_predictions.csv": "281579c7d7a212220d69766c2ad992ca24f21e407e4a536ed4f4a9d430dadd87",
+        "runs/stage5_convnext_tiny_session_448_lr0.0003_r5/test_predictions.csv": "ec158d5055bd174a5389b777414d90a4a78ce07ebdf800b77535f2dc0757e1a0",
+        "runs/stage5_swin_tiny_session_224_lr0.0001_r1/test_predictions.csv": "6bdfef2ea4719aff792b7e2e269e889e5f585c6cf340fbd4eff8061c68771694",
+        "runs/stage5_swin_tiny_session_224_lr0.0001_r2/test_predictions.csv": "fb344410d6debf3f9b22686285e309d8279e222a42ff18326f76a44925d94917",
+        "runs/stage5_swin_tiny_session_224_lr0.0001_r3/test_predictions.csv": "2bd01fe0b26133d3a5ef01d425af85b705e674de82d6095037c4183109cf8cda",
+        "runs/stage5_swin_tiny_session_224_lr0.0001_r4/test_predictions.csv": "f98ab3fcd8810bc9c5290a97ec230e9ba5685fea5098a4520bf0ed836c8d5b43",
+        "runs/stage5_swin_tiny_session_224_lr0.0001_r5/test_predictions.csv": "78df86af2d8000864701b527270e0e90378e65ecf5af1d52dd34964ab5395099",
+        "runs/stage7_session_attention_r1/test_predictions.csv": "d081b8b29cc5b46bcc1a8073d8b6ff46a1caf40c6a5163b55eae72c29212ad9a",
+        "runs/stage7_session_attention_r2/test_predictions.csv": "0544e145896baccbe6a5c552172ae09b36e2d674462a68e7236741260a0c19ab",
+        "runs/stage7_session_attention_r3/test_predictions.csv": "a554ca473c0a3ab69a77081d2eec92168b6c889f5312f12f97343866fed1643a",
+        "runs/stage7_session_attention_r4/test_predictions.csv": "6d7952814a372a3f0606e97b81a32ecd9a2c9eddcdd91da4f511605592631e1d",
+        "runs/stage7_session_attention_r5/test_predictions.csv": "3c3bba1e9bb3f2389f51536ad6b2209527b742fce6447cbbbb56adf68c2f4d71"
+      }
+    },
+    "paired_session": {
+      "status": "present",
+      "stage": "Stage 7 (session evaluation)",
+      "reason": null,
+      "rows": 20,
+      "sources": {
+        "results/tables/session_paired.csv": "a30aa6e0bb1b7b186663a9dcea54f441c6608348066fc9cf32e226365d81a879"
+      }
+    },
+    "paired_conditions": {
+      "status": "pending",
+      "stage": "Stage 5 paired test (branch stage5/paired-conditions)",
+      "reason": "missing results/tables/paired_conditions.csv",
+      "rows": 1,
+      "sources": {}
+    },
+    "paired_locked": {
+      "status": "present",
+      "stage": "Stage 7 (locked split)",
+      "reason": null,
+      "rows": 20,
+      "sources": {
+        "results/tables/followup_paired.csv": "88cc6a46e8c2193afc110836103f85928426c6fe046d305ab542f82d9b89d1fb"
+      }
+    },
+    "ablations": {
+      "status": "present",
+      "stage": "Stage 8",
+      "reason": null,
+      "rows": 13,
+      "sources": {
+        "results/tables/session_ablations.csv": "0fbd8e2b5b3fc6e86ee0b1a447fa3ce878e9c3042c3a9a31c3e8fd8c587db8d7"
+      }
+    },
+    "ablations_test": {
+      "status": "present",
+      "stage": "Stage 8",
+      "reason": null,
+      "rows": 4,
+      "sources": {
+        "docs/reports/session_ablation_report.md": "8077005d69b87e40df55c9681f9b91e2e167ca9d853b1cdbcbf499e6bb06c290",
+        "results/tables/session_final.csv": "e12b414cd4b55b0dae937cfa7f640615f68c0c0b2f2cfdc1d01105842c8e8a84",
+        "runs/session_ablations_plan.json": "d23a11ba591e1224c2801168efacfcdd9ccb86d461e1f30777b9b780f64bb9c6",
+        "runs/stage7_session_ablate_native_scale_r1/test_metrics.json": "8e24641d6f8c1a2f4c26e70d9ec0fad00bb4a13c742a854837df3deefb1a3370",
+        "runs/stage7_session_ablate_native_scale_r2/test_metrics.json": "d9c4022c9bea6b738236764c93f50bc71c6d82f65478ffd7bf1f4aa851cc78db",
+        "runs/stage7_session_ablate_native_scale_r3/test_metrics.json": "2d707f9c2e41ac0bb7067ce251aa43c29afc50efb1ac939648b1794acaaa79ae",
+        "runs/stage7_session_ablate_native_scale_r4/test_metrics.json": "e238013f5a5af51a14d8035e3152130f683622847c86040aacdc796e1d96c4f1",
+        "runs/stage7_session_ablate_native_scale_r5/test_metrics.json": "35a35e93defb4dcc8ab221d5e3d86dab297e5d3ac99f9fde47bf492f989811b7",
+        "runs/stage7_session_ablate_otsu_on_r1/test_metrics.json": "2f3d671ea5733fe8885cffbc9f28150c14dc7d2f6f6b81e41cfd6af3998fb976",
+        "runs/stage7_session_ablate_otsu_on_r2/test_metrics.json": "db3f3d4645307720447c02b05d244b2d8c97e29ccbc7f858f5398983658417ce",
+        "runs/stage7_session_ablate_otsu_on_r3/test_metrics.json": "6bc5c267781252046d864707ec05616fe3cfb11c1eccf3d8c9b265031ac13db1",
+        "runs/stage7_session_ablate_otsu_on_r4/test_metrics.json": "85476a6d6289cccaba4629fc358c13e6ff43535ebff54bb405e4d0095d351812",
+        "runs/stage7_session_ablate_otsu_on_r5/test_metrics.json": "61d114db2be2510f874430b17b5d58220e41a0e081d7f832f2e3d349c4aa5a88"
+      }
+    },
+    "partition_order": {
+      "status": "present",
+      "stage": "Stage 9",
+      "reason": null,
+      "rows": 12,
+      "sources": {
+        "results/tables/partition_order_inflation.csv": "3fdf3de768e9aa9a70e2f89e344ea6e0204e5f26284609bbd5870e66cbfdc9c9"
+      }
+    },
+    "shortcuts": {
+      "status": "present",
+      "stage": "Stage 4 / follow-up",
+      "reason": null,
+      "rows": 8,
+      "sources": {
+        "results/tables/followup_shortcuts.csv": "306a3ebb595fe1b1041b60a3ae5e4bd80548af7eefb7fa9d9028b8797c3b2b68"
+      }
+    },
+    "committee": {
+      "status": "pending",
+      "stage": "Stage 11",
+      "reason": "missing results/tables/committee_results.csv",
+      "rows": 1,
+      "sources": {}
+    },
+    "explain": {
+      "status": "pending",
+      "stage": "Stage 12",
+      "reason": "missing results/tables/explain_deletion_test.csv",
+      "rows": 1,
+      "sources": {}
+    },
+    "cost": {
+      "status": "pending",
+      "stage": "Stage 13",
+      "reason": "missing results/tables/cost_results.csv",
+      "rows": 1,
+      "sources": {}
+    }
+  }
+}

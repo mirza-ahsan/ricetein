@@ -1,0 +1,28 @@
+% final_ablations.tex: built by src/make_tables.py; do not edit by hand.
+% source: results/tables/session_ablations.csv
+\begin{table*}[t]
+\centering
+\caption{Stage 8 ablations, validation macro-F1 (\%), mean $\pm$ SD over the 5 rounds, session-blocked split. Validation scores favour the main configuration, whose settings were chosen on them.}
+\label{tab:final_ablations}
+\footnotesize
+\setlength{\tabcolsep}{3pt}
+\begin{tabular}{lllrrr}
+\toprule
+Variant & What changes & Partition & Macro-F1 & Variant minus main (points) & Rounds better than main \\
+\midrule
+main & E1 + attention, selected settings & validation & 78.5 $\pm$ 5.7 & +0.0 & -- \\
+main, seeds 1 and 2 & The same configuration, other training seeds (noise floor) & validation & 77.1 $\pm$ 5.9 & $-$1.4 & 1 \\
+otsu\_on & Tiles of Otsu-cleaned photos & validation & 74.5 $\pm$ 7.6 & $-$4.0 & 0 \\
+native\_scale & Native resolution instead of the common leaf scale & validation & 75.0 $\pm$ 7.1 & $-$3.5 & 1 \\
+tile448 & 448 px tiles shrunk to 224 px & validation & 77.8 $\pm$ 4.5 & $-$0.7 & 2 \\
+encoder\_e2 & Supervised ConvNeXt-T encoder (pooled output only, so the class-token description) & validation & 66.5 $\pm$ 6.9 & $-$12.0 & 0 \\
+encoder\_e3 & DINOv2-B encoder & validation & 76.1 $\pm$ 6.3 & $-$2.4 & 1 \\
+encoder\_e4 & DINOv3-S encoder (384 dimensions) & validation & 74.8 $\pm$ 7.9 & $-$3.7 & 1 \\
+unweighted\_loss & Unweighted loss & validation & 77.9 $\pm$ 6.4 & $-$0.6 & 1 \\
+single\_version & Clean photos only (no cached augmentation) & validation & 75.2 $\pm$ 6.8 & $-$3.3 & 0 \\
+tile\_dropout\_on & Tile dropout 0.15 (the selected setting is 0) & validation & 77.1 $\pm$ 5.3 & $-$1.4 & 0 \\
+description\_c & Class token only & validation & 77.5 $\pm$ 6.2 & $-$1.0 & 0 \\
+description\_m & Patch average only & validation & 74.8 $\pm$ 6.0 & $-$3.7 & 0 \\
+\bottomrule
+\end{tabular}
+\end{table*}

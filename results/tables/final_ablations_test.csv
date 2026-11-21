@@ -1,0 +1,5 @@
+Variant,Metric,Variant test score,Main test score,"Main minus variant, pooled (points)",Photo range,Block range,Rounds won by main,Reading (photo range),Verdict (block range)
+otsu_on,macro-F1,72.5 ± 3.6,77.9 ± 3.1,5.2,"[3.8, 6.7]","[3.3, 7.3]",5/5,main beats variant,main beats variant
+otsu_on,balanced accuracy,73.9 ± 4.0,78.0 ± 3.6,4.1,"[2.7, 5.6]","[2.2, 6.4]",5/5,main beats variant,main beats variant
+native_scale,macro-F1,74.7 ± 5.4,77.9 ± 3.1,2.9,"[1.5, 4.4]","[1.0, 5.5]",4/5,main beats variant,main beats variant
+native_scale,balanced accuracy,75.4 ± 5.5,78.0 ± 3.6,2.3,"[0.9, 3.8]","[0.3, 5.1]",4/5,main beats variant,main beats variant

@@ -1,0 +1,14 @@
+Model,Condition,Macro-F1,Balanced acc.
+InceptionV3,224 px,72.0 ± 3.6,72.2 ± 4.9
+InceptionV3,128 px,56.9 ± 6.4,56.7 ± 5.5
+InceptionV3,224 px + Otsu,71.3 ± 3.4,70.8 ± 3.9
+EfficientNetV2-S,224 px,74.1 ± 4.8,73.9 ± 5.9
+EfficientNetV2-S,128 px,62.8 ± 4.7,62.4 ± 6.1
+EfficientNetV2-S,224 px + Otsu,70.2 ± 2.5,70.6 ± 4.2
+ConvNeXt-T,224 px,75.0 ± 5.0,75.8 ± 3.7
+ConvNeXt-T,128 px,67.8 ± 6.0,67.8 ± 6.4
+ConvNeXt-T,224 px + Otsu,73.5 ± 3.4,74.2 ± 3.3
+ConvNeXt-T,448 px,79.2 ± 3.8,79.1 ± 5.0
+Swin-T,224 px,76.3 ± 4.1,75.8 ± 4.8
+Swin-T,128 px,65.2 ± 4.4,65.6 ± 4.9
+Swin-T,224 px + Otsu,71.7 ± 3.8,72.3 ± 4.9

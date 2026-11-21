@@ -1,0 +1,13 @@
+Model,Condition,What it is,"Macro-F1, pooled",Inflation vs A (points),Reading,"Balanced acc. (test, pooled)",Balanced acc. inflation (points)
+EfficientNetV2-S,A,"correct: grouped by capture block, augmentation on training photos only","75.9 [74.4, 77.3]","+0.0 [0.0, 0.0]",reference,75.9,+0.0
+EfficientNetV2-S,L,"reference: locked split (duplicates grouped, capture sessions not), its own selected settings","83.6 [82.3, 84.9]","+7.7 [6.1, 9.2]",clearly above A,83.6,+7.7
+EfficientNetV2-S,B,"augment first, then split the copies at random","93.0 [92.5, 93.6]","+17.2 [15.8, 18.6]",clearly above A,92.9,+17.0
+EfficientNetV2-S,B_clean,"as B, scored on the clean copy of each photo only","94.8 [94.0, 95.6]","+18.9 [17.5, 20.4]",clearly above A,94.8,+18.8
+EfficientNetV2-S,C,no grouping: photos split at random,"84.6 [83.4, 85.8]","+8.8 [7.2, 10.3]",clearly above A,84.5,+8.6
+EfficientNetV2-S,D,"train on every photo, score on every photo","86.9 [86.1, 87.7]","+11.0 [9.7, 12.3]",clearly above A,88.0,+12.1
+Attention MIL (ours),A,"correct: grouped by capture block, augmentation on training photos only","78.8 [77.3, 80.2]","+0.0 [0.0, 0.0]",reference,79.2,+0.0
+Attention MIL (ours),L,"reference: locked split (duplicates grouped, capture sessions not), its own selected settings","82.9 [81.5, 84.2]","+4.1 [2.8, 5.4]",clearly above A,83.4,+4.2
+Attention MIL (ours),B,"augment first, then split the copies at random","90.2 [89.5, 90.9]","+11.5 [10.3, 12.7]",clearly above A,90.8,+11.6
+Attention MIL (ours),B_clean,"as B, scored on the clean copy of each photo only","91.1 [90.1, 92.1]","+12.3 [11.0, 13.7]",clearly above A,91.7,+12.5
+Attention MIL (ours),C,no grouping: photos split at random,"82.7 [81.4, 84.0]","+4.0 [2.8, 5.2]",clearly above A,83.4,+4.2
+Attention MIL (ours),D,"train on every photo, score on every photo","88.9 [88.0, 89.7]","+10.1 [8.9, 11.3]",clearly above A,90.4,+11.2

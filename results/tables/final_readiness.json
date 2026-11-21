@@ -1,0 +1,327 @@
+{
+  "tables": {
+    "main": {
+      "status": "partly pending",
+      "stage": "Stage 10 (Paddy Doctor columns)"
+    },
+    "conditions": {
+      "status": "present",
+      "stage": "Stage 5"
+    },
+    "per_class": {
+      "status": "present",
+      "stage": "Stage 7 (session evaluation)"
+    },
+    "confusion": {
+      "status": "present",
+      "stage": "Stage 7 (session evaluation)"
+    },
+    "paired_session": {
+      "status": "present",
+      "stage": "Stage 7 (session evaluation)"
+    },
+    "paired_conditions": {
+      "status": "pending",
+      "stage": "Stage 5 paired test (branch stage5/paired-conditions)"
+    },
+    "paired_locked": {
+      "status": "present",
+      "stage": "Stage 7 (locked split)"
+    },
+    "ablations": {
+      "status": "present",
+      "stage": "Stage 8"
+    },
+    "ablations_test": {
+      "status": "present",
+      "stage": "Stage 8"
+    },
+    "partition_order": {
+      "status": "present",
+      "stage": "Stage 9"
+    },
+    "shortcuts": {
+      "status": "present",
+      "stage": "Stage 4 / follow-up"
+    },
+    "committee": {
+      "status": "pending",
+      "stage": "Stage 11"
+    },
+    "explain": {
+      "status": "pending",
+      "stage": "Stage 12"
+    },
+    "cost": {
+      "status": "pending",
+      "stage": "Stage 13"
+    }
+  },
+  "figures": {
+    "samples": {
+      "status": "pending",
+      "stage": "Stage 1 data (main checkout only)"
+    },
+    "confusion": {
+      "status": "present",
+      "stage": "Stage 7"
+    },
+    "partition_order": {
+      "status": "present",
+      "stage": "Stage 9"
+    },
+    "ablations": {
+      "status": "present",
+      "stage": "Stage 8"
+    },
+    "paddy_zoom": {
+      "status": "pending",
+      "stage": "Stage 10"
+    },
+    "deletion": {
+      "status": "pending",
+      "stage": "Stage 12"
+    },
+    "heatmaps": {
+      "status": "pending",
+      "stage": "Stage 12"
+    },
+    "cost": {
+      "status": "pending",
+      "stage": "Stage 13"
+    },
+    "pipeline_diagram": {
+      "status": "pending",
+      "stage": "drawn by hand with the paper"
+    }
+  },
+  "dataset_reports": {
+    "recount": {
+      "status": "present",
+      "file": "docs/reports/inventory_report.md"
+    },
+    "background audit": {
+      "status": "present",
+      "file": "docs/reports/audit_report.md"
+    },
+    "duplicates": {
+      "status": "present",
+      "file": "docs/reports/split_report.md"
+    }
+  },
+  "commitments": [
+    {
+      "id": "P1-1",
+      "commitment": "Re-derive class counts from the download; report any difference from published counts",
+      "delivered_by": "Stage 1",
+      "document_status": "\u2705 `data/inventory.csv` + `docs/reports/inventory_report.md` \u00a71 (2026-11-05): 3,355 photos, Hispa 565 vs published 563",
+      "status": "present",
+      "missing": []
+    },
+    {
+      "id": "P1-2",
+      "commitment": "Audit \u2265200 random primary images for background type; report the distribution",
+      "delivered_by": "Stage 2a",
+      "document_status": "\u2705 240-photo audit complete (2026-11-08), all plain after adjudication; disclosed model raters, not two human raters (`docs/reports/audit_report.md`)",
+      "status": "present",
+      "missing": []
+    },
+    {
+      "id": "P1-3",
+      "commitment": "Split before any other processing; index files committed; identical splits for every experiment",
+      "delivered_by": "Stage 3",
+      "document_status": "\u2705 Locked grouped folds and deduplicated Paddy Doctor list created before model fitting; `docs/reports/split_report.md` A session-blocked sensitivity split (`splits/session_blocked/folds.csv`) exists as well (2026-11-14); the locked split is unchanged",
+      "status": "present",
+      "missing": []
+    },
+    {
+      "id": "P1-4",
+      "commitment": "Leakage rules enforced **in code**: no augmentation before the split; variants stay with their source; test used once per model after tuning",
+      "delivered_by": "Golden rules; `tests/test_split.py`, `test_leakage.py`, `test_mil_leakage.py`",
+      "document_status": "\ud83d\udfe1 Implemented and tested; full experimental execution pending The session-blocked sensitivity split follows the same rules",
+      "status": "present",
+      "missing": []
+    },
+    {
+      "id": "P1-5",
+      "commitment": "Paddy Doctor 4-class subset held out entirely; full release used; version and download date stated",
+      "delivered_by": "Stages 1, 10",
+      "document_status": "\u2b1c",
+      "status": "pending",
+      "missing": [
+        "docs/reports/paddy_report.md"
+      ]
+    },
+    {
+      "id": "P1-6",
+      "commitment": "Five repetitions; every metric reported as mean \u00b1 std",
+      "delivered_by": "All stages (5 rounds)",
+      "document_status": "\u2b1c",
+      "status": "present",
+      "missing": []
+    },
+    {
+      "id": "P1-7",
+      "commitment": "Whole-image inputs at 128 and 224; tiled input at native resolution",
+      "delivered_by": "Stages 5, 6, 8",
+      "document_status": "\u2705 2026-11-21 (Stage 5 whole-image 128 and 224 px; Stage 8 `native_scale`: 74.7 \u00b1 5.4 test macro-F1 against 77.9 \u00b1 3.1 at the common scale). The headline tiles are at a common leaf scale (Stage 1 rule); native-resolution tiles are delivered as the declared Stage 8 ablation, evaluated on test. Say so in Phase 4",
+      "status": "present",
+      "missing": []
+    },
+    {
+      "id": "P1-8",
+      "commitment": "Accuracy for continuity; macro-F1 and balanced accuracy primary; per-class precision/recall; confusion matrix on test only; partition stated for every number",
+      "delivered_by": "Stage 4a, Stage 14",
+      "document_status": "\u2b1c",
+      "status": "present",
+      "missing": []
+    },
+    {
+      "id": "P1-9",
+      "commitment": "No generative oversampling; class-balanced loss instead",
+      "delivered_by": "Stages 5, 7",
+      "document_status": "\u2b1c",
+      "status": "manual",
+      "missing": []
+    },
+    {
+      "id": "P1-10",
+      "commitment": "Hispa recall reported and discussed as a pre-declared diagnostic",
+      "delivered_by": "Stages 7, 14",
+      "document_status": "\u2b1c",
+      "status": "present",
+      "missing": []
+    },
+    {
+      "id": "P1-11",
+      "commitment": "If a class shows anomalous recall, report a manual inspection of its misclassified images",
+      "delivered_by": "Stages 2d, 7, 12",
+      "document_status": "\u2b1c",
+      "status": "manual",
+      "missing": []
+    },
+    {
+      "id": "P1-12",
+      "commitment": "Record each dataset's licence terms at download; reproduce them in the final paper",
+      "delivered_by": "Stage 1 (`data/DATASETS.md`), final paper",
+      "document_status": "\ud83d\udfe1 recorded (primary: MIT; Paddy Doctor: CC BY 4.0); still to reproduce in the paper",
+      "status": "manual",
+      "missing": []
+    },
+    {
+      "id": "P1-13",
+      "commitment": "No images redistributed",
+      "delivered_by": "Always (`.gitignore`; Paddy Doctor on Kaggle is private)",
+      "document_status": "\ud83d\udfe1 ongoing",
+      "status": "manual",
+      "missing": []
+    },
+    {
+      "id": "P1-14",
+      "commitment": "Publish dataset versions and download dates, split files, background audit, re-derived counts",
+      "delivered_by": "Stage 14 reproducibility package",
+      "document_status": "\u2b1c",
+      "status": "present",
+      "missing": []
+    },
+    {
+      "id": "P1-15",
+      "commitment": "Attention reported as qualitative interpretability; no severity claims",
+      "delivered_by": "Stage 12",
+      "document_status": "\ud83d\udfe1 code ready (`src/explain.py`, 2026-11-20); runs and wording still to do",
+      "status": "pending",
+      "missing": [
+        "docs/reports/explain_report.md"
+      ]
+    },
+    {
+      "id": "P1-16",
+      "commitment": "If backgrounds turn out mostly uniform, don't claim robustness to clutter from in-domain results; rest that claim on Paddy Doctor",
+      "delivered_by": "Stages 2a, 10; Discussion",
+      "document_status": "\u2b1c",
+      "status": "pending",
+      "missing": [
+        "docs/reports/paddy_report.md"
+      ]
+    },
+    {
+      "id": "P1-17",
+      "commitment": "Dhan-Shomadhan only if the main programme is complete",
+      "delivered_by": "Optional",
+      "document_status": "\u2b1c",
+      "status": "manual",
+      "missing": []
+    },
+    {
+      "id": "O1",
+      "commitment": "Two-dataset benchmark (high-resolution primary + independent expert-labelled field set)",
+      "delivered_by": "Stages 1, 10",
+      "document_status": "\u2b1c",
+      "status": "pending",
+      "missing": [
+        "docs/reports/paddy_report.md"
+      ]
+    },
+    {
+      "id": "O2",
+      "commitment": "Leakage-free protocol: split before augmentation, published splits, macro-F1 + balanced accuracy + accuracy, mean \u00b1 std",
+      "delivered_by": "Stages 3, 4",
+      "document_status": "\u2b1c",
+      "status": "present",
+      "missing": []
+    },
+    {
+      "id": "O3",
+      "commitment": "Reproduce competitive whole-image baselines, including the threshold (Otsu) pipeline and modern **convolutional and transformer** backbones",
+      "delivered_by": "Stage 5 (InceptionV3, EfficientNetV2-S, ConvNeXt-T, Swin-T)",
+      "document_status": "\u2705 2026-11-21 (224 px tuned, 128 px, 224 px + Otsu and 448 px tested on the session split)",
+      "status": "present",
+      "missing": []
+    },
+    {
+      "id": "O4",
+      "commitment": "Tile-based weakly supervised model: tiling, frozen-encoder descriptions, attention combining from image-level labels",
+      "delivered_by": "Stages 6, 7",
+      "document_status": "\u2b1c",
+      "status": "present",
+      "missing": []
+    },
+    {
+      "id": "O5",
+      "commitment": "Ablations over input resolution, aggregation function, Otsu on/off",
+      "delivered_by": "Stage 8",
+      "document_status": "\u2705 2026-11-21 Resolution: whole-image 128 / 224 / 448 px (Stage 5) and 448 px tiles; aggregation: mean / max / attention (Stage 7); Otsu on whole images (Stage 5) and on tiles (`otsu_on`, test, main wins by 5.2 points); pixel scale (`native_scale`, test, main wins by 2.9); encoders, loss, versions, tile dropout, description on validation only (`docs/reports/session_ablation_report.md`)",
+      "status": "present",
+      "missing": []
+    },
+    {
+      "id": "O6",
+      "commitment": "Zero-shot evaluation of **all** models on the secondary dataset; compare attention maps with visible symptoms",
+      "delivered_by": "Stages 10, 12",
+      "document_status": "\u2b1c",
+      "status": "pending",
+      "missing": [
+        "docs/reports/paddy_report.md",
+        "docs/reports/explain_report.md",
+        "table:explain"
+      ]
+    },
+    {
+      "id": "O7",
+      "commitment": "Parameters, storage, inference latency; assess compressibility for on-device use",
+      "delivered_by": "Stage 13",
+      "document_status": "\u2b1c",
+      "status": "pending",
+      "missing": [
+        "table:cost",
+        "figure:cost"
+      ]
+    }
+  ],
+  "present_counts": {
+    "tables": 10,
+    "figures": 3,
+    "dataset_reports": 3,
+    "commitments": 13
+  }
+}
