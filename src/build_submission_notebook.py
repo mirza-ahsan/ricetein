@@ -62,7 +62,7 @@ STAGES = {
     10: ("Paddy Doctor zero-shot", "Every trained model scored once on the second dataset.",
          ["paddy_embed", "paddy_zero_shot"], ["docs/reports/paddy_report.md"]),
     11: ("Committee", "Combining members chosen on validation.", ["committee"], ["docs/reports/committee_report.md"]),
-    12: ("Heat maps and the deletion test", "Do the attention weights point at the symptoms?", ["explain"],
+    12: ("Heat maps and the deletion test", "Do the attention weights point at the symptoms?", ["explain", "heatmap_ratings"],
          ["docs/reports/explain_report.md", "docs/reports/heatmap_ratings_report.md"]),
     13: ("Cost and compression", "Size, speed and memory.", ["cost", "compress", "distill"],
          ["docs/reports/cost_report.md"]),

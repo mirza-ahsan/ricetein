@@ -1,5 +1,7 @@
 """Human heat-map ratings: strict import, no double import, model rows untouched, separate summaries."""
 
+from pathlib import Path
+
 import pandas as pd
 import pytest
 
@@ -16,14 +18,14 @@ MODEL_ROWS = "item_id,rater,rater_kind,rating,note\n" + "".join(
 NAMES = ("a", "b", "c")   # the returned files are ratings_<anything>.csv; the code never knows who is who
 
 
-def write_returned(folder, answers=None, **overrides):
-    """Three returned files. ``answers`` maps a file name to its 50 answers; ``overrides`` replaces whole texts."""
+def write_returned(folder, answers=None):
+    """Three returned files. ``answers`` maps a file name to its 50 answers (the default is a fixed pattern)."""
     folder.mkdir(parents=True, exist_ok=True)
     default = ["yes", "partly", "no", "yes", "no"] * 10
     for name in NAMES:
         rows = (answers or {}).get(name, default)
         text = "item_id,rating,note\n" + "".join(f"{i},{a},\n" for i, a in zip(ITEMS, rows))
-        (folder / f"ratings_{name}.csv").write_text(overrides.get(name, text))
+        (folder / f"ratings_{name}.csv").write_text(text)
 
 
 @pytest.fixture
@@ -47,7 +49,6 @@ def test_import_appends_150_human_rows_and_keeps_the_file_to_id_map_in_the_kit_o
     mapping = pd.read_csv(setup[2] / "rater_map.csv").set_index("file")["rater"]
     assert set(mapping) == set(hr.HUMAN_IDS) and set(human["rater"]) == set(hr.HUMAN_IDS)
     assert (human[human["rater"] == mapping["ratings_b.csv"]]["rating"] == "partly").all()   # case and spaces normalised
-    assert not any(name in open(hr.__file__).read().lower() for name in ("ahsan", "umer", "harris"))
 
 
 @pytest.mark.parametrize(
@@ -108,6 +109,11 @@ def test_odd_excel_exports_are_read_or_refused_clearly(setup):
         hr.read_returned(returned / "ratings_c.csv")
 
 
+def test_no_teammate_name_is_in_the_code():
+    source = Path(hr.__file__).read_text().lower()
+    assert not any(name in source for name in ("ahsan", "umer", "harris"))
+
+
 def test_two_files_instead_of_three_stop_the_import(setup):
     write_returned(setup[0])
     (setup[0] / "ratings_c.csv").unlink()
@@ -160,7 +166,7 @@ def kind_rows(kind, answers):
     )
 
 
-def test_majority_marks_a_three_way_tie_and_the_comparison_counts_it(setup):
+def test_majority_marks_a_three_way_tie_and_the_comparison_counts_it():
     human = kind_rows("human", [["yes"] * 50, ["yes"] * 25 + ["no"] * 25, ["partly"] * 10 + ["no"] * 40])
     model = kind_rows("model", [["yes"] * 50, ["no"] * 50, ["no"] * 50])
     majority = hr.majority(hr.wide_of(human))
@@ -173,7 +179,7 @@ def test_majority_marks_a_three_way_tie_and_the_comparison_counts_it(setup):
     assert (link["human_ties"], link["with_majority"], link["equal"]) == (50, 0, 0)
 
 
-def test_report_summarises_humans_and_models_separately(setup, tmp_path, monkeypatch):
+def test_report_summarises_humans_and_models_separately(tmp_path, monkeypatch):
     human = kind_rows("human", [["yes"] * 50, ["yes"] * 50, ["no"] * 50])
     model = kind_rows("model", [["partly"] * 50, ["partly"] * 50, ["partly"] * 50])
     ratings, examples = tmp_path / "ratings.csv", tmp_path / "examples.csv"
@@ -188,7 +194,7 @@ def test_report_summarises_humans_and_models_separately(setup, tmp_path, monkeyp
     assert by_kind.loc["model", "all_agree"] == 1 and by_kind.loc["human", "all_agree"] == 0
     text = (tmp_path / "report.md").read_text()
     assert "equals the model majority on 0 of 50" in text and "human raters" in text and "model raters" in text
+    assert "| category | yes | partly | no | maps |" in text
     pd.concat([model, human[human["rater"] != "human_rater_3"]]).to_csv(ratings, index=False)
-    assert "| maps |" in text or "maps" in text.split("by example category")[1]
     with pytest.raises(ValueError, match="three human raters"):
         hr.report(ratings, examples)

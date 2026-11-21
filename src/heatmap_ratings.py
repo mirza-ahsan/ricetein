@@ -20,7 +20,7 @@ from pathlib import Path
 import pandas as pd
 
 from src.config import REPO_ROOT
-from src.explain import ANSWERS, RATINGS, TABLES, fleiss_kappa, rating_summary
+from src.explain import ANSWERS, RATINGS, TABLES, rating_summary
 from src.inventory_report import md_table
 
 KIT = REPO_ROOT / "cache/rating_kit"
@@ -60,23 +60,25 @@ def read_returned(path) -> pd.DataFrame:
         raise ValueError(f"{path.name}: not a 3-column CSV (a comma inside a note needs quotes): {error}") from None
     frame.columns = [c.strip().lower() for c in frame.columns]
     frame = frame.loc[:, [not (c.startswith("unnamed") and (frame[c].str.strip() == "").all()) for c in frame.columns]]
-    frame["row"] = frame.index + 2
-    frame = frame[(frame.drop(columns="row").apply(lambda c: c.str.strip()) != "").any(axis=1)]
-    if list(frame.columns) != ["item_id", "rating", "note", "row"]:
-        raise ValueError(f"{path.name}: the header must be item_id,rating,note, found {','.join(frame.columns[:-1])}")
+    if list(frame.columns) != ["item_id", "rating", "note"]:
+        raise ValueError(f"{path.name}: the header must be item_id,rating,note, found {','.join(frame.columns)}")
+    frame = frame[(frame.apply(lambda c: c.str.strip()) != "").any(axis=1)]   # the index stays the spreadsheet row - 2
     frame["item_id"] = frame["item_id"].str.strip().str.upper()
     frame["rating"] = frame["rating"].str.strip().str.lower()
     frame["note"] = frame["note"].str.replace(r"\s+", " ", regex=True).str.strip()
-    for row, item, answer in zip(frame["row"], frame["item_id"], frame["rating"]):
-        if answer not in ANSWERS:
-            raise ValueError(f"{path.name}, row {row} ({item}): rating {answer!r} is not one of {', '.join(ANSWERS)}")
+    bad = frame[~frame["rating"].isin(ANSWERS)]
+    if not bad.empty:
+        first = bad.iloc[0]
+        raise ValueError(
+            f"{path.name}, row {bad.index[0] + 2} ({first['item_id']}): rating {first['rating']!r} is not one of {', '.join(ANSWERS)}"
+        )
     if frame["item_id"].duplicated().any():
         raise ValueError(f"{path.name}: item {frame.loc[frame['item_id'].duplicated(), 'item_id'].iloc[0]} is rated twice")
     if sorted(frame["item_id"]) != ITEMS:
         missing = sorted(set(ITEMS) - set(frame["item_id"]))
         extra = sorted(set(frame["item_id"]) - set(ITEMS))
         raise ValueError(f"{path.name}: needs exactly H01 to H50 once each (missing {missing}, unknown {extra})")
-    return frame.drop(columns="row").sort_values("item_id").reset_index(drop=True)
+    return frame.sort_values("item_id").reset_index(drop=True)
 
 
 def import_ratings(returned, ratings_path=None, kit=None) -> int:
@@ -85,9 +87,8 @@ def import_ratings(returned, ratings_path=None, kit=None) -> int:
     ratings_path, kit = ratings_path or RATINGS, kit or KIT
     map_path = kit / "rater_map.csv"
     existing = ratings_path.read_text(encoding="utf-8") if ratings_path.exists() else ""
-    done = set(pd.read_csv(io.StringIO(existing), dtype=str)["rater"]) & set(HUMAN_IDS) if existing else set()
-    if done or map_path.exists():
-        raise ValueError(f"human ratings are already imported ({', '.join(sorted(done)) or map_path}); nothing was changed")
+    if map_path.exists() or any(rater in existing for rater in HUMAN_IDS):
+        raise ValueError("human ratings are already imported; nothing was changed")
     paths = sorted(returned.glob(FILES))
     if len(paths) != len(HUMAN_IDS):
         raise ValueError(f"expected {len(HUMAN_IDS)} files {FILES} in {returned}, found {len(paths)}")
@@ -117,9 +118,8 @@ def import_ratings(returned, ratings_path=None, kit=None) -> int:
 # ------------------------------------------------------------------------------------------------ report
 def majority(wide: pd.DataFrame) -> pd.Series:
     """The answer given most often per item; NaN when two or more answers tie for the top."""
-    counts = pd.DataFrame({a: (wide == a).sum(axis=1) for a in ANSWERS})
-    top = counts.max(axis=1)
-    return counts.idxmax(axis=1).where((counts == top.to_numpy()[:, None]).sum(axis=1) == 1)
+    modes = wide.mode(axis=1)   # one column per answer tied for the top, the rest NaN
+    return modes.iloc[:, 0].where(modes.notna().sum(axis=1) == 1)
 
 
 def wide_of(ratings: pd.DataFrame) -> pd.DataFrame:
@@ -127,7 +127,8 @@ def wide_of(ratings: pd.DataFrame) -> pd.DataFrame:
 
 
 def human_against_model(human: pd.DataFrame, model: pd.DataFrame) -> dict:
-    h, m = majority(wide_of(human)), majority(wide_of(model)).reindex(wide_of(human).index)
+    h = majority(wide_of(human))
+    m = majority(wide_of(model)).reindex(h.index)
     both = h.notna() & m.notna()
     return {
         "maps": len(h),
@@ -156,13 +157,19 @@ def report(ratings_path=None, examples_path=None) -> None:
     ratings = pd.read_csv(ratings_path or RATINGS, dtype=str, keep_default_na=False)
     examples = pd.read_csv(examples_path or EXAMPLES)
     kinds = {k: ratings[ratings["rater_kind"] == k] for k in ("human", "model")}
-    if any(kinds[k]["rater"].nunique() != 3 for k in kinds):
+    if any(kinds[k]["rater"].nunique() != len(HUMAN_IDS) for k in kinds):
         raise ValueError("the report needs the three human raters and the three model raters in the ratings file")
     summaries = {k: rating_summary(frame, examples) for k, frame in kinds.items()}
     table = by_kind_table(summaries)
     TABLES.mkdir(parents=True, exist_ok=True)
     table.to_csv(BY_KIND, index=False)
     link = human_against_model(kinds["human"], kinds["model"])
+    same_majority = (
+        f"- The human majority equals the model majority on {link['equal']} of {link['with_majority']} maps that have "
+        f"a majority on both sides ({link['equal'] / link['with_majority']:.1%})."
+        if link["with_majority"]
+        else "- No map has a majority on both sides."
+    )
     text = [
         "# Stage 12: human ratings of the 50 blind heat maps",
         "",
@@ -191,9 +198,7 @@ def report(ratings_path=None, examples_path=None) -> None:
         "The majority answer of a map is the answer at least two of the three raters gave; when all three differ "
         "there is no majority (a tie).",
         "",
-        f"- The human majority equals the model majority on {link['equal']} of {link['with_majority']} maps that have "
-        f"a majority on both sides ({link['equal'] / link['with_majority']:.1%})." if link["with_majority"] else
-        "- No map has a majority on both sides.",
+        same_majority,
         f"- Ties: {link['human_ties']} maps have no human majority and {link['model_ties']} have no model majority "
         f"(of {link['maps']}).",
         f"- Counting a tie as a difference, they agree on {link['equal']} of {link['maps']} maps "
@@ -217,10 +222,10 @@ def report(ratings_path=None, examples_path=None) -> None:
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("action", choices=["import", "report"])
-    parser.add_argument("--returned", default=str(KIT / "returned"), help="folder with the three filled CSVs")
+    parser.add_argument("--returned", type=Path, default=KIT / "returned", help="folder with the three filled CSVs")
     args = parser.parse_args()
     if args.action == "import":
-        print(f"appended {import_ratings(Path(args.returned))} human ratings to {RATINGS}")
+        print(f"appended {import_ratings(args.returned)} human ratings to {RATINGS}")
     else:
         report()
 
