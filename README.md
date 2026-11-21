@@ -75,7 +75,7 @@ Requirements: Linux, an NVIDIA GPU with a CUDA 12.8-capable driver, [uv](https:/
 git clone https://github.com/mirza-ahsan/ricetein.git
 cd ricetein
 uv sync                      # Python 3.12.13, PyTorch 2.11 (CUDA 12.8); every version pinned in uv.lock
-uv run nbstripout --install  # strips notebook outputs on commit
+uv run nbstripout --install --attributes .gitattributes  # strips notebook outputs on commit; notebooks/ricetein.ipynb keeps its outputs
 uv run --locked pytest -q    # the test suite needs no data and no GPU
 ```
 
