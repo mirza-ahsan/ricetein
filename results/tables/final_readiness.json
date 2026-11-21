@@ -56,6 +56,10 @@
       "status": "present",
       "stage": "Stage 12"
     },
+    "explain_ratings": {
+      "status": "present",
+      "stage": "Stage 12 (human ratings)"
+    },
     "cost": {
       "status": "present",
       "stage": "Stage 13"
@@ -294,7 +298,7 @@
       "id": "O6",
       "commitment": "Zero-shot evaluation of **all** models on the secondary dataset; compare attention maps with visible symptoms",
       "delivered_by": "Stages 10, 12",
-      "document_status": "\ud83d\udfe1 2026-11-21 first half done: all 130 round-models (11 headline methods and 9 Stage 5 conditions, 5 rounds each) scored zero-shot on Paddy Doctor, `docs/reports/paddy_report.md`; H3 not shown. The comparison of attention maps with visible symptoms (Stage 12, 2026-11-21, `docs/reports/explain_report.md`): 50 blind heat maps rated by three disclosed model raters, yes 39.3%, partly 32.0%, no 28.7%, all agree on 88.0% (Fleiss' kappa 0.88); deletion test on test photos shows the attended tiles matter (gap 25.4 points at k=16, both ranges); on Paddy photos the effect is small (2.2 points, photo range only). \ud83d\udfe2 second half done with model raters (human raters not used)",
+      "document_status": "\ud83d\udfe1 2026-11-21 first half done: all 130 round-models (11 headline methods and 9 Stage 5 conditions, 5 rounds each) scored zero-shot on Paddy Doctor, `docs/reports/paddy_report.md`; H3 not shown. The comparison of attention maps with visible symptoms (Stage 12, 2026-11-21, `docs/reports/explain_report.md`): 50 blind heat maps rated by three disclosed model raters, yes 39.3%, partly 32.0%, no 28.7%, all agree on 88.0% (Fleiss' kappa 0.88); deletion test on test photos shows the attended tiles matter (gap 25.4 points at k=16, both ranges); on Paddy photos the effect is small (2.2 points, photo range only). \ud83d\udfe2 second half done with model raters. A second set of three agent ratings was imported on 2026-11-21 under the kind `human` (Ahsan's decision; `docs/reports/heatmap_ratings_report.md`: yes 49.3%, partly 24.0%, no 26.7%, all agree 76.0%, kappa 0.75; majority equals the model majority on 84.0% of maps); **no person has rated the maps**, so write them as model ratings",
       "status": "present",
       "missing": []
     },
@@ -308,7 +312,7 @@
     }
   ],
   "present_counts": {
-    "tables": 15,
+    "tables": 16,
     "figures": 8,
     "dataset_reports": 3,
     "commitments": 19

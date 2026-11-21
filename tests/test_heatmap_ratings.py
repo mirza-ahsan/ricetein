@@ -198,3 +198,20 @@ def test_report_summarises_humans_and_models_separately(tmp_path, monkeypatch):
     pd.concat([model, human[human["rater"] != "human_rater_3"]]).to_csv(ratings, index=False)
     with pytest.raises(ValueError, match="three human raters"):
         hr.report(ratings, examples)
+
+
+def test_the_provenance_note_is_shown_first_when_it_exists(tmp_path, monkeypatch):
+    human = kind_rows("human", [["yes"] * 50] * 3)
+    model = kind_rows("model", [["no"] * 50] * 3)
+    ratings, examples, note = tmp_path / "ratings.csv", tmp_path / "examples.csv", tmp_path / "note.txt"
+    pd.concat([model, human]).to_csv(ratings, index=False)
+    sheet().to_csv(examples, index=False)
+    note.write_text("filled by agents\n")
+    for name, value in (("REPORT", tmp_path / "r.md"), ("BY_KIND", tmp_path / "k.csv"), ("TABLES", tmp_path), ("PROVENANCE", note)):
+        monkeypatch.setattr(hr, name, value)
+    hr.report(ratings, examples)
+    text = (tmp_path / "r.md").read_text()
+    assert "**Provenance.** filled by agents" in text and text.index("Provenance") < text.index("## Shares")
+    note.unlink()
+    hr.report(ratings, examples)
+    assert "Provenance" not in (tmp_path / "r.md").read_text()
