@@ -1,16 +1,20 @@
 """Stage 12 step 4: import the three human heat-map ratings and report them next to the model ratings.
 
-    python -m src.heatmap_ratings import    # reads cache/rating_kit/returned/ratings_{ahsan,umer,harris}.csv
+    python -m src.heatmap_ratings import    # reads cache/rating_kit/returned/ratings_*.csv (three files)
     python -m src.heatmap_ratings report    # needs all three imported; reads examples_val.csv for the categories
 
 ``import`` only checks the returned files and appends them to ``data/heatmap_ratings.csv`` (model rows are never
-rewritten). The names stay in ``cache/rating_kit/rater_map.csv``, which is git-ignored.
+rewritten). Which file got which id is drawn at random and kept only in ``cache/rating_kit/rater_map.csv``
+(git-ignored); no name appears in the code or in the tracked files.
 """
 
 from __future__ import annotations
 
 import argparse
 import csv
+import io
+import os
+import random
 from pathlib import Path
 
 import pandas as pd
@@ -24,23 +28,46 @@ EXAMPLES = REPO_ROOT / "results/explain/examples_val.csv"
 REPORT = REPO_ROOT / "docs/reports/heatmap_ratings_report.md"
 BY_KIND = TABLES / "explain_ratings_by_kind.csv"
 ITEMS = [f"H{i:02d}" for i in range(1, 51)]
-RATERS = {"ahsan": "human_rater_1", "umer": "human_rater_2", "harris": "human_rater_3"}   # file name -> rater id
+HUMAN_IDS = ["human_rater_1", "human_rater_2", "human_rater_3"]
+FILES = "ratings_*.csv"   # the three returned files; the rater ids are assigned to them at random
 COLUMNS = ["item_id", "rater", "rater_kind", "rating", "note"]
 
 
 # ------------------------------------------------------------------------------------------------ import
+def read_text(path) -> str:
+    """UTF-8 (with or without BOM) or, for Excel's plain "CSV" on Windows, cp1252. UTF-16 is refused with a clear error."""
+    raw = path.read_bytes()
+    if raw[:2] in (b"\xff\xfe", b"\xfe\xff"):
+        raise ValueError(f"{path.name}: saved as UTF-16; save it again as CSV (comma delimited) or CSV UTF-8")
+    try:
+        return raw.decode("utf-8-sig")
+    except UnicodeDecodeError:
+        return raw.decode("cp1252", errors="replace")
+
+
 def read_returned(path) -> pd.DataFrame:
     """One returned file, checked: 50 rows H01..H50 once each, every answer yes / partly / no (case and spaces
-    normalised). Anything else stops with the file and the row (as a spreadsheet shows it: header = row 1)."""
+    normalised). Anything else stops with the file and the row (as a spreadsheet shows it: header = row 1).
+    Rows that are completely empty and empty extra columns (Excel adds them) are ignored."""
     if not path.exists():
         raise ValueError(f"{path.name}: file not found")
-    frame = pd.read_csv(path, dtype=str, keep_default_na=False, encoding="utf-8-sig", skipinitialspace=True)
+    try:
+        frame = pd.read_csv(
+            io.StringIO(read_text(path)), dtype=str, keep_default_na=False, skipinitialspace=True,
+            skip_blank_lines=False, index_col=False,
+        )
+    except pd.errors.ParserError as error:
+        raise ValueError(f"{path.name}: not a 3-column CSV (a comma inside a note needs quotes): {error}") from None
     frame.columns = [c.strip().lower() for c in frame.columns]
-    if list(frame.columns) != ["item_id", "rating", "note"]:
-        raise ValueError(f"{path.name}: the header must be item_id,rating,note, found {','.join(frame.columns)}")
+    frame = frame.loc[:, [not (c.startswith("unnamed") and (frame[c].str.strip() == "").all()) for c in frame.columns]]
+    frame["row"] = frame.index + 2
+    frame = frame[(frame.drop(columns="row").apply(lambda c: c.str.strip()) != "").any(axis=1)]
+    if list(frame.columns) != ["item_id", "rating", "note", "row"]:
+        raise ValueError(f"{path.name}: the header must be item_id,rating,note, found {','.join(frame.columns[:-1])}")
     frame["item_id"] = frame["item_id"].str.strip().str.upper()
     frame["rating"] = frame["rating"].str.strip().str.lower()
-    for row, (item, answer) in enumerate(zip(frame["item_id"], frame["rating"]), start=2):
+    frame["note"] = frame["note"].str.replace(r"\s+", " ", regex=True).str.strip()
+    for row, item, answer in zip(frame["row"], frame["item_id"], frame["rating"]):
         if answer not in ANSWERS:
             raise ValueError(f"{path.name}, row {row} ({item}): rating {answer!r} is not one of {', '.join(ANSWERS)}")
     if frame["item_id"].duplicated().any():
@@ -49,31 +76,41 @@ def read_returned(path) -> pd.DataFrame:
         missing = sorted(set(ITEMS) - set(frame["item_id"]))
         extra = sorted(set(frame["item_id"]) - set(ITEMS))
         raise ValueError(f"{path.name}: needs exactly H01 to H50 once each (missing {missing}, unknown {extra})")
-    return frame.sort_values("item_id").reset_index(drop=True)
+    return frame.drop(columns="row").sort_values("item_id").reset_index(drop=True)
 
 
 def import_ratings(returned, ratings_path=None, kit=None) -> int:
-    """Validate all three files, then append them in one go. Nothing is written when any check fails."""
+    """Validate all three files, then add them in one step. Nothing is written when any check fails, and the ratings
+    file is replaced in one move, so it is never left half written."""
     ratings_path, kit = ratings_path or RATINGS, kit or KIT
-    existing = pd.read_csv(ratings_path, dtype=str) if ratings_path.exists() else pd.DataFrame(columns=COLUMNS)
-    done = set(existing["rater"]) & set(RATERS.values())
-    if done:
-        raise ValueError(f"already imported: {', '.join(sorted(done))}; nothing was changed")
-    files = {name: read_returned(returned / f"ratings_{name}.csv") for name in RATERS}
+    map_path = kit / "rater_map.csv"
+    existing = ratings_path.read_text(encoding="utf-8") if ratings_path.exists() else ""
+    done = set(pd.read_csv(io.StringIO(existing), dtype=str)["rater"]) & set(HUMAN_IDS) if existing else set()
+    if done or map_path.exists():
+        raise ValueError(f"human ratings are already imported ({', '.join(sorted(done)) or map_path}); nothing was changed")
+    paths = sorted(returned.glob(FILES))
+    if len(paths) != len(HUMAN_IDS):
+        raise ValueError(f"expected {len(HUMAN_IDS)} files {FILES} in {returned}, found {len(paths)}")
+    files = [read_returned(path) for path in paths]
+    ids = random.SystemRandom().sample(HUMAN_IDS, len(HUMAN_IDS))
     rows = [
-        {"item_id": r.item_id, "rater": RATERS[name], "rater_kind": "human", "rating": r.rating, "note": r.note.strip()}
-        for name, frame in files.items()
+        {"item_id": r.item_id, "rater": rater, "rater_kind": "human", "rating": r.rating, "note": r.note}
+        for rater, frame in zip(ids, files)
         for r in frame.itertuples()
     ]
-    text = ratings_path.read_text()
-    with ratings_path.open("a", newline="") as out:
-        if text and not text.endswith("\n"):
-            out.write("\n")
-        csv.DictWriter(out, COLUMNS, lineterminator="\n").writerows(rows)
+    out = io.StringIO()
+    csv.DictWriter(out, COLUMNS, lineterminator="\n").writerows(rows)
+    new_text = existing + ("\n" if existing and not existing.endswith("\n") else "") + out.getvalue()
     kit.mkdir(parents=True, exist_ok=True)
-    pd.DataFrame({"file": [f"ratings_{n}.csv" for n in RATERS], "rater": list(RATERS.values())}).to_csv(
-        kit / "rater_map.csv", index=False
-    )
+    pd.DataFrame({"file": [p.name for p in paths], "rater": ids}).to_csv(map_path, index=False)
+    temp = ratings_path.with_suffix(".tmp")
+    try:
+        temp.write_text(new_text, encoding="utf-8", newline="")
+        os.replace(temp, ratings_path)
+    except BaseException:
+        map_path.unlink(missing_ok=True)
+        temp.unlink(missing_ok=True)
+        raise
     return len(rows)
 
 
@@ -98,7 +135,6 @@ def human_against_model(human: pd.DataFrame, model: pd.DataFrame) -> dict:
         "with_majority": int(both.sum()),
         "human_ties": int(h.isna().sum()),
         "model_ties": int(m.isna().sum()),
-        "all_equal": int(((h == m) & both).sum()),
     }
 
 
@@ -120,8 +156,8 @@ def report(ratings_path=None, examples_path=None) -> None:
     ratings = pd.read_csv(ratings_path or RATINGS, dtype=str, keep_default_na=False)
     examples = pd.read_csv(examples_path or EXAMPLES)
     kinds = {k: ratings[ratings["rater_kind"] == k] for k in ("human", "model")}
-    if kinds["human"]["rater"].nunique() != 3 or kinds["model"]["rater"].nunique() < 2:
-        raise ValueError("the report needs the three human raters and the model raters in the ratings file")
+    if any(kinds[k]["rater"].nunique() != 3 for k in kinds):
+        raise ValueError("the report needs the three human raters and the three model raters in the ratings file")
     summaries = {k: rating_summary(frame, examples) for k, frame in kinds.items()}
     table = by_kind_table(summaries)
     TABLES.mkdir(parents=True, exist_ok=True)
@@ -133,7 +169,8 @@ def report(ratings_path=None, examples_path=None) -> None:
         "Generated by `python -m src.heatmap_ratings report` from `data/heatmap_ratings.csv`; nothing is typed by "
         "hand. The three human raters (`human_rater_1..3`) are the team members; the model raters "
         "(`model_rater_1..3`) are disclosed model judgements (handbook §24, 2026-11-08). Question: does the hot area "
-        "cover visible symptoms? Each rater saw the same 50 blind sheets, without the true class or the prediction. "
+        "cover visible symptoms? Each rater saw the same 50 blind sheets (validation photos, chosen by the Stage 12 rule), "
+        "without the true class or the prediction. "
         "Percentages of ratings. The table is also `results/tables/explain_ratings_by_kind.csv`.",
         "",
     ]
@@ -159,15 +196,16 @@ def report(ratings_path=None, examples_path=None) -> None:
         "- No map has a majority on both sides.",
         f"- Ties: {link['human_ties']} maps have no human majority and {link['model_ties']} have no model majority "
         f"(of {link['maps']}).",
-        f"- Counting a tie as a difference, they agree on {link['all_equal']} of {link['maps']} maps "
-        f"({link['all_equal'] / link['maps']:.1%}).",
+        f"- Counting a tie as a difference, they agree on {link['equal']} of {link['maps']} maps "
+        f"({link['equal'] / link['maps']:.1%}).",
         "",
         "## Human raters by example category",
         "",
         "`correct` and `wrong` = the rule's confident right and wrong answers; `random` = random photos of each class; `extra` = further random photos. "
         "Seen only after rating. Percentages of the human ratings in each category.",
         "",
-        md_table(percent(summaries["human"]["by_category"])),
+        md_table(percent(summaries["human"]["by_category"]).merge(
+            examples["category"].value_counts().rename("maps"), left_on="category", right_index=True)),
         "",
         "Limits: three raters who are also the authors, one model family rated, 50 maps.",
         "",

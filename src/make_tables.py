@@ -456,7 +456,7 @@ def ratings_table(root: Path) -> Built:
         "Partly (%)": [pct(v) for v in d.partly],
         "No (%)": [pct(v) for v in d.no],
         "All raters agree (%)": [pct(v) for v in d.all_agree],
-        "Fleiss' kappa": [f"{v:.2f}" for v in d.kappa]})
+        "Fleiss' kappa": [DASH if pd.isna(v) else f"{v:.2f}" for v in d.kappa]})
     return frame, [root / path]
 
 
