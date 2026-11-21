@@ -47,8 +47,9 @@ STAGES = {
     4: ("Scoring and sanity baselines", "Metrics, bootstrap, and baselines that never see the leaf.",
         ["metrics", "stats", "sanity_baselines", "shortcut_baselines"], ["docs/reports/sanity_report.md"]),
     5: ("Whole-image models", "Fine-tuned InceptionV3, EfficientNetV2-S, ConvNeXt-T and Swin-T at 128, 224 and 448 px.",
-        ["augment", "photo_dataset", "train_wholeimage", "stage5", "session_conditions", "session_conditions_report"],
-        ["docs/reports/session_conditions_report.md"]),
+        ["augment", "photo_dataset", "train_wholeimage", "stage5", "session_conditions", "session_conditions_report",
+         "paired_conditions"],
+        ["docs/reports/session_conditions_report.md", "docs/reports/paired_conditions_report.md"]),
     6: ("Tile descriptions", "Tiling at the common leaf scale and the cached frozen-encoder descriptions.",
         ["tiling", "encoders", "embed", "cache_report", "wholephoto_bags", "pipeline", "preflight"], []),
     7: ("Probes and tile heads", "Linear probes, mean and max pooling, gated attention, tuning and the follow-up study.",
@@ -61,13 +62,31 @@ STAGES = {
         ["partition_order", "partition_splits", "partition_report"], ["docs/reports/partition_order_report.md"]),
     10: ("Paddy Doctor zero-shot", "Every trained model scored once on the second dataset.",
          ["paddy_embed", "paddy_zero_shot"], ["docs/reports/paddy_report.md"]),
-    11: ("Committee", "Combining members chosen on validation.", ["committee"], ["docs/reports/committee_report.md"]),
+    11: ("Committee", "Combining members chosen on validation.", ["committee", "paired_committee"],
+         ["docs/reports/committee_report.md", "docs/reports/paired_committee_report.md"]),
     12: ("Heat maps and the deletion test", "Do the attention weights point at the symptoms?", ["explain", "heatmap_ratings"],
          ["docs/reports/explain_report.md", "docs/reports/heatmap_ratings_report.md"]),
     13: ("Cost and compression", "Size, speed and memory.", ["cost", "compress", "distill"],
          ["docs/reports/cost_report.md"]),
     14: ("Final tables, figures and this notebook", "Everything below is generated from `runs/`.",
          ["make_tables", "make_figures", "build_submission_notebook"], []),
+}
+# stage number -> a note shown under the stage heading; the wording agrees with the paper
+NOTES = {
+    1: "The leaf-width measurements were made by disclosed AI model raters, not by people; the report names them.",
+    2: "Every judgement in this stage (duplicate review, background audit, label check, Otsu review) was made by "
+       "disclosed AI model raters, not by people. Where a launcher cell below speaks of team members or human parts, "
+       "it describes how the tool can be used by people; no person-made judgement is part of the results.",
+    5: "The paired tests of Attention MIL against ConvNeXt-T at 448 px and against the 128 px and Otsu conditions were "
+       "declared after the means were seen (post-hoc), and are marked so in the report.",
+    11: "The paired test of the committee against ConvNeXt-T (448 px) alone was declared after both means were seen "
+        "(post-hoc). ConvNeXt-T is a member of the committee, so the two are not independent. The last line of the "
+        "committee report, \"Cost column: pending: Stage 13\", was written before Stage 13 ran; the committee's cost "
+        "is in the cost table (`final_cost.csv`) shown below.",
+    12: "Both sets of heat-map ratings (three raters each) are disclosed AI model raters; no person rated the maps. "
+        "The importer's file and column names call the second set `human`, which only records how it was imported: "
+        "the provenance note in the report below says that model agents filled it in. In the paper the two sets are "
+        "called model raters, set 1 and set 2.",
 }
 LAUNCHERS = {0: "00", 1: "01", 2: "02", 3: "03", 4: "04", 5: "05", 6: "06", 7: "07", 10: "10", 11: "11", 12: "12",
              13: "13", 14: "14"}   # notebook file prefix of each stage (several files may match)
@@ -166,7 +185,14 @@ def build(root: Path = ROOT) -> nbformat.NotebookNode:
             "from the run records in `runs/`. No cell splits, trains or evaluates on test unless `RUN_STAGES` is set. "
             "The permanent splits are never regenerated.\n\n"
             "Every number in a table or figure below was read from a run record; none is typed by hand. A result that "
-            "does not exist yet is shown as *pending* and never filled with an estimate."),
+            "does not exist yet is shown as *pending* and never filled with an estimate.\n\n"
+            "**Names and disclosures.** The method is called Attention MIL: a gated-attention head trained on the cached "
+            "descriptions of a frozen DINOv3 ViT-B/16 for the tiles of a photo. It is compared with InceptionV3, "
+            "EfficientNetV2-S, ConvNeXt-T and Swin-T fine-tuned on whole photos. The headline split is the "
+            "session-blocked split. All audits and heat-map ratings are disclosed AI model ratings, never human ratings. "
+            "Comparisons declared after the means were seen are marked post-hoc. The photos themselves are not part of "
+            "this package; the only photo images are the two figures `final_samples` and `final_heatmaps` that the "
+            "paper also shows. The pipeline diagram (Fig. 1) is drawn in TikZ inside the paper."),
         v4.new_markdown_cell("## Setup and helpers"),
         v4.new_code_cell(SETUP),
     ]
@@ -176,6 +202,8 @@ def build(root: Path = ROOT) -> nbformat.NotebookNode:
                                           + (f" (not written yet: {', '.join(f'`{m}`' for m in modules if m not in present)})"
                                              if any(m not in present for m in modules) and any(m in present for m in modules) else "")
                                           + ". The code itself is in the source appendix at the end."))
+        if stage in NOTES:
+            cells.append(v4.new_markdown_cell(f"**Note.** {NOTES[stage]}"))
         cells += launcher_cells(root, stage)
         for report in reports:
             cells.append(v4.new_code_cell(f"show_report({report!r})"))

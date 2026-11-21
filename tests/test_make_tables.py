@@ -242,6 +242,13 @@ def test_readiness_lists_every_commitment_and_writes_the_json(fixture):
     assert ready["figures"]["deletion"]["status"] == "not built"        # make_figures has not run in the fixture
 
 
+def test_the_pipeline_diagram_is_present_as_a_file_or_as_a_labelled_tikz_figure(fixture):
+    assert mt.check(fixture)["figures"]["pipeline_diagram"]["status"] == "pending"
+    (fixture / "paper" / "sections").mkdir(parents=True)
+    (fixture / "paper/sections/methodology.tex").write_text("\\begin{tikzpicture}\\end{tikzpicture}\\label{fig:pipeline}")
+    assert mt.check(fixture)["figures"]["pipeline_diagram"]["status"] == "present"
+
+
 def test_every_real_commitment_is_listed():
     ids = {c["id"] for c in mt.commitments(REPO)}
     assert ids == {*(f"P1-{i}" for i in range(1, 18)), *(f"O{i}" for i in range(1, 8))}
