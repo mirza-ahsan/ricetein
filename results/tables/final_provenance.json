@@ -1,5 +1,5 @@
 {
-  "code_version": "bfa5bca",
+  "code_version": "e03c47e",
   "tables": {
     "main": {
       "status": "present",
@@ -200,12 +200,13 @@
       }
     },
     "committee": {
-      "status": "partly pending",
+      "status": "present",
       "stage": "Stage 11",
       "reason": null,
       "rows": 4,
       "sources": {
-        "results/tables/committee_results.csv": "7fc6c0ce893b615349d3580251611f33163a4bd524a81987056313ff37e6c9f4"
+        "results/tables/committee_results.csv": "7fc6c0ce893b615349d3580251611f33163a4bd524a81987056313ff37e6c9f4",
+        "results/tables/cost_results.csv": "8ccc19c6637cb3ac2b34895975107233a6b4f8545e8732af9b7879aaf796d1f2"
       }
     },
     "explain": {
