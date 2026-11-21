@@ -4,6 +4,7 @@
     uv run python -m src.cost sizes                  # parameters, files, cache bytes (no timing)
     uv run python -m src.cost time --device gpu      # end-to-end seconds per photo, each method in its own process
     uv run python -m src.cost time --device cpu      # (nothing else may run on the machine)
+    uv run python -m src.cost time --device cpu --methods final_onnx   # after `select` and `compress export`
     uv run python -m src.cost select                 # the final small model, chosen on validation by the declared rule
     uv run python -m src.cost plan                   # freeze runs/cost_plan.json and the model's validation run
     uv run python -m src.cost test                   # test it ONCE (runs/cost_final/test_started.json, never deleted)
@@ -16,10 +17,10 @@ main methods are read from their existing test runs; the only new test evaluatio
 from __future__ import annotations
 
 import argparse
-import hashlib
 import io
 import json
 import resource
+import shutil
 import subprocess
 import sys
 import time
@@ -32,14 +33,13 @@ import pandas as pd
 import psutil
 import torch
 
-from src import compress, tiling
-from src import followup_report as fr
-from src.compress import CACHES, ENCODER, TILE, VARIANTS, head_runs, read_json, selected_runs
-from src.config import REPO_ROOT, cache_folder, load_config, output_root
+from src import compress, metrics
+from src.compress import CACHES, ENCODER, PARTS, VARIANTS, head_runs, selected_runs
+from src.config import REPO_ROOT, cache_folder, dataset_dir, load_config, output_root
 from src.encoders import describe, load_encoder
-from src.inventory_report import md_table
+from src.followup import read_json
 from src.records import RunRecorder, get_default_runs_dir, require_clean_code
-from src.split import read_folds, round_column
+from src.split import read_folds, round_column, sha256
 
 # method -> how it is run. Keys are those of src/make_tables.py, so the cost chart can name them.
 METHODS: dict[str, dict[str, Any]] = {
@@ -61,8 +61,7 @@ VARIANT_TIMING = {"e1_top16": {"kind": "tiles", "head": "attention", "tiles": "t
 CPU_ONLY = ("attention_int8", "final_onnx")
 TIMED = {**METHODS, **VARIANT_TIMING}
 # the distilled head has the architecture of the E4 head, so it takes that timing
-TIMING_KEY = {"e1_top16": "e1_top16", "e4": "e4", "e4_top16": "e4_top16", "distilled_e4": "e4",
-              "distilled_e4_top16": "e4_top16"}
+TIMING_KEY = {"distilled_e4": "e4", "distilled_e4_top16": "e4_top16"}
 
 
 # ---------------------------------------------------------------------------------------------- timing harness
@@ -113,7 +112,7 @@ def timing_photos(config: dict[str, Any]) -> tuple[list[str], list[str]]:
     return chosen[:t["photos"]], chosen[t["photos"]:]
 
 
-def machine_state() -> dict[str, Any]:
+def machine_state(full: bool = False) -> dict[str, Any]:
     """What else runs on the machine: processes using the CPU over two seconds, python processes, GPU memory."""
     me = psutil.Process()
     processes = [p for p in psutil.process_iter(["pid", "name"]) if p.pid != me.pid]
@@ -135,17 +134,19 @@ def machine_state() -> dict[str, Any]:
         except psutil.Error:
             pass
     state: dict[str, Any] = {"total_cpu_percent": psutil.cpu_percent(None), "busy_processes": busy,
-                             "python_processes": python, "gpu_mib_used": None}
+                             "python_processes": python, "gpu_mib_used": None, "nvidia_smi": None}
     try:
         used = subprocess.check_output(["nvidia-smi", "--query-gpu=memory.used", "--format=csv,noheader,nounits"],
                                        text=True, timeout=20)
         state["gpu_mib_used"] = int(used.split()[0])
+        if full:
+            state["nvidia_smi"] = subprocess.check_output(["nvidia-smi"], text=True, timeout=20)
     except (OSError, subprocess.SubprocessError, ValueError):
         pass
     return state
 
 
-def require_quiet(state: dict[str, Any], quiet: dict[str, float], device: str) -> None:
+def require_quiet(state: dict[str, Any], quiet: dict[str, float]) -> None:
     """Refuse to time on a busy machine (thresholds from configs/cost.yaml)."""
     problems = [f"{p['name']} (pid {p['pid']}) uses {p['cpu_percent']:.0f}% of a core" for p in state["busy_processes"]
                 if p["cpu_percent"] > quiet["max_process_cpu_percent"]]
@@ -163,7 +164,8 @@ def decision_of(config: dict[str, Any]) -> dict[str, Any]:
 
 
 def descriptor_of(cls: torch.Tensor, mean: torch.Tensor, descriptor: str) -> torch.Tensor:
-    return torch.cat({"c": [cls], "m": [mean], "cm": [cls, mean]}[descriptor], dim=1)
+    parts = {"cls": cls, "mean": mean}
+    return torch.cat([parts[k] for k in PARTS[descriptor]], dim=1)
 
 
 def tile_pipeline(config: dict[str, Any], device: torch.device, spec: dict[str, Any]) -> Callable:
@@ -178,13 +180,10 @@ def tile_pipeline(config: dict[str, Any], device: torch.device, spec: dict[str, 
     encoder_spec = config["encoders"][code]
 
     def run(path: str, laps: Laps) -> None:
-        rgb = compress.leaf_scale_photo(path, decision)
-        tiles = (compress.cut_selected(rgb, compress.top_tiles(rgb, rule)) if spec["tiles"] == "top16"
-                 else tiling.cut(rgb, TILE)[0])
+        tiles = compress.photo_tiles(path, decision, rule, spec["tiles"] == "top16")
         laps.mark("prepare")
         with torch.autocast(device.type, dtype=torch.float16, enabled=device.type == "cuda" and not spec.get("int8")):
-            parts = [describe(encoder, tiles[i:i + batch], encoder_spec, config, device) for i in range(0, len(tiles), batch)]
-        cls, mean = torch.cat([p[0] for p in parts]), torch.cat([p[1] for p in parts])
+            cls, mean = compress.describe_batches(encoder, tiles, encoder_spec, config, device, batch)
         laps.mark("describe")
         bag = descriptor_of(cls, mean, params["descriptor"])[None].to(device).float()
         with torch.inference_mode():
@@ -195,13 +194,10 @@ def tile_pipeline(config: dict[str, Any], device: torch.device, spec: dict[str, 
 
 def probe_pipeline(config: dict[str, Any], device: torch.device, spec: dict[str, Any]) -> Callable:
     """Open, rescale, pad to square at 224 or 512 px, one E1 description, the probe's prediction."""
-    import pickle
-
     from src.photo_dataset import prepare_square
 
     encoder = load_encoder(config, "E1", device)
-    with (get_default_runs_dir() / selected_runs(f"probe_{spec['size']}")[0] / "model.pkl").open("rb") as f:
-        model = pickle.load(f)   # our own local checkpoint
+    model = compress.load_probe(f"probe_{spec['size']}", 1)
     decision = decision_of(config)
 
     def run(path: str, laps: Laps) -> None:
@@ -258,10 +254,9 @@ def onnx_pipeline(config: dict[str, Any]) -> Callable:
     top16 = VARIANTS[selection][1] == "top16"
 
     def run(path: str, laps: Laps) -> None:
-        rgb = compress.leaf_scale_photo(path, decision)
-        tiles = compress.cut_selected(rgb, compress.top_tiles(rgb, rule)) if top16 else tiling.cut(rgb, TILE)[0]
+        tiles = compress.photo_tiles(path, decision, rule, top16)
         laps.mark("prepare")
-        pixels = tiles.transpose(0, 3, 1, 2).astype(np.float32) / 255
+        pixels = np.ascontiguousarray(tiles.transpose(0, 3, 1, 2), dtype=np.float32) / 255
         described = np.concatenate([encoder.run(None, {"pixels": pixels[i:i + batch]})[0] for i in range(0, len(pixels), batch)])
         laps.mark("describe")
         head.run(None, {"tiles": described[None], "mask": np.ones((1, len(described)), bool)})
@@ -295,7 +290,7 @@ def time_one(method: str, device_name: str, out: Path) -> None:
     baseline = rss_mib()
     run = build_run(method, config, device)
     timed, warmup = timing_photos(config)
-    root = _photo_root(config)
+    root = dataset_dir(config, "primary")
     for photo in [*warmup, *timed]:           # photo files into the OS cache, untimed: only decoding is timed
         (root / photo).read_bytes()
     sync = torch.cuda.synchronize if device.type == "cuda" else (lambda: None)
@@ -305,37 +300,57 @@ def time_one(method: str, device_name: str, out: Path) -> None:
                                "peak_rss_mib": rss_mib(), "rss_before_model_mib": baseline}, indent=2))
 
 
-def _photo_root(config: dict[str, Any]) -> Path:
-    from src.config import dataset_dir
+def read_timing(device: str) -> dict[str, Any]:
+    """The timing results of a device: ``cost_time_<device>`` and any ``cost_time_<device>_<methods>`` run (a later
+    run of a few methods, e.g. the ONNX model after the export), merged by key."""
+    merged: dict[str, Any] = {"median_seconds_per_photo": {}, "peak_gpu_mib": {}, "peak_rss_mib": {}, "summary": {}}
+    for folder in sorted(get_default_runs_dir().glob(f"cost_time_{device}*")):
+        if (folder / "metrics.json").exists():
+            result = read_json(folder / "metrics.json")
+            for key in merged:
+                merged[key].update(result[key])
+    return merged
 
-    return dataset_dir(config, "primary")
 
-
-def time_all(config: dict[str, Any], device_name: str) -> None:
+def time_all(config: dict[str, Any], device_name: str, only: list[str] | None = None) -> None:
+    """Time every method (or only ``only``, stored as its own run so that earlier timings stay untouched).
+    The machine is checked before every method."""
     require_clean_code()
-    start = machine_state()
-    require_quiet(start, config["cost"]["quiet"], device_name)
+    runs = get_default_runs_dir()
+    if only:
+        methods, name = only, f"cost_time_{device_name}_{'_'.join(only)}"
+    else:
+        methods, name = [m for m in TIMED if m != "final_onnx" and not (device_name == "gpu" and m in CPU_ONLY)], f"cost_time_{device_name}"
+    if device_name == "gpu" and (bad := [m for m in methods if m in CPU_ONLY]):
+        raise ValueError(f"{', '.join(bad)}: timed on the CPU only")
+    if "final_onnx" in methods and not (runs / "cost_export" / "metrics.json").exists():
+        raise RuntimeError("run `python -m src.compress export` before timing the ONNX model")
+    start = machine_state(full=True)
+    require_quiet(start, config["cost"]["quiet"])
     _, checksum = read_folds(config)
-    recorder = RunRecorder(f"cost_time_{device_name}", config=config, split_checksum=checksum, overwrite=True,
+    recorder = RunRecorder(name, config=config, split_checksum=checksum, overwrite=True,
                            data_version={"primary": config["datasets"]["primary"]["version"]})
-    methods = [m for m in TIMED if not (device_name == "gpu" and m in CPU_ONLY)]
-    if "final_onnx" in methods and not (get_default_runs_dir() / "cost_selection.json").exists():
-        methods.remove("final_onnx")          # the final model is not chosen yet: time it after `select` and `export`
-    results = {}
+    results: dict[str, Any] = {}
+
+    def save(end: dict[str, Any] | None) -> None:       # after every method, so a late failure loses nothing
+        recorder.save_metrics({"partition": "none", "device": device_name, "methods": methods,
+                               "median_seconds_per_photo": {m: r["summary"]["median"] for m, r in results.items()},
+                               "summary": {m: r["summary"] for m, r in results.items()},
+                               "peak_gpu_mib": {m: r["peak_gpu_mib"] for m, r in results.items()},
+                               "peak_rss_mib": {m: r["peak_rss_mib"] for m, r in results.items()},
+                               "machine_state_start": start, "machine_state_end": end})
+        pd.DataFrame([{"method": m, "device": device_name, **row} for m, res in results.items() for row in res["rows"]]
+                     ).to_csv(recorder.run_dir / "timing.csv", index=False)
+
     for method in methods:
+        require_quiet(machine_state(), config["cost"]["quiet"])
         out = recorder.run_dir / f"{method}.json"
         subprocess.run([sys.executable, "-m", "src.cost", "time-one", "--method", method, "--device", device_name,
-                        "--out", str(out)], check=True)
+                        "--out", str(out)], check=True, cwd=REPO_ROOT)
         results[method] = read_json(out)
+        save(None)
         print(f"{method}: median {results[method]['summary']['median']:.3f} s per photo ({device_name})", flush=True)
-    pd.DataFrame([{"method": m, "device": device_name, **row} for m, res in results.items() for row in res["rows"]]
-                 ).to_csv(recorder.run_dir / "timing.csv", index=False)
-    recorder.save_metrics({"partition": "none", "device": device_name,
-                           "median_seconds_per_photo": {m: r["summary"]["median"] for m, r in results.items()},
-                           "summary": {m: r["summary"] for m, r in results.items()},
-                           "peak_gpu_mib": {m: r["peak_gpu_mib"] for m, r in results.items()},
-                           "peak_rss_mib": {m: r["peak_rss_mib"] for m, r in results.items()},
-                           "machine_state_start": start, "machine_state_end": machine_state()})
+    save(machine_state(full=True))
     recorder.finish()
 
 
@@ -356,34 +371,33 @@ def count(parameters) -> int:
     return int(sum(p.numel() for p in parameters))
 
 
-def size_row(method: str, config: dict[str, Any]) -> dict[str, Any]:
-    """Parameters (encoder, decision-maker), bytes on disk and cache bytes of one method."""
-    runs = get_default_runs_dir()
+def size_row(method: str, config: dict[str, Any], memo: dict | None = None) -> dict[str, Any]:
+    """Parameters (encoder, decision-maker), bytes on disk and cache bytes of one method. ``memo`` holds what depends
+    on the encoder only (parameters, file, cache), so that ``sizes`` loads each encoder once."""
+    runs, memo = get_default_runs_dir(), {} if memo is None else memo
     spec = TIMED.get(method) or {"kind": "tiles", "head": VARIANTS[method][0]}    # a candidate name, e.g. distilled_e4
     if spec["kind"] == "tiles":
         code = ENCODER[spec["head"]]
-        encoder = load_encoder(config, code, torch.device("cpu"))
+        encoder = load_encoder(config, code, torch.device("cpu"))     # the 8-bit variant needs it anyway
+        facts = memo.setdefault(code, {"params": count(encoder.parameters()), "file": encoder_file_bytes(config, code),
+                                       "cache": dir_bytes(cache_folder(CACHES[code]))})
         state = torch.load(runs / head_runs(spec["head"])[0] / "model.pt", map_location="cpu", weights_only=True)
         if spec.get("int8"):
             buffer = io.BytesIO()
             torch.save(compress.quantise(encoder).state_dict(), buffer)
             encoder_bytes = buffer.getbuffer().nbytes
         else:
-            encoder_bytes = encoder_file_bytes(config, code)
-        return {"method": method, "params_encoder": count(encoder.parameters()), "params_decider": count(state.values()),
+            encoder_bytes = facts["file"]
+        return {"method": method, "params_encoder": facts["params"], "params_decider": count(state.values()),
                 "disk_bytes": encoder_bytes + (runs / head_runs(spec["head"])[0] / "model.pt").stat().st_size,
-                "cache_bytes": dir_bytes(cache_folder(CACHES[code]))}
+                "cache_bytes": facts["cache"]}
     if spec["kind"] == "probe":
-        import pickle
-
-        encoder = load_encoder(config, "E1", torch.device("cpu"))
-        file = runs / selected_runs(method)[0] / "model.pkl"
-        with file.open("rb") as f:
-            model = pickle.load(f)   # our own local checkpoint
-        scaler, logistic = model.steps[0][1], model.steps[1][1]
+        facts = memo.setdefault("E1", {"params": count(load_encoder(config, "E1", torch.device("cpu")).parameters()),
+                                       "file": encoder_file_bytes(config, "E1")})
+        scaler, logistic = (step for _, step in compress.load_probe(method, 1).steps)
         stored = [scaler.mean_, scaler.scale_, logistic.coef_, logistic.intercept_]
-        return {"method": method, "params_encoder": count(encoder.parameters()), "params_decider": int(sum(a.size for a in stored)),
-                "disk_bytes": encoder_file_bytes(config, "E1") + file.stat().st_size,
+        return {"method": method, "params_encoder": facts["params"], "params_decider": int(sum(a.size for a in stored)),
+                "disk_bytes": facts["file"] + (runs / selected_runs(method)[0] / "model.pkl").stat().st_size,
                 "cache_bytes": dir_bytes(cache_folder("e1_wholephoto"))}
     if spec["kind"] == "cnn":
         from src import photo_dataset
@@ -397,7 +411,7 @@ def size_row(method: str, config: dict[str, Any]) -> dict[str, Any]:
         return {"method": method, "params_encoder": count(model.parameters()) - decider, "params_decider": decider,
                 "disk_bytes": (runs / selected_runs(method)[0] / "model.pt").stat().st_size, "cache_bytes": photos.stat().st_size}
     exported = read_json(runs / "cost_export" / "metrics.json")
-    return {**size_row(exported["candidate"], config), "method": method, "disk_bytes": sum(exported["bytes"].values())}
+    return {**size_row(exported["candidate"], config, memo), "method": method, "disk_bytes": sum(exported["bytes"].values())}
 
 
 def sizes(config: dict[str, Any]) -> None:
@@ -405,7 +419,8 @@ def sizes(config: dict[str, Any]) -> None:
     names = [*METHODS, "e1_top16", "e4", "e4_top16", "distilled_e4", "attention_int8"]
     if (get_default_runs_dir() / "cost_export" / "metrics.json").exists():
         names.append("final_onnx")
-    rows = [size_row(m, config) for m in names]
+    memo: dict = {}
+    rows = [size_row(m, config, memo) for m in names]
     by = {r["method"]: r for r in rows}
     if by["distilled_e4"]["params_decider"] != by["e4"]["params_decider"]:
         raise RuntimeError("the distilled head is not the architecture of the E4 head: it cannot take its timing")
@@ -425,7 +440,7 @@ def choose_final(val_f1: dict[str, float], cpu_seconds: dict[str, float], refere
     def best(names: list[str], key: Callable[[str], tuple]) -> str:
         return min(names, key=lambda n: (*key(n), -val_f1[n], order.index(n)))
 
-    eligible = [n for n in order if val_f1[n] >= reference_f1 - margin_points / 100]
+    eligible = [n for n in order if val_f1[n] >= reference_f1 - margin_points / 100 - 1e-9]
     if eligible:
         return best(eligible, lambda n: (cpu_seconds[n],)), "fastest on the CPU among those within the margin"
     faster = [n for n in order if cpu_seconds[n] < reference_seconds]
@@ -438,25 +453,22 @@ def select(config: dict[str, Any]) -> None:
     version = require_clean_code()
     root = get_default_runs_dir()
     variants = read_json(root / "cost_fewer_tiles" / "metrics.json")["variants"]
-    cpu = read_json(root / "cost_time_cpu" / "metrics.json")["median_seconds_per_photo"]
+    cpu = read_timing("cpu")["median_seconds_per_photo"]
     val = {n: variants[n]["val_macro_f1_mean"] for n in compress.CANDIDATES}
-    seconds = {n: cpu[TIMING_KEY[n]] for n in compress.CANDIDATES}
-    chosen, why = choose_final(val, seconds, variants["attention"]["val_macro_f1_mean"], cpu["attention"],
-                               config["compress"]["final_margin_points"], compress.CANDIDATES)
+    seconds = {n: cpu[TIMING_KEY.get(n, n)] for n in compress.CANDIDATES}
+    reference, reference_seconds = variants["attention"]["val_macro_f1_mean"], cpu["attention"]
+    chosen, why = choose_final(val, seconds, reference, reference_seconds, config["compress"]["final_margin_points"],
+                               compress.CANDIDATES)
     (root / "cost_selection.json").write_text(json.dumps(
         {"partition": "val", "selected": chosen, "reason": why, "code_version": version,
-         "reference": {"val_macro_f1": variants["attention"]["val_macro_f1_mean"], "cpu_seconds": cpu["attention"]},
+         "reference": {"val_macro_f1": reference, "cpu_seconds": reference_seconds},
          "candidates": {n: {"val_macro_f1": val[n], "cpu_seconds": seconds[n]} for n in compress.CANDIDATES}}, indent=2) + "\n")
     print(f"final small model: {chosen} ({why})", flush=True)
 
 
-def digest(path: Path) -> str:
-    return hashlib.sha256(path.read_bytes()).hexdigest()
-
-
 def plan_entries(selected: str) -> dict[str, dict[str, str]]:
     root = get_default_runs_dir()
-    return {run: {"record_sha256": digest(root / run / "record.json"), "checkpoint_sha256": digest(root / run / "model.pt")}
+    return {run: {"record_sha256": sha256(root / run / "record.json"), "checkpoint_sha256": sha256(root / run / "model.pt")}
             for run in head_runs(VARIANTS[selected][0])}
 
 
@@ -468,7 +480,7 @@ def plan(config: dict[str, Any]) -> None:
     selection = read_json(root / "cost_selection.json")
     _, checksum = read_folds(config)
     frozen = {"selection_partition": "val", "code_version": version, "selected": selection["selected"],
-              "selection_sha256": digest(root / "cost_selection.json"), "rule": compress.rule_of(config),
+              "selection_sha256": sha256(root / "cost_selection.json"), "rule": compress.rule_of(config),
               "split_checksum": checksum, "runs": plan_entries(selection["selected"])}
     path = root / "cost_plan.json"
     if path.exists():
@@ -483,34 +495,39 @@ def plan(config: dict[str, Any]) -> None:
                            overwrite=not (root / "cost_final" / "test_started.json").exists(),
                            data_version={"primary": config["datasets"]["primary"]["version"]})
     recorder.save_predictions(pd.read_csv(root / "cost_fewer_tiles" / f"predictions_{selection['selected']}.csv"))
+    # the round-1 head as the run's checkpoint: session_study.require_intact wants one in every tested run folder
+    shutil.copy2(root / head_runs(VARIANTS[selection["selected"]][0])[0] / "model.pt", recorder.run_dir / "model.pt")
     recorder.save_metrics({"partition": "val", **{k: v for k, v in selection.items() if k != "partition"}})
     recorder.finish()
 
 
 def evaluate_final(config: dict[str, Any]) -> None:
-    """The one test evaluation of Stage 13."""
+    """The one test evaluation of Stage 13. Everything that needs no test score (the checks against the plan, the
+    five heads, the descriptions, the tile selection of the test photos: pixels only) is done first; the marker is
+    written last, just before the first test prediction, so that a crash in the preparation does not use it up."""
     version = require_clean_code()
     root = get_default_runs_dir()
     frozen = read_json(root / "cost_plan.json")
-    if frozen["selection_sha256"] != digest(root / "cost_selection.json") or frozen["runs"] != plan_entries(frozen["selected"]):
+    folds, checksum = read_folds(config)
+    if frozen["selection_sha256"] != sha256(root / "cost_selection.json") or frozen["runs"] != plan_entries(frozen["selected"]):
         raise ValueError("the selection or a round-model changed after the plan was frozen")
-    folder = root / "cost_final"
+    if frozen["rule"] != compress.rule_of(config) or frozen["split_checksum"] != checksum:
+        raise ValueError("the tile rule or the split changed after the plan was frozen")
+    name, folder = frozen["selected"], root / "cost_final"
+    rows = compress.role_rows(folds, "test")
+    ids = folds["photo_id"].to_numpy()
+    photos = sorted({ids[r] for rs in rows.values() for r in rs})
+    selection = compress.tile_selection(config, photos) if VARIANTS[name][1] == "top16" else None
+    variant = compress.Variant(config, name, folds, selection)
     try:
         marker = (folder / "test_started.json").open("x")
     except FileExistsError:
         raise RuntimeError("the final small model was already tested or its test was started; no retry") from None
     with marker:
-        json.dump({"evaluation_code": version, "plan_sha256": digest(root / "cost_plan.json")}, marker)
-    folds, _ = read_folds(config)
-    rows = compress.role_rows(folds, "test")
-    photos = sorted({folds["photo_id"].iloc[r] for rs in rows.values() for r in rs})
-    name = frozen["selected"]
-    selection = compress.tile_selection(config, photos) if VARIANTS[name][1] == "top16" else None
-    result = compress.variant_scores(config, [name], folds, "test", selection, rows)[name]
+        json.dump({"evaluation_code": version, "plan_sha256": sha256(root / "cost_plan.json")}, marker)
+    result = compress.score_variant(variant, folds, rows, config["classes"], "test")
     table = result["predictions"]
     table.to_csv(folder / "test_predictions.csv", index=False)
-    from src import metrics
-
     scores = metrics.scores(table["true_class"], table["pred_class"], config["classes"])
     (folder / "test_metrics.json").write_text(json.dumps(
         {"partition": "test", **scores, "macro_f1_rounds": result["scores"], "macro_f1_mean": float(np.mean(result["scores"])),
@@ -518,21 +535,23 @@ def evaluate_final(config: dict[str, Any]) -> None:
 
 
 # ---------------------------------------------------------------------------------------------- report
+def cost_row(label: str, sizes_row: dict[str, Any], timing: dict[str, Any], key: str, macro_f1: float | None) -> dict[str, Any]:
+    """One row of the cost table: sizes, timing under ``key`` on both devices, and the test macro-F1."""
+    return {"method": label, "params_encoder_m": sizes_row["params_encoder"] / 1e6, "params_decider_m": sizes_row["params_decider"] / 1e6,
+            "disk_mb": sizes_row["disk_bytes"] / 2**20, "cache_gb": sizes_row["cache_bytes"] / 2**30,
+            "seconds_per_photo": timing["gpu"]["median_seconds_per_photo"][key],
+            "seconds_per_photo_cpu": timing["cpu"]["median_seconds_per_photo"][key],
+            "peak_gpu_mb": timing["gpu"]["peak_gpu_mib"][key], "peak_cpu_rss_mb": timing["cpu"]["peak_rss_mib"][key],
+            "macro_f1": macro_f1, "partition": "test"}
+
+
 def method_rows(config: dict[str, Any]) -> pd.DataFrame:
     """The cost table: every main method (and the committee, if Stage 11 gave one), test macro-F1 from its test runs."""
     root = get_default_runs_dir()
     sizes_ = {r["method"]: r for r in read_json(root / "cost_sizes" / "metrics.json")["rows"]}
-    timing = {d: read_json(root / f"cost_time_{d}" / "metrics.json") for d in ("gpu", "cpu")}
-    rows = []
-    for method in METHODS:
-        s = sizes_[method]
-        test = [read_json(root / run / "test_metrics.json")["macro_f1"] for run in selected_runs(method)]
-        rows.append({"method": method, "params_encoder_m": s["params_encoder"] / 1e6, "params_decider_m": s["params_decider"] / 1e6,
-                     "disk_mb": s["disk_bytes"] / 2**20, "cache_gb": s["cache_bytes"] / 2**30,
-                     "seconds_per_photo": timing["gpu"]["median_seconds_per_photo"][method],
-                     "seconds_per_photo_cpu": timing["cpu"]["median_seconds_per_photo"][method],
-                     "peak_gpu_mb": timing["gpu"]["peak_gpu_mib"][method], "peak_cpu_rss_mb": timing["cpu"]["peak_rss_mib"][method],
-                     "macro_f1": float(np.mean(test)), "partition": "test"})
+    timing = {d: read_timing(d) for d in ("gpu", "cpu")}
+    rows = [cost_row(m, sizes_[m], timing, m, float(np.mean([read_json(root / run / "test_metrics.json")["macro_f1"]
+                                                              for run in selected_runs(m)]))) for m in METHODS]
     members = config["cost"]["committee"]["members"]
     if members:
         parts = [r for r in rows if r["method"] in members]
@@ -540,16 +559,11 @@ def method_rows(config: dict[str, Any]) -> pd.DataFrame:
                      ("params_encoder_m", "params_decider_m", "disk_mb", "cache_gb", "seconds_per_photo", "seconds_per_photo_cpu")},
                      "peak_gpu_mb": max(p["peak_gpu_mb"] for p in parts), "peak_cpu_rss_mb": max(p["peak_cpu_rss_mb"] for p in parts),
                      "macro_f1": config["cost"]["committee"]["test_macro_f1"], "partition": "test"})
-    final = read_json(root / "cost_final" / "test_metrics.json")
     name = read_json(root / "cost_plan.json")["selected"]
-    key = TIMING_KEY[name]
-    s = sizes_.get(name) or sizes_["distilled_e4"]       # both distilled candidates have the one head's size
-    rows.append({"method": f"final_small_model ({name})", "params_encoder_m": s["params_encoder"] / 1e6,
-                 "params_decider_m": s["params_decider"] / 1e6, "disk_mb": s["disk_bytes"] / 2**20,
-                 "cache_gb": s["cache_bytes"] / 2**30, "seconds_per_photo": timing["gpu"]["median_seconds_per_photo"][key],
-                 "seconds_per_photo_cpu": timing["cpu"]["median_seconds_per_photo"][key],
-                 "peak_gpu_mb": timing["gpu"]["peak_gpu_mib"][key], "peak_cpu_rss_mb": timing["cpu"]["peak_rss_mib"][key],
-                 "macro_f1": final["macro_f1_mean"], "partition": "test"})
+    final = read_json(root / "cost_final" / "test_metrics.json")["macro_f1_mean"]
+    # both distilled candidates have the one head's size
+    rows.append(cost_row(f"final_small_model ({name})", sizes_.get(name) or sizes_["distilled_e4"], timing,
+                         TIMING_KEY.get(name, name), final))
     return pd.DataFrame(rows)
 
 
@@ -557,12 +571,12 @@ def compression_rows(config: dict[str, Any]) -> pd.DataFrame:
     """Each variant: validation macro-F1 against seconds per photo (GPU and CPU)."""
     root = get_default_runs_dir()
     variants = read_json(root / "cost_fewer_tiles" / "metrics.json")["variants"]
-    timing = {d: read_json(root / f"cost_time_{d}" / "metrics.json")["median_seconds_per_photo"] for d in ("gpu", "cpu")}
+    timing = {d: read_timing(d)["median_seconds_per_photo"] for d in ("gpu", "cpu")}
     reference = variants["attention"]["val_macro_f1_mean"]
     rows = []
     for name, v in variants.items():
-        key = "attention" if name == "attention" else TIMING_KEY.get(name)
-        rows.append({"variant": name, "what": {"attention": "E1 + attention, all tiles (the reference)"}.get(name, name.replace("_", " ")),
+        key = TIMING_KEY.get(name, name)
+        rows.append({"variant": name, "what": "E1 + attention, all tiles (the reference)" if name == "attention" else name.replace("_", " "),
                      "val_macro_f1": v["val_macro_f1_mean"], "val_macro_f1_sd": v["val_macro_f1_sd"],
                      "difference_points": 100 * (v["val_macro_f1_mean"] - reference), "tiles_used": v["tiles_used"],
                      "seconds_per_photo": timing["gpu"].get(key), "seconds_per_photo_cpu": timing["cpu"].get(key),
@@ -577,15 +591,21 @@ def compression_rows(config: dict[str, Any]) -> pd.DataFrame:
                  "partition": "val"})
     if "final_onnx" in timing["cpu"]:
         chosen = read_json(root / "cost_plan.json")["selected"]
-        rows.append({"variant": "final_onnx", "what": f"{chosen} exported to ONNX (onnxruntime, CPU)", "val_macro_f1": variants[chosen]["val_macro_f1_mean"],
-                     "val_macro_f1_sd": variants[chosen]["val_macro_f1_sd"], "difference_points": 100 * (variants[chosen]["val_macro_f1_mean"] - reference),
-                     "tiles_used": variants[chosen]["tiles_used"], "seconds_per_photo": None,
+        v = variants[chosen]
+        rows.append({"variant": "final_onnx", "what": f"{chosen} exported to ONNX (onnxruntime, CPU)", "val_macro_f1": v["val_macro_f1_mean"],
+                     "val_macro_f1_sd": v["val_macro_f1_sd"], "difference_points": 100 * (v["val_macro_f1_mean"] - reference),
+                     "tiles_used": v["tiles_used"], "seconds_per_photo": None,
                      "seconds_per_photo_cpu": timing["cpu"]["final_onnx"], "note": "same model, other runtime", "partition": "val"})
     return pd.DataFrame(rows)
 
 
 def report(config: dict[str, Any]) -> None:
+    from src import followup_report as fr
+    from src.inventory_report import md_table
+
     root = get_default_runs_dir()
+    t = config["cost"]["timing"]
+    fmt = lambda x, f: "–" if pd.isna(x) else f.format(x)   # noqa: E731
     cost, compression = method_rows(config), compression_rows(config)
     tables = REPO_ROOT / "results/tables"
     tables.mkdir(parents=True, exist_ok=True)
@@ -596,14 +616,13 @@ def report(config: dict[str, Any]) -> None:
     final = pd.concat([pd.read_csv(root / "cost_final" / f) for f in ("predictions.csv", "test_predictions.csv")], ignore_index=True)
     paired = fr.paired_rows(attention, {final_name: final}, fr.block_of(), config)
     shown = pd.DataFrame({"method": cost["method"].map(lambda m: m.replace("_", " ")),
-                          "encoder params (M)": cost["params_encoder_m"].map("{:.1f}".format),
+                          "encoder params (M, frozen)": cost["params_encoder_m"].map("{:.1f}".format),
                           "decision-maker params (M)": cost["params_decider_m"].map("{:.2f}".format),
                           "files (MB)": cost["disk_mb"].map("{:.0f}".format), "training cache (GB)": cost["cache_gb"].map("{:.1f}".format),
                           "GPU s/photo": cost["seconds_per_photo"].map("{:.3f}".format),
                           "CPU s/photo": cost["seconds_per_photo_cpu"].map("{:.2f}".format),
                           "peak GPU (MB)": cost["peak_gpu_mb"].map("{:.0f}".format), "peak CPU RAM (MB)": cost["peak_cpu_rss_mb"].map("{:.0f}".format),
-                          "test macro-F1 (%)": cost["macro_f1"].map(lambda x: "–" if pd.isna(x) else f"{100 * x:.1f}")})
-    fmt = lambda x, f: "–" if pd.isna(x) else f.format(x)   # noqa: E731
+                          "test macro-F1 (%)": cost["macro_f1"].map(lambda x: fmt(100 * x, "{:.1f}"))})
     shown_c = pd.DataFrame({"variant": compression["variant"], "what": compression["what"],
                             "validation macro-F1 (%)": [f"{100 * m:.1f} ± {100 * s:.1f}" for m, s in zip(compression["val_macro_f1"], compression["val_macro_f1_sd"])],
                             "difference (points)": compression["difference_points"].map("{:+.1f}".format),
@@ -612,14 +631,16 @@ def report(config: dict[str, Any]) -> None:
                             "CPU s/photo": compression["seconds_per_photo_cpu"].map(lambda x: fmt(x, "{:.2f}")),
                             "note": compression["note"]})
     p = paired.iloc[0]
+    committee_note = ("" if config["cost"]["committee"]["members"] else
+                      "\nThere is no committee row: Stage 11 had not produced a committee when this was built.\n")
     text = f"""# Stage 13: cost and compression
 
 Built by `src/cost.py` from `runs/`; do not edit by hand. Declaration: handbook §24, 2026-11-21.
 
 **Hardware dependence.** Every time and every memory figure comes from one machine, `halo` (RTX 4060 8 GB, Ryzen 7 7700,
-8 threads for torch and onnxruntime), and depends on it. Times are medians over 100 training photos of round 1, one photo
-at a time from the file on disk (decoding included, cold-disk reads not), after 5 discarded warm-up photos. GPU: fp16
-autocast, 128 tiles per pass; CPU: fp32, 16 tiles per pass. Each method ran in its own process.
+{t["cpu_threads"]} threads for torch and onnxruntime), and depends on it. Times are medians over {t["photos"]} training photos of round {t["source_round"]}, one photo
+at a time from the file on disk (decoding included, cold-disk reads not), after {t["warmup"]} discarded warm-up photos. GPU: fp16
+autocast, {t["tile_batch"]["cuda"]} tiles per pass; CPU: fp32, {t["tile_batch"]["cpu"]} tiles per pass. Each method ran in its own process.
 
 ## 1. Cost of every main method
 
@@ -628,7 +649,7 @@ The tile method describes about 79 tiles per photo, so it is **slower per photo 
 cache is the description cache (all 8 versions) or the resized-photo cache.
 
 {md_table(shown)}
-
+{committee_note}
 ## 2. Compression variants (validation macro-F1)
 
 Validation photos only (session split, mean ± SD over 5 rounds); no variant was tested except the final small model.
@@ -662,6 +683,7 @@ def main() -> None:
     parser.add_argument("action", choices=[*ACTIONS, "time", "time-one"])
     parser.add_argument("--device", choices=["gpu", "cpu"])
     parser.add_argument("--method", choices=list(TIMED))
+    parser.add_argument("--methods", nargs="+", choices=list(TIMED), help="for time: only these (stored as their own run)")
     parser.add_argument("--out", type=Path)
     args = parser.parse_args()
     if args.action == "time-one":
@@ -671,7 +693,7 @@ def main() -> None:
     if args.action == "time":
         if not args.device:
             parser.error("time needs --device gpu or cpu")
-        time_all(config, args.device)
+        time_all(config, args.device, args.methods)
     else:
         ACTIONS[args.action](config)
     print(f"COST {args.action} DONE", flush=True)

@@ -11,14 +11,15 @@ from ``configs/cost.yaml``, no hard labels, no class weights.
 
 The teacher is the Stage 11 committee: its answers on the training photos come from ``distill.teacher.soft_answers_file``
 when Stage 11 saved them, else they are computed here as the mean probability of ``distill.teacher.members``
-(selected tile heads on E1, or probes) with each member's own round-model.
+(selected tile heads on E1, or probes) with each member's own round-model. The temperature softens the teacher's answers
+only. Run all five rounds in one go: ``reusable_run`` compares every file under ``src/`` and ``configs/``, so a resume
+after an unrelated commit asks for the unfinished rounds to be archived.
 """
 
 from __future__ import annotations
 
 import argparse
 import math
-import pickle
 from collections.abc import Callable
 from typing import Any
 
@@ -27,19 +28,16 @@ import pandas as pd
 import torch
 
 from src import metrics, train_mil
-from src.compress import ROUNDS, cached_bags, head_probs, load_head, read_json, selected_runs
+from src.compress import cached_bags, head_probs, load_head, load_probe, role_rows, selected_runs
 from src.config import REPO_ROOT, load_config
+from src.followup import ROUNDS, read_json
 from src.mil_models import MILModel
 from src.records import RunRecorder, get_default_runs_dir, require_clean_code, reusable_run
 from src.seeding import seed_everything
-from src.split import read_folds, round_column
+from src.split import read_folds
 from src.train_wholeimage import prediction_table
 
 STUDENT_ABLATION = "stage7_session_ablate_encoder_e4_r1"    # its record holds the settings the student reuses
-
-
-def train_rows(folds: pd.DataFrame, round_: int) -> np.ndarray:
-    return np.flatnonzero((folds[round_column(round_)] == "train").to_numpy())
 
 
 def soften(probs: np.ndarray, temperature: float) -> np.ndarray:
@@ -48,15 +46,19 @@ def soften(probs: np.ndarray, temperature: float) -> np.ndarray:
     return powered / powered.sum(axis=1, keepdims=True)
 
 
-def teacher_targets(folds: pd.DataFrame, round_: int, members: list[Callable[[np.ndarray], np.ndarray]],
-                    n_classes: int, temperature: float) -> np.ndarray:
-    """(photos, classes): the members' mean probability on the TRAINING photos of the round, NaN for every other
-    photo. A member is asked about training rows only."""
-    rows = train_rows(folds, round_)
-    mean = np.mean([member(rows) for member in members], axis=0)
-    targets = np.full((len(folds), n_classes), np.nan, np.float32)
-    targets[rows] = soften(mean, temperature)
+def scatter(folds: pd.DataFrame, rows: np.ndarray, probs: np.ndarray, temperature: float) -> np.ndarray:
+    """(photos, classes): the answers on ``rows`` (softened), NaN for every other photo."""
+    targets = np.full((len(folds), probs.shape[1]), np.nan, np.float32)
+    targets[rows] = soften(probs, temperature)
     return targets
+
+
+def teacher_targets(folds: pd.DataFrame, round_: int, members: list[Callable[[np.ndarray], np.ndarray]],
+                    temperature: float) -> np.ndarray:
+    """The members' mean probability on the TRAINING photos of the round, NaN for every other photo. A member is
+    asked about training rows only."""
+    rows = role_rows(folds, "train")[round_]
+    return scatter(folds, rows, np.mean([member(rows) for member in members], axis=0), temperature)
 
 
 def file_targets(path, folds: pd.DataFrame, round_: int, classes: list[str], temperature: float) -> np.ndarray:
@@ -64,34 +66,34 @@ def file_targets(path, folds: pd.DataFrame, round_: int, classes: list[str], tem
     there, and no photo that is not a training photo of the round may be."""
     table = pd.read_csv(path, dtype={"photo_id": str})
     table = table[table["round"] == round_].set_index("photo_id")
-    rows = train_rows(folds, round_)
+    rows = role_rows(folds, "train")[round_]
     wanted = folds["photo_id"].to_numpy()[rows]
     if set(table.index) != set(wanted):
         raise ValueError(f"{path}: round {round_} must hold exactly the training photos of the round")
-    targets = np.full((len(folds), len(classes)), np.nan, np.float32)
-    targets[rows] = soften(table.loc[wanted, [f"prob_{c}" for c in classes]].to_numpy(float), temperature)
-    return targets
+    return scatter(folds, rows, table.loc[wanted, [f"prob_{c}" for c in classes]].to_numpy(float), temperature)
 
 
-def probe_member(method: str, round_: int, folds: pd.DataFrame) -> Callable[[np.ndarray], np.ndarray]:
+def probe_member(method: str, round_: int, folds: pd.DataFrame, shared: dict) -> Callable[[np.ndarray], np.ndarray]:
     from src import linear_probe
 
-    config = load_config(f"configs/session/probe_e1_{method.split('_')[1]}.yaml")   # probe_224 -> size 224
-    x = linear_probe.descriptors(config, folds, 1)[0]
-    with (get_default_runs_dir() / selected_runs(method)[round_ - 1] / "model.pkl").open("rb") as f:
-        model = pickle.load(f)   # our own local checkpoint
+    if method not in shared:      # the whole-photo descriptions do not depend on the round: read them once
+        config = load_config(f"configs/session/probe_e1_{method.split('_')[1]}.yaml")   # probe_224 -> size 224
+        shared[method] = linear_probe.descriptors(config, folds, 1)[0]
+    x, model = shared[method], load_probe(method, round_)
     order = np.argsort(model.classes_)
     return lambda rows: model.predict_proba(x[rows])[:, order]
 
 
-def tile_member(method: str, round_: int, config: dict[str, Any], folds: pd.DataFrame) -> Callable:
+def tile_member(method: str, round_: int, config: dict[str, Any], folds: pd.DataFrame, shared: dict) -> Callable:
     model, params = load_head(selected_runs(method)[round_ - 1])
-    bag_of = cached_bags(config, "E1", params["descriptor"], folds)
-    return lambda rows: np.array([head_probs(model, bag_of(folds["photo_id"].iloc[r])) for r in rows])
+    bag_of, ids = cached_bags(config, "E1", params["descriptor"], folds, shared), folds["photo_id"].to_numpy()
+    return lambda rows: np.array([head_probs(model, bag_of(ids[r])) for r in rows])
 
 
-def build_members(names: list[str], round_: int, config: dict[str, Any], folds: pd.DataFrame) -> list[Callable]:
-    return [probe_member(n, round_, folds) if n.startswith("probe") else tile_member(n, round_, config, folds)
+def build_members(names: list[str], round_: int, config: dict[str, Any], folds: pd.DataFrame,
+                  shared: dict) -> list[Callable]:
+    """``shared`` keeps what does not depend on the round (descriptions, packed stores) across the five rounds."""
+    return [probe_member(n, round_, folds, shared) if n.startswith("probe") else tile_member(n, round_, config, folds, shared)
             for n in names]
 
 
@@ -154,21 +156,22 @@ def run(config: dict[str, Any]) -> None:
     folds, checksum = read_folds(base)
     pack_one_key_at_a_time(variant_config("encoder_e4"))
     store = train_mil.store_for(base, folds, params["descriptor"])
+    classes, shared = base["classes"], {}
     for r in ROUNDS:
         name = f"cost_distill_e4_r{r}"
         run_config = {**base, "params": params, "round": r, "run_seed": base["seed"], "distill": d}
         if reusable_run(name, run_config, checksum, ("model.pt", "metrics.json", "predictions.csv")):
             continue
         if d["teacher"]["soft_answers_file"]:
-            targets = file_targets(REPO_ROOT / d["teacher"]["soft_answers_file"], folds, r, base["classes"], d["temperature"])
+            targets = file_targets(REPO_ROOT / d["teacher"]["soft_answers_file"], folds, r, classes, d["temperature"])
         else:
-            members = build_members(d["teacher"]["members"], r, base, folds)
-            targets = teacher_targets(folds, r, members, len(base["classes"]), d["temperature"])
+            members = build_members(d["teacher"]["members"], r, base, folds, shared)
+            targets = teacher_targets(folds, r, members, d["temperature"])
         recorder = RunRecorder(name, config=run_config, split_checksum=checksum, overwrite=True,
                                data_version={"primary": base["datasets"]["primary"]["version"]})
         best = fit_student(store, folds, r, params, base, targets, base["seed"], log=recorder.log_epoch)
         torch.save(best["state"], recorder.run_dir / "model.pt")
-        recorder.save_predictions(prediction_table(folds, best["rows"], best["probs"], r, "val", base["classes"]))
+        recorder.save_predictions(prediction_table(folds, best["rows"], best["probs"], r, "val", classes))
         recorder.save_metrics({"best_epoch": best["epoch"], "val_macro_f1": best["f1"], "params": params,
                                "partition": "val", "teacher": d["teacher"]})
         recorder.finish()

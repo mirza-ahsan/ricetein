@@ -42,9 +42,16 @@ def test_the_rule_takes_pixels_and_settings_only_no_label_no_model():
     assert list(inspect.signature(compress.top_tiles).parameters) == ["rgb", "rule"]
     assert list(inspect.signature(compress._select_one).parameters) == ["job"]
     assert list(inspect.signature(compress.even_tiles).parameters) == ["n", "k"]
-    # the selection is a function of the pixels: an all-leaf, uniform photo gives the same tiles whatever follows
-    rgb = leaf_photo()
-    assert np.array_equal(compress.top_tiles(rgb, RULE), compress.top_tiles(rgb, RULE))
+
+
+def test_with_fewer_than_16_eligible_tiles_the_rest_is_filled_by_leaf_share():
+    rgb = np.full((1120, 1568, 3), 255, np.uint8)
+    rgb[400:620, 500:720] = (60, 140, 60)                     # a small leaf: only a few tiles hold half leaf
+    chosen = compress.top_tiles(rgb, RULE)
+    assert len(chosen) == 16 and len(set(chosen)) == 16 and chosen.tolist() == sorted(chosen.tolist())
+    grid = compress.grid_of(rgb)
+    over_leaf = [i for i, (x, y, _, _) in enumerate(grid) if x < 720 and x + 224 > 500 and y < 620 and y + 224 > 400]
+    assert set(over_leaf) <= set(chosen)                       # the filled tiles are the ones that touch the leaf first
 
 
 def test_a_photo_with_no_more_tiles_than_wanted_keeps_them_all():
@@ -68,7 +75,7 @@ def test_cut_selected_gives_the_pixels_of_the_normal_cut(shape):
 def test_tile_selection_opens_only_the_photos_asked_for_and_caches(tmp_path, monkeypatch):
     opened = []
     monkeypatch.setattr(compress, "cache_folder", lambda name, write=False: tmp_path / name)
-    monkeypatch.setattr("src.config.dataset_dir", lambda config, name: tmp_path)
+    monkeypatch.setattr(compress, "dataset_dir", lambda config, name: tmp_path)
     monkeypatch.setattr(compress, "read_folds", lambda config: (_ for _ in ()).throw(AssertionError("folds read")))
     monkeypatch.setattr(compress, "leaf_scale_photo", lambda path, decision: opened.append(path) or leaf_photo())
     config = load_config("configs/cost.yaml")
@@ -176,3 +183,13 @@ def test_description_cosine_is_one_for_equal_descriptions_and_zero_for_orthogona
     assert compress.description_cosine(bags.get, bags.get, ["a", "b"]) == pytest.approx(1.0)
     flipped = {"a": np.eye(3, dtype=np.float32)[::-1].copy()}
     assert compress.description_cosine({"a": np.eye(3, dtype=np.float32)}.get, flipped.get, ["a"]) == pytest.approx(1 / 3)
+
+
+def test_recorded_predictions_are_compared_photo_by_photo(tmp_path, monkeypatch):
+    monkeypatch.setattr(compress, "get_default_runs_dir", lambda: tmp_path)
+    (tmp_path / "r1").mkdir()
+    pd.DataFrame({"round": 1, "photo_id": ["a", "b"], "pred_class": ["healthy", "hispa"]}).to_csv(tmp_path / "r1" / "predictions.csv", index=False)
+    table = pd.DataFrame({"round": 1, "photo_id": ["a", "b"], "pred_class": ["healthy", "healthy"]})
+    assert compress.agreement_with_runs(table, ["r1"]) == 0.5
+    with pytest.raises(ValueError, match="do not cover"):
+        compress.agreement_with_runs(pd.concat([table, table.assign(photo_id=["c", "d"])]), ["r1"])

@@ -8,6 +8,7 @@ import pytest
 import torch
 
 from src import distill
+from src.compress import role_rows
 
 CLASSES = ["healthy", "leaf_blast", "brown_spot", "hispa"]
 PARAMS = {"lr": 0.01, "weight_decay": 0.0, "width": 8, "dropout": 0.0, "tile_dropout": 0.0, "descriptor": "cm"}
@@ -27,13 +28,14 @@ class Store:
 
 
 def folds():
+    roles = ["train"] * 12 + ["val"] * 6 + ["test"] * 6
     return pd.DataFrame({"photo_id": [str(k) for k in range(24)], "class": CLASSES * 6,
-                         "round_1": ["train"] * 12 + ["val"] * 6 + ["test"] * 6})
+                         **{f"round_{r}": roles for r in range(1, 6)}})
 
 
 def one_hot_targets(table):
     targets = np.full((len(table), 4), np.nan, np.float32)
-    rows = distill.train_rows(table, 1)
+    rows = role_rows(table, "train")[1]
     targets[rows] = np.eye(4)[np.arange(len(rows)) % 4]
     return targets
 
@@ -45,7 +47,7 @@ def test_the_teacher_is_asked_about_training_photos_only_and_nothing_else_gets_a
         asked.append(rows.copy())
         return np.full((len(rows), 4), 0.25)
 
-    targets = distill.teacher_targets(table, 1, [member, member], 4, 1.0)
+    targets = distill.teacher_targets(table, 1, [member, member], 1.0)
     assert all(table["round_1"].to_numpy()[rows].tolist() == ["train"] * len(rows) for rows in asked)
     assert np.isfinite(targets[:12]).all() and np.isnan(targets[12:]).all()
     assert np.allclose(targets[:12].sum(1), 1)

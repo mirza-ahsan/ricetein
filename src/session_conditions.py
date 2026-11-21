@@ -21,9 +21,9 @@ import argparse
 from typing import Any
 
 from src import stage5
-from src.photo_dataset import photo_cache
 from src.config import load_config
 from src.followup import MODELS, ROUNDS, evaluate_once, read_json, write_json
+from src.photo_dataset import photo_cache
 from src.records import get_default_runs_dir, require_clean_code
 from src.session_study import require_intact
 

@@ -25,16 +25,17 @@ from PIL import Image
 from torch import nn
 
 from src import embed, metrics, otsu, tiling, train_mil
-from src.config import REPO_ROOT, cache_folder, load_config
+from src.config import REPO_ROOT, cache_folder, dataset_dir, load_config
 from src.encoders import describe, load_encoder
+from src.followup import ROUNDS, read_json
 from src.leaf_width import rescale_factor
 from src.mil_models import MILModel
 from src.records import RunRecorder, completed_run, get_default_runs_dir, require_clean_code
-from src.split import read_folds, round_column
+from src.session_ablations import PARTS, pack_one_key_at_a_time
+from src.split import read_folds, round_column, sha256
 from src.train_wholeimage import prediction_table
 
 TILE = 224
-ROUNDS = range(1, 6)
 RULE_VERSION = 1
 NEUTRAL = embed.version_settings({}, 0, 0, "")           # version 0: the photo as it is
 CACHES = {"E1": "e1_dinov3_vitb16", "E4": "e4_dinov3_vits16"}
@@ -46,10 +47,6 @@ VARIANTS = {"attention": ("attention", "all"), "e1_top16": ("attention", "top16"
 # the candidates for the final small model: those that run from cached descriptions (the 8-bit encoder is not one)
 CANDIDATES = ["e1_top16", "e4", "e4_top16", "distilled_e4", "distilled_e4_top16"]
 Policy = Callable[[str, int], "np.ndarray | None"]   # (photo, number of tiles) -> indices of the tiles kept, or None
-
-
-def read_json(path) -> Any:
-    return json.loads(path.read_text())
 
 
 # ---------------------------------------------------------------------------------------------- which runs
@@ -153,9 +150,9 @@ def _select_one(job: tuple[str, str, dict, dict]) -> tuple[str, int, list[int]]:
 def tile_selection(config: dict[str, Any], photo_ids: list[str], workers: int = 8) -> dict[str, dict[str, Any]]:
     """The tiles kept for each photo, cached in cache/compress/top_tiles.json. Only the photos asked for are
     opened, so a validation run never reads a test photo."""
-    from src.config import dataset_dir
-
-    rule, path = rule_of(config), cache_folder("compress", write=True) / "top_tiles.json"
+    sources = {f: sha256(REPO_ROOT / f)
+               for f in ("src/compress.py", "src/otsu.py", "src/embed.py", config["pixel_scale"]["decision_file"])}
+    rule, path = {**rule_of(config), "sources": sources}, cache_folder("compress", write=True) / "top_tiles.json"
     cached = read_json(path) if path.exists() else {"rule": rule, "photos": {}}
     if cached["rule"] != rule:
         raise ValueError(f"{path}: made with another rule; archive it before rebuilding")
@@ -163,7 +160,7 @@ def tile_selection(config: dict[str, Any], photo_ids: list[str], workers: int = 
     if todo:
         decision = read_json(REPO_ROOT / config["pixel_scale"]["decision_file"])
         root = dataset_dir(config, "primary")
-        jobs = [(p, str(root / p), decision, rule) for p in todo]
+        jobs = [(p, str(root / p), decision, rule_of(config)) for p in todo]
         if workers == 1:
             results = list(map(_select_one, jobs))
         else:
@@ -174,6 +171,27 @@ def tile_selection(config: dict[str, Any], photo_ids: list[str], workers: int = 
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(json.dumps(cached))
     return {p: cached["photos"][p] for p in photo_ids}
+
+
+def photo_tiles(path: str, decision: dict[str, Any], rule: dict[str, Any], top16: bool) -> np.ndarray:
+    """Open a photo, bring it to the leaf scale and cut the tiles to describe: the 16 chosen, or all of them."""
+    rgb = leaf_scale_photo(path, decision)
+    return cut_selected(rgb, top_tiles(rgb, rule)) if top16 else tiling.cut(rgb, TILE)[0]
+
+
+def describe_batches(encoder: nn.Module, tiles: np.ndarray, spec: dict[str, Any], config: dict[str, Any],
+                     device: torch.device, batch: int) -> tuple[torch.Tensor, torch.Tensor]:
+    """Class tokens and patch averages of all tiles, ``batch`` tiles per encoder pass."""
+    parts = [describe(encoder, tiles[i:i + batch], spec, config, device) for i in range(0, len(tiles), batch)]
+    return torch.cat([p[0] for p in parts]), torch.cat([p[1] for p in parts])
+
+
+def load_probe(method: str, round_: int):
+    """The fitted probe (a scikit-learn pipeline) of one round."""
+    import pickle
+
+    with (get_default_runs_dir() / selected_runs(method)[round_ - 1] / "model.pkl").open("rb") as f:
+        return pickle.load(f)   # our own local, checksum-verified checkpoint
 
 
 def all_tiles(photo: str, n: int) -> None:
@@ -207,14 +225,14 @@ def evaluate_rows(heads: list[MILModel], bag_of: Callable[[str], np.ndarray], fo
                   role: str) -> tuple[list[float], pd.DataFrame, float]:
     """Macro-F1 of each round, the predictions, and the mean number of tiles used, for the given rows. Every row
     must have ``role`` in its round: validation work cannot touch test photos and the other way round."""
-    scores, tables, used = [], [], []
+    scores, tables, used, ids = [], [], [], folds["photo_id"].to_numpy()
     for r, model in zip(ROUNDS, heads):
         rows = round_rows[r]
         if not (folds[round_column(r)].to_numpy()[rows] == role).all():
             raise ValueError(f"round {r}: some of these photos are not {role} photos")
         probs = []
         for row in rows:
-            photo = folds["photo_id"].iloc[row]
+            photo = ids[row]
             bag = bag_of(photo)
             keep = policy(photo, len(bag))
             bag = bag if keep is None else bag[keep]
@@ -230,35 +248,59 @@ def role_rows(folds: pd.DataFrame, role: str) -> dict[int, np.ndarray]:
     return {r: np.flatnonzero((folds[round_column(r)] == role).to_numpy()) for r in ROUNDS}
 
 
-def cached_bags(config: dict[str, Any], encoder: str, descriptor: str, folds: pd.DataFrame) -> Callable:
-    """Clean (version 0) tile descriptions of the cache of ``encoder`` as a function photo -> (n, d)."""
-    from src.session_ablations import pack_one_key_at_a_time
-
+def cached_bags(config: dict[str, Any], encoder: str, descriptor: str, folds: pd.DataFrame,
+                shared: dict | None = None) -> Callable:
+    """Clean (version 0) tile descriptions of the cache of ``encoder`` as a function photo -> (n, d). Pass the same
+    ``shared`` dict to every call of one job and each (encoder, descriptor) store is built once."""
+    key = (encoder, descriptor)
+    if shared is not None and key in shared:
+        return shared[key]
     cache = CACHES[encoder]
     packed = {**config, "mil": {**config["mil"], "cache": cache, "versions": 1,
                                 "override": {"descriptor": descriptor}}}
     pack_one_key_at_a_time(packed)    # builds the packed files one kind at a time (HANDOFF Part 7)
     store = train_mil.BagStore(cache, descriptor, sorted(folds["photo_id"]), 1)
-    return lambda photo: store.bag(photo, 0)
+
+    def bag_of(photo: str) -> np.ndarray:
+        return store.bag(photo, 0)
+
+    if shared is not None:
+        shared[key] = bag_of
+    return bag_of
 
 
-def variant_scores(config: dict[str, Any], names: list[str], folds: pd.DataFrame, role: str, selection: dict | None,
-                   rows: dict[int, np.ndarray]) -> dict[str, dict[str, Any]]:
-    """Per-round macro-F1 and predictions of the named variants on the rows (validation, or the final test)."""
-    out, bags = {}, {}
-    for name in names:
+class Variant:
+    """Everything a variant needs before any photo is scored: its five heads, its descriptions and its tile policy."""
+
+    def __init__(self, config: dict[str, Any], name: str, folds: pd.DataFrame, selection: dict | None,
+                 shared: dict | None = None) -> None:
         head, kind = VARIANTS[name]
-        runs = head_runs(head)
-        models = [load_head(run) for run in runs]
-        descriptor = models[0][1]["descriptor"]
-        if (ENCODER[head], descriptor) not in bags:
-            bags[(ENCODER[head], descriptor)] = cached_bags(config, ENCODER[head], descriptor, folds)
-        policy = {"all": all_tiles, "even16": even_policy(config["compress"]["tiles"]),
-                  "top16": selected_policy(selection) if selection is not None else None}[kind]
-        scores, table, tiles = evaluate_rows([m for m, _ in models], bags[(ENCODER[head], descriptor)], folds, rows,
-                                             policy, config["classes"], role)
-        out[name] = {"scores": scores, "predictions": table, "tiles_used": tiles}
-    return out
+        loaded = [load_head(run) for run in head_runs(head)]
+        self.models = [m for m, _ in loaded]
+        self.bag_of = cached_bags(config, ENCODER[head], loaded[0][1]["descriptor"], folds, shared)
+        if kind == "all":
+            self.policy = all_tiles
+        elif kind == "even16":
+            self.policy = even_policy(config["compress"]["tiles"])
+        elif selection is None:
+            raise ValueError(f"{name} needs the tile selection")
+        else:
+            self.policy = selected_policy(selection)
+
+
+def score_variant(variant: Variant, folds: pd.DataFrame, rows: dict[int, np.ndarray], classes: list[str],
+                  role: str) -> dict[str, Any]:
+    scores, table, tiles = evaluate_rows(variant.models, variant.bag_of, folds, rows, variant.policy, classes, role)
+    return {"scores": scores, "predictions": table, "tiles_used": tiles}
+
+
+def agreement_with_runs(table: pd.DataFrame, runs: list[str]) -> float:
+    """Share of photos on which these predictions equal the validation predictions recorded in the runs."""
+    recorded = pd.concat([pd.read_csv(get_default_runs_dir() / run / "predictions.csv") for run in runs])
+    merged = table.merge(recorded, on=["round", "photo_id"], suffixes=("", "_recorded"))
+    if len(merged) != len(table):
+        raise ValueError("the recorded validation predictions do not cover these photos")
+    return float((merged["pred_class"] == merged["pred_class_recorded"]).mean())
 
 
 def fewer_tiles(config: dict[str, Any]) -> None:
@@ -270,20 +312,23 @@ def fewer_tiles(config: dict[str, Any]) -> None:
     folds, checksum = read_folds(config)
     rows = role_rows(folds, "val")
     union = sorted({folds["photo_id"].iloc[r] for rs in rows.values() for r in rs})
-    result = variant_scores(config, list(VARIANTS), folds, "val", tile_selection(config, union), rows)
+    selection, shared = tile_selection(config, union), {}
+    result = {name: score_variant(Variant(config, name, folds, selection, shared), folds, rows, config["classes"], "val")
+              for name in VARIANTS}
     recorder = RunRecorder("cost_fewer_tiles", config=config, split_checksum=checksum, overwrite=True,
                            data_version={"primary": config["datasets"]["primary"]["version"]})
     recorded = [read_json(get_default_runs_dir() / run / "metrics.json")["val_macro_f1"] for run in head_runs("attention")]
     gap = float(np.max(np.abs(np.array(recorded) - np.array(result["attention"]["scores"]))))
-    if gap > 0.02:    # the same heads on the same descriptions must give the macro-F1 recorded at training time
-        raise RuntimeError(f"all tiles, attention: this code gives validation macro-F1 {gap:.3f} away from the runs")
+    agree = agreement_with_runs(result["attention"]["predictions"], head_runs("attention"))
+    if gap > 0.005 or agree < 0.99:    # the same heads on the same descriptions must reproduce the recorded predictions
+        raise RuntimeError(f"all tiles, attention: macro-F1 {gap:.3f} away from the runs, {100 * agree:.1f}% same predictions")
     summary = {}
     for name, entry in result.items():
         entry["predictions"].to_csv(recorder.run_dir / f"predictions_{name}.csv", index=False)
         scores = np.array(entry["scores"])
         summary[name] = {"val_macro_f1_rounds": scores.tolist(), "val_macro_f1_mean": float(scores.mean()),
                          "val_macro_f1_sd": float(scores.std(ddof=1)), "tiles_used": entry["tiles_used"]}
-    recorder.save_metrics({"partition": "val", "variants": summary, "check_gap_attention_all_tiles": gap,
+    recorder.save_metrics({"partition": "val", "variants": summary, "check_gap_attention_all_tiles": gap, "check_agreement_attention_all_tiles": agree,
                            "rule": rule_of(config)})
     recorder.finish()
 
@@ -307,26 +352,24 @@ def int8_describe(config: dict[str, Any]) -> None:
     require_clean_code()
     embed_config = load_config("configs/embed/e1_dinov3_vitb16.yaml")
     folds, _ = read_folds(config)
-    subset = int8_subset(folds, config["compress"]["int8"]["photos"], config["compress"]["int8"]["seed"])
-    folder = cache_folder(f"compress/{config['compress']['int8']['cache']}", write=True)
+    settings = config["compress"]["int8"]
+    subset = int8_subset(folds, settings["photos"], settings["seed"])
+    folder = cache_folder(f"compress/{settings['cache']}", write=True)
+    batch = config["cost"]["timing"]["tile_batch"]["cpu"]
     todo = [(p, 0) for p in subset if not (folder / f"{embed.photo_key(p)}.npz").exists()]
     spec = embed_config["encoders"]["E1"]
     model = quantise(load_encoder(embed_config, "E1", torch.device("cpu")))
     loader = torch.utils.data.DataLoader(embed.Jobs(embed_config, todo, embed.scale_factors(embed_config, subset)),
                                          batch_size=None, num_workers=4)
     for photo_id, _, tiles, boxes in tqdm(loader, total=len(todo), desc="int8"):
-        parts = [describe(model, tiles[i:i + 16], spec, embed_config, torch.device("cpu"))
-                 for i in range(0, len(tiles), 16)]
-        embed.save(folder / f"{embed.photo_key(photo_id)}.npz", torch.cat([p[0] for p in parts]).float(),
-                   torch.cat([p[1] for p in parts]).float(), np.asarray(boxes))
+        cls, mean = describe_batches(model, tiles, spec, embed_config, torch.device("cpu"), batch)
+        embed.save(folder / f"{embed.photo_key(photo_id)}.npz", cls.float(), mean.float(), np.asarray(boxes))
 
 
 def int8_bags(folder, descriptor: str) -> Callable[[str], np.ndarray]:
-    parts = {"c": ["cls"], "m": ["mean"], "cm": ["cls", "mean"]}[descriptor]
-
     def bag(photo: str) -> np.ndarray:
         with np.load(folder / f"{embed.photo_key(photo)}.npz") as saved:
-            return np.concatenate([saved[k].astype(np.float32) for k in parts], axis=1)
+            return np.concatenate([saved[k].astype(np.float32) for k in PARTS[descriptor]], axis=1)
     return bag
 
 
@@ -345,11 +388,12 @@ def int8_score(config: dict[str, Any]) -> None:
     A photo is scored only by the rounds in which it is a validation photo."""
     require_clean_code()
     folds, checksum = read_folds(config)
-    subset = set(int8_subset(folds, config["compress"]["int8"]["photos"], config["compress"]["int8"]["seed"]))
+    settings = config["compress"]["int8"]
+    subset = set(int8_subset(folds, settings["photos"], settings["seed"]))
     models = [load_head(run) for run in head_runs("attention")]
     descriptor = models[0][1]["descriptor"]
     rows = {r: np.array([i for i in rs if folds["photo_id"].iloc[i] in subset]) for r, rs in role_rows(folds, "val").items()}
-    folder = cache_folder(f"compress/{config['compress']['int8']['cache']}")
+    folder = cache_folder(f"compress/{settings['cache']}")
     heads = [m for m, _ in models]
     classes = config["classes"]
     float_bags, quantised_bags = cached_bags(config, "E1", descriptor, folds), int8_bags(folder, descriptor)
@@ -382,9 +426,8 @@ class DescribeModule(nn.Module):
 
     def forward(self, pixels: torch.Tensor) -> torch.Tensor:
         tokens = self.encoder(pixel_values=(pixels - self.mean) / self.std).last_hidden_state
-        parts = {"c": [tokens[:, 0]], "m": [tokens[:, self.first_patch:].mean(1)],
-                 "cm": [tokens[:, 0], tokens[:, self.first_patch:].mean(1)]}[self.descriptor]
-        return torch.cat(parts, dim=1)
+        parts = {"cls": tokens[:, 0], "mean": tokens[:, self.first_patch:].mean(1)}
+        return torch.cat([parts[k] for k in PARTS[self.descriptor]], dim=1)
 
 
 class HeadModule(nn.Module):
@@ -439,8 +482,15 @@ def export(config: dict[str, Any]) -> None:
     export_onnx(head_module, (torch.from_numpy(tiles), torch.from_numpy(mask)), names["head"], ["tiles", "mask"],
                 {"tiles": {1: "n"}, "mask": {1: "n"}})
     threads = config["cost"]["timing"]["cpu_threads"]
-    gaps = {"encoder": max_difference(encoder, onnx_session(names["encoder"], threads), {"pixels": pixels}),
-            "head": max_difference(head_module, onnx_session(names["head"], threads), {"tiles": tiles, "mask": mask})}
+    sessions = {k: onnx_session(p, threads) for k, p in names.items()}
+    rng = np.random.default_rng(2)
+    more = rng.random((16, 3, TILE, TILE), dtype=np.float32)         # the batch the timing uses on the CPU
+    many = rng.standard_normal((1, 79, dim)).astype(np.float32)      # a whole photo, with a partly empty mask
+    partial = np.ones((1, 79), bool)
+    partial[0, 60:] = False
+    gaps = {"encoder": max(max_difference(encoder, sessions["encoder"], {"pixels": x}) for x in (pixels, more)),
+            "head": max(max_difference(head_module, sessions["head"], inputs)
+                        for inputs in ({"tiles": tiles, "mask": mask}, {"tiles": many, "mask": partial}))}
     recorder = RunRecorder("cost_export", config=config, overwrite=True,
                            data_version={"primary": config["datasets"]["primary"]["version"]})
     recorder.save_metrics({"partition": "none", "candidate": selection["selected"], "max_abs_difference": gaps,

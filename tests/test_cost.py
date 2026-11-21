@@ -41,7 +41,7 @@ def test_warm_up_photos_are_discarded_and_the_median_is_over_the_timed_photos():
     summary = cost.summarise(rows)
     assert summary["median"] == 3.0 and summary["q1"] == 2.0 and summary["q3"] == 4.0 and summary["n"] == 5
     assert summary["median_prepare"] == 1.5 and summary["median_decide"] == 1.5
-    assert len(syncs) >= 2 * 7 * 2 // 2    # the GPU is synchronised at every reading
+    assert len(syncs) == 7 * 3                # once at the start and once at each of the two marks, for all 7 photos
 
 
 def test_the_100_timing_photos_are_a_seeded_draw_of_training_photos_with_5_distinct_warm_ups(monkeypatch):
@@ -58,11 +58,11 @@ def test_the_100_timing_photos_are_a_seeded_draw_of_training_photos_with_5_disti
 def test_a_busy_machine_is_refused():
     quiet = {"max_process_cpu_percent": 15, "max_total_cpu_percent": 20, "max_gpu_mib": 1500}
     calm = {"total_cpu_percent": 3.0, "busy_processes": [{"pid": 1, "name": "hyprland", "cpu_percent": 2.0}], "gpu_mib_used": 400}
-    cost.require_quiet(calm, quiet, "gpu")
+    cost.require_quiet(calm, quiet)
     for change in ({"gpu_mib_used": 4000}, {"total_cpu_percent": 60.0},
                    {"busy_processes": [{"pid": 7, "name": "python", "cpu_percent": 90.0}]}):
         with pytest.raises(RuntimeError, match="not quiet"):
-            cost.require_quiet({**calm, **change}, quiet, "cpu")
+            cost.require_quiet({**calm, **change}, quiet)
 
 
 # ---------------------------------------------------------------------------------------------- sizes
@@ -140,17 +140,22 @@ def make_final_fixture(fake_runs, monkeypatch, selected="e4"):
     val = pd.DataFrame({"round": 1, "partition": "val", "photo_id": ["4", "5"], "true_class": CLASSES[:2], "pred_class": CLASSES[:2]})
     (fake_runs / "cost_fewer_tiles").mkdir()
     val.to_csv(fake_runs / "cost_fewer_tiles" / f"predictions_{selected}.csv", index=False)
-    seen = {}
+    seen = {"order": []}
 
-    def scores(config_, names, folds_, role, selection, rows):
-        seen.update(names=names, role=role, rows={r: folds_["photo_id"].to_numpy()[v].tolist() for r, v in rows.items()})
+    class FakeVariant:
+        def __init__(self, config_, name, folds_, selection):
+            seen.update(name=name, selection=selection, marker_at_prepare=(fake_runs / "cost_final" / "test_started.json").exists())
+
+    def score(variant, folds_, rows, classes, role):
+        seen.update(role=role, rows={r: folds_["photo_id"].to_numpy()[v].tolist() for r, v in rows.items()})
         table = pd.DataFrame({"round": 1, "partition": role, "photo_id": ["6", "7"], "true_class": CLASSES[2:], "pred_class": CLASSES[2:]})
-        return {names[0]: {"scores": [1.0] * 5, "predictions": table, "tiles_used": 79.0}}
+        return {"scores": [1.0] * 5, "predictions": table, "tiles_used": 79.0}
 
     monkeypatch.setattr(cost, "require_clean_code", lambda: "abc1234")
     monkeypatch.setattr(cost, "read_folds", lambda config_: (folds, "checksum"))
     monkeypatch.setattr("src.records.get_code_version", lambda: "abc1234")
-    monkeypatch.setattr(compress, "variant_scores", scores)
+    monkeypatch.setattr(compress, "Variant", FakeVariant)
+    monkeypatch.setattr(compress, "score_variant", score)
     monkeypatch.setattr(compress, "tile_selection", lambda config_, photos, workers=8: pytest.fail("not a top16 model"))
     return config, seen
 
@@ -161,7 +166,8 @@ def test_the_final_model_is_tested_once_and_only_on_test_photos(fake_runs, monke
     cost.plan(config)                                              # repeating the plan changes nothing
     assert not (fake_runs / "cost_final" / "test_metrics.json").exists() and (fake_runs / "cost_final" / "predictions.csv").exists()
     cost.evaluate_final(config)
-    assert seen["role"] == "test" and set(sum(seen["rows"].values(), [])) == {"6", "7"}
+    assert seen["role"] == "test" and set(sum(seen["rows"].values(), [])) == {"6", "7"} and not seen["marker_at_prepare"]
+    assert (fake_runs / "cost_final" / "model.pt").exists()     # session_study.require_intact needs a checkpoint
     assert (fake_runs / "cost_final" / "test_started.json").exists() and (fake_runs / "cost_final" / "test_predictions.csv").exists()
     first = (fake_runs / "cost_final" / "test_metrics.json").read_text()
     with pytest.raises(RuntimeError, match="no retry"):
@@ -206,7 +212,8 @@ def test_cost_table_has_the_columns_of_the_chart_and_the_committee_is_a_sum(fake
     for device, base in (("gpu", 0.1), ("cpu", 2.0)):
         write(fake_runs / f"cost_time_{device}" / "metrics.json",
               {"median_seconds_per_photo": {m: base * (k + 1) for k, m in enumerate(timed)},
-               "peak_gpu_mib": {m: 900.0 for m in timed}, "peak_rss_mib": {m: 3000.0 for m in timed}})
+               "peak_gpu_mib": {m: 900.0 for m in timed}, "peak_rss_mib": {m: 3000.0 for m in timed},
+               "summary": {m: {} for m in timed}})
     write(fake_runs / "cost_plan.json", {"selected": "e4_top16"})
     write(fake_runs / "cost_final" / "test_metrics.json", {"macro_f1_mean": 0.74})
     table = cost.method_rows(config)
@@ -240,5 +247,66 @@ def test_the_e4_runs_exist_and_use_the_main_settings():
 
 
 def test_the_distilled_head_is_timed_as_the_e4_head():
-    assert cost.TIMING_KEY["distilled_e4"] == "e4" and cost.TIMING_KEY["distilled_e4_top16"] == "e4_top16"
-    assert set(cost.TIMING_KEY) == set(compress.CANDIDATES)
+    assert cost.TIMING_KEY == {"distilled_e4": "e4", "distilled_e4_top16": "e4_top16"}
+    timed = {cost.TIMING_KEY.get(n, n) for n in compress.CANDIDATES}
+    assert timed <= set(cost.TIMED)
+
+
+def test_a_top16_model_gets_the_selection_of_the_test_photos_only_and_before_the_marker(fake_runs, monkeypatch):
+    config, seen = make_final_fixture(fake_runs, monkeypatch, selected="e4_top16")
+    asked = []
+
+    def selection(config_, photos, workers=8):
+        asked.append((list(photos), (fake_runs / "cost_final" / "test_started.json").exists()))
+        return {p: {"n": 79, "tiles": [0]} for p in photos}
+
+    monkeypatch.setattr(compress, "tile_selection", selection)
+    cost.plan(config)
+    cost.evaluate_final(config)
+    assert asked == [(["6", "7"], False)] and set(seen["selection"]) == {"6", "7"}
+
+
+def test_a_crash_while_preparing_does_not_use_up_the_test(fake_runs, monkeypatch):
+    config, _ = make_final_fixture(fake_runs, monkeypatch, selected="e4_top16")
+    cost.plan(config)
+
+    def broken(config_, photos, workers=8):
+        raise OSError("a test photo does not decode")
+
+    monkeypatch.setattr(compress, "tile_selection", broken)
+    with pytest.raises(OSError):
+        cost.evaluate_final(config)
+    assert not (fake_runs / "cost_final" / "test_started.json").exists()
+
+
+def test_a_changed_tile_rule_or_split_after_the_plan_stops_the_test_before_the_marker(fake_runs, monkeypatch):
+    config, _ = make_final_fixture(fake_runs, monkeypatch, selected="e4_top16")
+    monkeypatch.setattr(compress, "tile_selection", lambda config_, photos, workers=8: {})
+    cost.plan(config)
+    other = load_config("configs/cost.yaml")
+    other["compress"]["shrink"] = 4
+    with pytest.raises(ValueError, match="tile rule or the split"):
+        cost.evaluate_final(other)
+    monkeypatch.setattr(cost, "read_folds", lambda config_: (pd.DataFrame(), "another checksum"))
+    with pytest.raises(ValueError, match="tile rule or the split"):
+        cost.evaluate_final(config)
+    assert not (fake_runs / "cost_final" / "test_started.json").exists()
+
+
+def test_timing_results_of_later_runs_are_merged(fake_runs):
+    write(fake_runs / "cost_time_cpu" / "metrics.json", {"median_seconds_per_photo": {"a": 1.0}, "peak_gpu_mib": {"a": None},
+                                                          "peak_rss_mib": {"a": 5.0}, "summary": {"a": {}}})
+    write(fake_runs / "cost_time_cpu_final_onnx" / "metrics.json", {"median_seconds_per_photo": {"final_onnx": 0.5},
+                                                                     "peak_gpu_mib": {"final_onnx": None}, "peak_rss_mib": {"final_onnx": 7.0},
+                                                                     "summary": {"final_onnx": {}}})
+    assert cost.read_timing("cpu")["median_seconds_per_photo"] == {"a": 1.0, "final_onnx": 0.5}
+    assert cost.read_timing("gpu")["median_seconds_per_photo"] == {}
+
+
+def test_the_onnx_model_is_timed_only_after_the_export(fake_runs, monkeypatch):
+    config = load_config("configs/cost.yaml")
+    monkeypatch.setattr(cost, "require_clean_code", lambda: "abc1234")
+    with pytest.raises(RuntimeError, match="export"):
+        cost.time_all(config, "cpu", ["final_onnx"])
+    with pytest.raises(ValueError, match="CPU only"):
+        cost.time_all(config, "gpu", ["attention_int8"])
