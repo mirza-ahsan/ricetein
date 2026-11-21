@@ -74,7 +74,7 @@ def test_a_missing_source_gives_a_pending_table_never_no_table(fixture):
     pending = table(fixture, "ablations")
     assert list(pending.columns) == ["status"] and pending.status[0].startswith("pending: Stage 8")
     assert "pending: Stage 8" in (fixture / "results/tables/final_ablations.tex").read_text()
-    for name in ("committee", "explain", "cost", "paired_conditions"):
+    for name in ("committee", "explain", "cost", "paired_conditions", "paired_committee"):
         assert provenance[name]["status"] == "pending"
     assert table(fixture, "committee").status[0] == "pending: Stage 11"
 
@@ -108,6 +108,21 @@ def test_paired_conditions_reads_the_stage_5_branch_columns(fixture):
     shown = table(fixture, "paired_conditions")
     assert shown["Rounds won by attention"].tolist() == ["1/5", "0/5"] and shown["Rounds won by the other"].tolist() == ["4/5", "5/5"]
     assert shown["Against"][0] == "ConvNeXt-T, 448 px"
+
+
+def test_paired_committee_names_both_sides_and_both_round_counts(fixture):
+    frame = pd.DataFrame({"A": ["row2_plain"] * 2, "B": ["convnext_tiny_448"] * 2, "metric": ["macro_f1", "balanced_accuracy"],
+                          "difference": [0.022, 0.023], "photo_low": [0.012, 0.013], "photo_high": [0.032, 0.033],
+                          "block_low": [0.01, 0.009], "block_high": [0.038, 0.041], "round_wins": [4, 4], "rounds": [5, 5],
+                          "round_losses": [1, 1], "verdict_photo": ["A beats B", "A beats B"],
+                          "verdict_block": ["A beats B", "no clear difference"]})
+    frame.to_csv(fixture / "results/tables/paired_committee.csv", index=False)
+    provenance = mt.build_all(fixture)["tables"]
+    shown = table(fixture, "paired_committee")
+    assert shown["Rounds won by the committee"].tolist() == ["4/5", "4/5"] and shown["Rounds won by ConvNeXt-T"].tolist() == ["1/5", "1/5"]
+    assert shown["Verdict (photo range)"][0] == "committee beats ConvNeXt-T" and shown["Verdict (block range)"][1] == "no clear difference"
+    assert shown["Difference, pooled (points)"][0] == "+2.2" and shown["Photo range"][0] == "[1.2, 3.2]"
+    assert "results/tables/paired_committee.csv" in provenance["paired_committee"]["sources"]
 
 
 def test_per_class_and_confusion_agree_with_the_predictions(fixture):
