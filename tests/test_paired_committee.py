@@ -14,6 +14,9 @@ CONFIG = {"classes": CLASSES, "seed": 0,
                          "comparison": {"ci_excludes_zero": True, "min_round_wins": 4}}}
 
 
+BLOCKS = pd.Series({f"p{r}_{i}": f"b{i % 8}" for r in range(1, 6) for i in range(40)})
+
+
 def predictions(correct_share, seed, rounds=5, photos=40):
     """``rounds`` test rounds (each photo is a test photo in one round only); ``correct_share`` of them right, the rest the next class."""
     rows = []
@@ -25,28 +28,44 @@ def predictions(correct_share, seed, rounds=5, photos=40):
     return pd.DataFrame(rows)
 
 
-def test_require_started_names_the_run_without_a_marker(tmp_path, monkeypatch):
-    (tmp_path / "a").mkdir()
-    (tmp_path / "a" / "test_started.json").write_text("{}")
-    (tmp_path / "b").mkdir()
+def test_require_started_checks_the_marker_and_the_plan_hash(tmp_path, monkeypatch):
+    plan = tmp_path / "plan.json"
+    plan.write_text("{}")
+    digest = pcm.sha256(plan)
+    for name, marker in (("a", {"plan_sha256": digest}), ("old", {"plan_sha256": "0" * 64}), ("b", None)):
+        (tmp_path / name).mkdir()
+        if marker is not None:
+            (tmp_path / name / "test_started.json").write_text(json.dumps(marker))
     monkeypatch.setattr(pcm, "get_default_runs_dir", lambda: tmp_path)
-    pcm.require_started(["a"], ["a", "b"], "plan.json")
+    pcm.require_started(["a"], "plan.json", ["a", "b"])
     with pytest.raises(RuntimeError, match="b has no test_started.json"):
-        pcm.require_started(["b"], ["a", "b"], "plan.json")
+        pcm.require_started(["b"], "plan.json", ["a", "b"])
+    with pytest.raises(RuntimeError, match="old: test_started.json was written under another version"):
+        pcm.require_started(["old"], "plan.json", ["old"])
     with pytest.raises(RuntimeError, match="c is not in runs/plan.json"):
-        pcm.require_started(["c"], ["a", "b"], "plan.json")
+        pcm.require_started(["c"], "plan.json", ["a", "b"])
 
 
-def test_single_runs_must_match_the_tested_condition_runs(tmp_path, monkeypatch):
-    runs = [f"r{i}" for i in range(5)]
-    (tmp_path / "committee_selection.json").write_text(json.dumps({"member_runs": {pcm.SINGLE: runs}}))
-    (tmp_path / "session_conditions_selection.json").write_text(json.dumps({"configurations": {pcm.SINGLE: runs}}))
+def test_the_committee_folder_must_hold_the_declared_committee(tmp_path, monkeypatch):
+    declared = {"members": ["m", "n"], "weights": [1, 1], "runs": {"m": ["r1"], "n": ["r2"]}}
+    (tmp_path / f"committee_{pcm.COMMITTEE}").mkdir()
+    folder_file = tmp_path / f"committee_{pcm.COMMITTEE}" / "committee.json"
+    monkeypatch.setattr(pcm.cm, "get_default_runs_dir", lambda: tmp_path)
+    folder_file.write_text(json.dumps({"id": "x", **declared}))
+    pcm.require_declared_committee({"committees": {pcm.COMMITTEE: declared}})
+    folder_file.write_text(json.dumps({"id": "x", **declared, "weights": [1, 2]}))
+    with pytest.raises(RuntimeError, match="differs"):
+        pcm.require_declared_committee({"committees": {pcm.COMMITTEE: declared}})
+
+
+def test_the_single_models_test_files_must_match_the_frozen_hashes(tmp_path, monkeypatch):
+    (tmp_path / "r1").mkdir()
+    (tmp_path / "r1" / "test_predictions.csv").write_text("a,b\n1,2\n")
     monkeypatch.setattr(pcm, "get_default_runs_dir", lambda: tmp_path)
-    assert pcm.single_runs() == runs
-    (tmp_path / "session_conditions_selection.json").write_text(
-        json.dumps({"configurations": {pcm.SINGLE: runs[::-1]}}))
-    with pytest.raises(RuntimeError, match="differ"):
-        pcm.single_runs()
+    good = pcm.sha256(tmp_path / "r1" / "test_predictions.csv")
+    pcm.require_unchanged(["r1"], {"tested_members_test_sha256": {"r1": good}})
+    with pytest.raises(RuntimeError, match="r1: test predictions changed"):
+        pcm.require_unchanged(["r1"], {"tested_members_test_sha256": {"r1": "0" * 64}})
 
 
 def test_the_photo_sets_must_be_identical_in_every_round():
@@ -63,16 +82,28 @@ def test_the_photo_sets_must_be_identical_in_every_round():
 
 
 def test_the_verdict_reads_in_both_directions():
-    blocks = pd.Series({f"p{r}_{i}": f"b{i % 8}" for r in range(1, 6) for i in range(40)})
     better, worse = predictions(0.95, 0), predictions(0.5, 1)
-    ahead = pcm.cm.paired_with_two_way(better, worse, "A", "B", blocks, CONFIG)
+    ahead = pcm.cm.paired_with_two_way(better, worse, "A", "B", BLOCKS, CONFIG)
     row = ahead[ahead["metric"] == "macro_f1"].iloc[0]
     assert row["difference"] > 0 and row["round_wins"] == 5 and row["round_losses"] == 0
     assert row["verdict_photo"] == "A beats B"
-    behind = pcm.cm.paired_with_two_way(worse, better, "A", "B", blocks, CONFIG)
+    behind = pcm.cm.paired_with_two_way(worse, better, "A", "B", BLOCKS, CONFIG)
     row = behind[behind["metric"] == "macro_f1"].iloc[0]
     assert row["difference"] < 0 and row["round_losses"] == 5
     assert row["verdict_photo"] == "B beats A"
+
+
+def test_a_gain_with_too_few_round_wins_is_no_clear_difference():
+    """The range is above 0 but the committee wins only 3 rounds (two rounds tied): neither side wins."""
+    single = predictions(0.7, 1)
+    better = single.copy()
+    for r in (1, 2, 3):                       # the committee fixes five photos in rounds 1 to 3 only
+        fixed = better[(better["round"] == r) & (better["pred_class"] != better["true_class"])].head(5).index
+        better.loc[fixed, "pred_class"] = better.loc[fixed, "true_class"]
+    paired = pcm.cm.paired_with_two_way(better, single, "A", "B", BLOCKS, CONFIG)
+    row = paired[paired["metric"] == "macro_f1"].iloc[0]
+    assert row["round_wins"] == 3 and row["round_losses"] == 0
+    assert row["verdict_photo"] == "no clear difference" and row["verdict_block"] == "no clear difference"
 
 
 def test_report_names_both_models_and_states_each_verdict():
