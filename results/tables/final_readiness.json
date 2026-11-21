@@ -1,7 +1,7 @@
 {
   "tables": {
     "main": {
-      "status": "partly pending",
+      "status": "present",
       "stage": "Stage 10 (Paddy Doctor columns)"
     },
     "conditions": {
@@ -21,7 +21,7 @@
       "stage": "Stage 7 (session evaluation)"
     },
     "paired_conditions": {
-      "status": "pending",
+      "status": "present",
       "stage": "Stage 5 paired test (branch stage5/paired-conditions)"
     },
     "paired_locked": {
@@ -59,7 +59,7 @@
   },
   "figures": {
     "samples": {
-      "status": "pending",
+      "status": "present",
       "stage": "Stage 1 data (main checkout only)"
     },
     "confusion": {
@@ -75,7 +75,7 @@
       "stage": "Stage 8"
     },
     "paddy_zoom": {
-      "status": "pending",
+      "status": "present",
       "stage": "Stage 10"
     },
     "deletion": {
@@ -146,11 +146,9 @@
       "id": "P1-5",
       "commitment": "Paddy Doctor 4-class subset held out entirely; full release used; version and download date stated",
       "delivered_by": "Stages 1, 10",
-      "document_status": "\u2b1c",
-      "status": "pending",
-      "missing": [
-        "docs/reports/paddy_report.md"
-      ]
+      "document_status": "\u2705 2026-11-21: the four tested classes (`splits/paddy4.csv`, 8,086 photos, 78 byte-identical copies removed) were scored zero-shot only, nothing trained, tuned or chosen on them; full release (CC BY 4.0), version and download date in `data/DATASETS.md`; `docs/reports/paddy_report.md`",
+      "status": "present",
+      "missing": []
     },
     {
       "id": "P1-6",
@@ -238,11 +236,9 @@
       "id": "P1-16",
       "commitment": "If backgrounds turn out mostly uniform, don't claim robustness to clutter from in-domain results; rest that claim on Paddy Doctor",
       "delivered_by": "Stages 2a, 10; Discussion",
-      "document_status": "\u2b1c",
-      "status": "pending",
-      "missing": [
-        "docs/reports/paddy_report.md"
-      ]
+      "document_status": "\u2705 2026-11-21: the primary photos have plain backgrounds (audit `docs/reports/audit_report.md`), and on Paddy Doctor field photos no method transfers well (macro-F1 13.5 to 30.1%, H3 not shown): **do not claim robustness to clutter**; `docs/reports/paddy_report.md`",
+      "status": "present",
+      "missing": []
     },
     {
       "id": "P1-17",
@@ -256,11 +252,9 @@
       "id": "O1",
       "commitment": "Two-dataset benchmark (high-resolution primary + independent expert-labelled field set)",
       "delivered_by": "Stages 1, 10",
-      "document_status": "\u2b1c",
-      "status": "pending",
-      "missing": [
-        "docs/reports/paddy_report.md"
-      ]
+      "document_status": "\u2705 2026-11-21: primary (3,334 photos) and Paddy Doctor (8,086 photos of the four classes), both with the same protocol; Paddy Doctor scored zero-shot once (`docs/reports/paddy_report.md`)",
+      "status": "present",
+      "missing": []
     },
     {
       "id": "O2",
@@ -298,10 +292,9 @@
       "id": "O6",
       "commitment": "Zero-shot evaluation of **all** models on the secondary dataset; compare attention maps with visible symptoms",
       "delivered_by": "Stages 10, 12",
-      "document_status": "\u2b1c",
+      "document_status": "\ud83d\udfe1 2026-11-21 first half done: all 130 round-models (11 headline methods and 9 Stage 5 conditions, 5 rounds each) scored zero-shot on Paddy Doctor, `docs/reports/paddy_report.md`; H3 not shown. The comparison of attention maps with visible symptoms is Stage 12 (not run yet)",
       "status": "pending",
       "missing": [
-        "docs/reports/paddy_report.md",
         "docs/reports/explain_report.md",
         "table:explain"
       ]
@@ -319,9 +312,9 @@
     }
   ],
   "present_counts": {
-    "tables": 10,
-    "figures": 3,
+    "tables": 11,
+    "figures": 5,
     "dataset_reports": 3,
-    "commitments": 13
+    "commitments": 16
   }
 }

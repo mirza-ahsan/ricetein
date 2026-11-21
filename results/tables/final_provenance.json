@@ -1,13 +1,14 @@
 {
-  "code_version": "fc8a293",
+  "code_version": "61415fe",
   "tables": {
     "main": {
-      "status": "partly pending",
+      "status": "present",
       "stage": "Stage 10 (Paddy Doctor columns)",
       "reason": null,
       "rows": 12,
       "sources": {
         "results/tables/followup_final.csv": "ee8818f920f57cb96ad8c6ccedb78f13879af769008327f0ec967b59e42326b8",
+        "results/tables/paddy_results.csv": "86036639edc06873f82f7ab767502f3a2c3840d73d8bcad59df18a3993058247",
         "results/tables/session_conditions_scores.csv": "0b8c82f00e4c72a03e6693f4fe4e37734514d3967579b60302f1d8ab9a4a3e6f",
         "results/tables/session_final.csv": "e12b414cd4b55b0dae937cfa7f640615f68c0c0b2f2cfdc1d01105842c8e8a84"
       }
@@ -124,11 +125,13 @@
       }
     },
     "paired_conditions": {
-      "status": "pending",
+      "status": "present",
       "stage": "Stage 5 paired test (branch stage5/paired-conditions)",
-      "reason": "missing results/tables/paired_conditions.csv",
-      "rows": 1,
-      "sources": {}
+      "reason": null,
+      "rows": 18,
+      "sources": {
+        "results/tables/paired_conditions.csv": "78ddd8960144a15e9535a7cdb5804e76fc2d2809042ed20f10948929dbd192a8"
+      }
     },
     "paired_locked": {
       "status": "present",
