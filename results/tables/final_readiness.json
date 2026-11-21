@@ -226,7 +226,7 @@
       "id": "P1-14",
       "commitment": "Publish dataset versions and download dates, split files, background audit, re-derived counts",
       "delivered_by": "Stage 14 reproducibility package",
-      "document_status": "\ud83d\udce6 Packaging: the data are final; the reproducibility package (dataset versions, split files, audit, counts) is assembled at packaging",
+      "document_status": "\u2705 `docs/REPRODUCIBILITY.md` (2026-11-22) points to the dataset versions and download dates, the split files, the background audit and the re-derived counts, and says what is not included and why",
       "status": "present",
       "missing": []
     },
