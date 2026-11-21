@@ -2,12 +2,12 @@
 \label{sec:setup}
 
 This section describes the data, the two splits, the comparison models, the tuning and the rule used to compare methods.
-The duplicate review, background audit, label check and heat-map ratings were done by AI models acting as disclosed
-raters, not by people. The leaf-width measurement had two measurers, one of them an AI model.
+The duplicate review, background audit, label check and heat-map ratings were done by disclosed AI model raters; one of
+the two leaf-width measurers was also an AI model.
 
 \subsection{Data}
 \label{sec:setup:data}
-The primary data are the labelled photos of the Rice Diseases Image Dataset \cite{do2019} (MIT licence, downloaded on
+The primary data are the labelled photos of the Rice Diseases Image Dataset \cite{do2019} (MIT licence; Kaggle release last updated 2019-11-15, downloaded on
 2026-09-26): 3{,}355 photos of healthy leaves (1{,}488), leaf blast (779), brown spot (523) and hispa (565), with shorter
 sides of 734--3{,}120 px (Fig.~\ref{fig:samples}). The download holds two more hispa photos than the published count (563). Three phone cameras
 appear, and hispa photos all come from one of them.
@@ -23,7 +23,7 @@ measurable). Width and shorter side correlated with Spearman $\rho=0.539$, above
 photos are rescaled. The audit is borderline: leave-one-out correlations run from 0.488 to 0.613. The two measurers
 agreed closely ($\rho=0.978$).
 
-Paddy Doctor \cite{petchiammal2023} (CC BY 4.0, downloaded on 2026-09-26) has 16{,}225 field photos of $1080\times1440$ px
+Paddy Doctor \cite{petchiammal2023} (full release from IEEE DataPort, DOI 10.21227/hz4v-af08; CC BY 4.0; downloaded on 2026-09-26) has 16{,}225 field photos of $1080\times1440$ px
 in 13 classes. Its four classes shared with the primary data hold 8{,}086 photos once 78 byte-identical copies are
 removed; none matches a primary photo. It was used only for zero-shot scoring, never for training, tuning or selection. A
 224-px tile covers about three times more leaf on Paddy Doctor photos than on rescaled primary photos (median leaf width
@@ -40,7 +40,7 @@ headline; midway ($\times1.73$); and matched ($\times3.0$).
 
 \subsection{Splits}
 \label{sec:setup:splits}
-Both splits are made once, before any other processing, and are never regenerated. The \emph{locked split} is a stratified,
+Each split was made once, before any model was trained on it, and is never regenerated; the locked split was made before any other processing. The \emph{locked split} is a stratified,
 near-duplicate-grouped five-fold split (seed 2026). In each round one fold is the test set, and a stratified, grouped
 $1/8$ of the rest is validation, giving about 70\,\%, 10\,\% and 20\,\% of the photos. Because photos were shot in
 long sessions, it still lets a test photo have a training photo of the same camera a few seconds away (90.2\,\% of test
@@ -50,14 +50,14 @@ and the same validation rule. Block sizes make class shares uneven across rounds
 reported, not enforced. Test sets hold 616--738 photos. The session-blocked split was declared after the locked-split test
 results were seen, and every method was then tuned again on its validation photos; it is the headline split, and the
 locked split is the secondary one. Augmented copies stay in the role of their source photo and never reach validation or
-test.
+test, which automated tests enforce.
 
 \subsection{Comparison models}
 Four ImageNet-pretrained models were fine-tuned on whole photos, padded to a square and resized:
 InceptionV3 \cite{szegedy2016inception}, EfficientNetV2-S \cite{tan2021efficientnetv2}, ConvNeXt-T \cite{liu2022convnext}
 and Swin-T \cite{liu2021swin}, at 224 px; at 128 px; at 224 px after Otsu background removal; and, for ConvNeXt-T, which
-had the best validation score at 224 px, at 448 px. Linear probes (Linear probe at 224 and 512 px) fit class-balanced
-logistic regression on one frozen whole-photo description. Six controls never see the leaf: majority class, random by class
+had the best validation score at 224 px, at 448 px. Linear probes at 224 and 512 px fit class-balanced
+logistic regression on one frozen DINOv3 description of the whole photo. Six controls see no leaf shape: majority class, random by class
 share, colour only, background only, file properties only and camera only; a seventh predicts the class of the nearest
 training photo in time from the same camera.
 
@@ -81,12 +81,12 @@ record keeps the configuration, code commit, split checksum, and per-photo predi
 \subsection{Metrics and the comparison rule}
 \label{sec:setup:metrics}
 The main metric is macro-F1, the mean over the four classes of the F1 score, with balanced accuracy (the mean recall). We also
-report per-class recall, confusion matrices and the expected calibration error (ECE, 15 equal-width bins
+report per-class recall, confusion matrices (from which per-class precision follows; Table~\ref{tab:final_confusion}) and the expected calibration error (ECE, 15 equal-width bins
 \cite{guo2017calibration}). Every table gives the mean $\pm$ SD over the five test rounds; there is one training seed per
-round, so the SD measures variation over folds, not over seeds. Differences between two methods are computed on the
+round, so the SD measures variation over folds, not over seeds; the model trained in a round is its ``round-model''. Differences between two methods are computed on the
 pooled test predictions (every photo once) and come with two 95\,\% percentile bootstrap ranges \cite{efron1993bootstrap}:
 the \emph{photo range} resamples photos (2{,}000 class-stratified resamples) and the \emph{block range} resamples whole
 capture blocks, and is wider when neighbouring photos look alike. ``A beats B'' requires the range of the difference to lie
 above zero \emph{and} A to win at least four of the five rounds (a tied round is won by neither); we state the verdict
-under both ranges, and otherwise write ``no clear difference''. Each frozen configuration was evaluated on test once.
+under both ranges, and otherwise write ``no clear difference''. Plain accuracy is kept in every run record. Each frozen configuration was evaluated on test once.
 Comparisons declared after the means were seen are marked as such where they are reported.

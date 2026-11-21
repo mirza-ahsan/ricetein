@@ -8,26 +8,19 @@ the five major food crops \cite{savary2019}. Rice is Pakistan's second most impo
 to inspect every field, so an image-based diagnosis that works on photos a farmer can take would remove a real
 bottleneck.
 
-Automated recognition has moved from hand-made colour and texture features \cite{orillo2014, pugoy2011, azim2021}
-to fine-tuned convolutional networks \cite{mohanty2016, lu2017, chen2020, ghosal2020, tejaswini2022} and, more recently,
-to transformers and hybrids \cite{dosovitskiy2021, alfalluji2025, vitresnet2025, globallocal2026}, with generative
-augmentation \cite{ali2026, muhammad2023, fhwd2025} and compression for phones \cite{edge2026, liu2025} as
-parallel threads. Across these threads the formulation is the same: one label is predicted from one
-strongly downsampled view of the photo. That is a poor match to the task. A lesion can fill well under 1\,\% of the
-frame, so a photo of $1881\times1881$ pixels \cite{do2019} shrunk to $128\times128$ loses over 200 times
-its pixels, and the pale centre or halo that separates brown spot from leaf blast is averaged away. The usual
-remedy, background removal, has two forms. Global thresholding such as Otsu's method \cite{otsu1979} assumes a clean
-two-peak histogram and uses grey values only; segmentation networks need pixel masks that most public rice sets do not
-have.
+Automated recognition has moved from hand-made features to fine-tuned convolutional networks, transformers and generative
+augmentation (Section~\ref{sec:related}), but one formulation has stayed the same: one label is predicted from one strongly
+downsampled view of the photo. That is a poor match to the task. A lesion can fill well under 1\,\% of the frame, so a
+photo of $1881\times1881$ pixels \cite{do2019} shrunk to $224\times224$ keeps about 1 pixel in 70, and the pale centre or
+halo that separates brown spot from leaf blast is averaged away.
 
 Three gaps follow from the literature reviewed in Section~\ref{sec:related}.
 (i) Resolution is fixed early and never varied, although region aggregation is standard for gigapixel pathology images
 \cite{ilse2018, lu2021clam}. (ii) Background suppression is either hand-made or needs annotation; a learned method that
 uses photo-level labels only has not been evaluated for rice. (iii) Reporting practice makes numbers hard to compare:
 the order of splitting and augmenting is often unstated, accuracy on imbalanced data is the usual metric, and
-cross-dataset tests are rare. A systematic review of plant disease datasets names random splitting as a cause of
-over-estimated test scores \cite{xu2024}, and a model above 90\,\% on several benchmarks has been reported at
-58.15\,\% on an unseen rice set \cite{thakur2023}.
+cross-dataset tests are rare. Testing problems of this kind are common in the field \cite{xu2024}, and a model above
+90\,\% on several benchmarks has been reported at 58.15\,\% on an unseen rice set \cite{thakur2023}.
 
 We therefore treat resolution as a variable and the protocol as part of the contribution. The method keeps lesion-scale
 detail by cutting each photo into high-detail tiles at a common leaf scale, describing every tile with a frozen
@@ -42,7 +35,7 @@ spread and two bootstrap ranges, and states a rule for ``A beats B'' (Section~\r
 a deletion test of the heat maps, a cost measurement, and a partition-order experiment on how much a faulty split
 raises the score (Section~\ref{sec:results}).
 \end{itemize}
-Five research questions, each with a hypothesis fixed before the experiments, structure the study:
+Five hypotheses, fixed before the experiments, structure the study:
 \textbf{H1}, tiles beat whole-photo input with the same encoder;
 \textbf{H2}, the learned attention is at least as good as mean pooling, max pooling and Otsu preprocessing;
 \textbf{H3}, frozen features hold up on unseen field photos;

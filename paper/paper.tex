@@ -84,8 +84,8 @@ Email: \{l230515, l230551, l230845\}@lhr.nu.edu.pk}}
 \end{abstract}
 
 \begin{IEEEkeywords}
-rice leaf disease; multiple instance learning; attention pooling;
-self-supervised features; grouped evaluation; zero-shot transfer
+Rice leaf disease, multiple instance learning, attention pooling,
+self-supervised features, grouped evaluation, zero-shot transfer
 \end{IEEEkeywords}
 
 \IEEEpeerreviewmaketitle
@@ -99,17 +99,18 @@ self-supervised features; grouped evaluation; zero-shot transfer
 \input{sections/limitations}
 \input{sections/conclusion}
 
+\appendices
+\input{sections/appendix}
+\clearpage
+
 \section*{Acknowledgements}
-\raggedright
-This work was supported by a NUCES research grant. It uses DINOv3 \cite{simeoni2025dinov3}, which is
+{\raggedright
+This work uses DINOv3 \cite{simeoni2025dinov3}, which is
 distributed under the DINOv3 License; as the licence requires, we acknowledge its use. The model versions
 are \path{facebook/dinov3-vitb16-pretrain-lvd1689m} (revision \path{5931719e}) and
 \path{facebook/dinov3-vits16-pretrain-lvd1689m} (revision \path{114c1379}). The primary dataset is
-released under the MIT licence \cite{do2019} and Paddy Doctor under CC~BY~4.0 \cite{petchiammal2023}.
+released under the MIT licence \cite{do2019} and Paddy Doctor under CC~BY~4.0 \cite{petchiammal2023}.\par}
 
 \printbibliography
-
-\appendix
-\input{sections/appendix}
 
 \end{document}

@@ -51,7 +51,7 @@ only the clean one is used for validation and test); the encoder (85.7 M paramet
 
 \subsection{Gated-attention head}
 For a bag of descriptors $\{\mathbf h_i\}$ a learned layer gives
-$\mathbf g_i=\operatorname{Dropout}(\operatorname{ReLU}(W_p\mathbf h_i+b_p))$. The gated attention of Ilse
+$\mathbf g_i=\operatorname{Dropout}(\operatorname{ReLU}(W_p\mathbf h_i+\mathbf b_p))$. The gated attention of Ilse
 \textit{et al.}\ \cite{ilse2018} scores and normalises the tiles and forms the photo representation $\mathbf z$:
 \begin{align}
  e_i &= \mathbf v^{\top}\bigl[\tanh(V\mathbf g_i+\mathbf b_V)\odot\sigma(U\mathbf g_i+\mathbf b_U)\bigr],\\
@@ -61,11 +61,11 @@ $\mathbf g_i=\operatorname{Dropout}(\operatorname{ReLU}(W_p\mathbf h_i+b_p))$. T
 A linear layer maps $\mathbf z$ to four class scores. Only the projection, the attention parameters and this layer are
 trained (0.23 M parameters). During training we dropped tiles at random with a tuned probability and always kept at
 least one. The weights $a_i$ sum to one over the photo; painted on the tile footprints (overlaps averaged, scaled to
-each photo's maximum), they form the heat map. They describe where the head looked and are not a segmentation.
+each photo's maximum), they form the heat map. They describe where the head looked and are not a segmentation. We call the full model Attention MIL.
 
 \subsection{Variants}
 Replacing the attention with the mean or the elementwise maximum of the $\mathbf g_i$ gave the pooling controls
 (Mean pooling over tiles, Max pooling over tiles). Applying the head to one description of the whole photo, at 224 or
 512 px, gave the whole-photo controls (Same head, whole photo); a bag of one tile has no attention to learn. The
-Committee averages the class probabilities of two models, and the Small model (16 tiles) keeps only the 16 tiles ranked
+Committee averages the class probabilities of ConvNeXt-T (448 px) and Attention MIL, and the Small model (16 tiles) keeps only the 16 tiles ranked
 highest by a simple colour rule, to cut the number of encoder passes (Section~\ref{sec:results}).
