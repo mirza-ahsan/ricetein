@@ -29,7 +29,7 @@ Everything below runs from the repository root. `uv sync` installs the locked en
 | What | Command |
 |---|---|
 | Tests | `uv run --locked pytest -q` |
-| Frozen files unchanged (since the methodology code was frozen) | `git diff --stat e58a219 -- src/augment.py src/config.py src/embed.py src/encoders.py src/inventory.py src/inventory_report.py src/kaggle_bootstrap.py src/leaf_width.py src/linear_probe.py src/metrics.py src/mil_models.py src/otsu.py src/photo_dataset.py src/review_tool.py src/sanity_baselines.py src/seeding.py src/split.py src/stats.py src/tiling.py src/train_mil.py src/train_wholeimage.py pyproject.toml uv.lock` (prints nothing) |
+| Frozen files unchanged (since the methodology code was frozen) | `git diff --stat 2f001de -- src/augment.py src/config.py src/embed.py src/encoders.py src/inventory.py src/inventory_report.py src/kaggle_bootstrap.py src/leaf_width.py src/linear_probe.py src/metrics.py src/mil_models.py src/otsu.py src/photo_dataset.py src/review_tool.py src/sanity_baselines.py src/seeding.py src/split.py src/stats.py src/tiling.py src/train_mil.py src/train_wholeimage.py pyproject.toml uv.lock` (prints nothing) |
 | Final tables | `uv run --locked python -m src.make_tables` |
 | Final figures | `uv run --locked python -m src.make_figures` |
 | Readiness of every promised table and figure | `uv run --locked python -m src.make_tables --check` (nothing is pending) |
