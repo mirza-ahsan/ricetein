@@ -1,0 +1,43 @@
+# ===================================================================
+# configs/paddy_e2.yaml: Stage 11 (committee). Paddy Doctor descriptions with the E2 encoder
+# ===================================================================
+# A copy of the frozen configs/paddy_zero_shot.yaml with only two changes: paddy.encoder is E2 and the cache names
+# are paddy_e2_*. Only the native tile cache is built (--cache paddy_e2_native; the Stage 10 headline zoom).
+# Describing photos uses no label and chooses nothing. Paddy Doctor is never used for training, tuning or selection.
+# ===================================================================
+extends: base.yaml
+
+paddy:
+  split_file: splits/paddy4.csv          # 8,086 photos of the four tested classes (78 byte-identical copies removed)
+  encoder: E2                            # the frozen encoder of the headline method
+  headline_zoom: native                  # fixed now, whichever zoom level scores best later
+  zoom_factors:                          # photo scale before tiling; native = the photo as stored
+    native: 1.0
+    midway: 1.73                         # square root of the matched factor (halfway on a log scale)
+    matched: 3.0                         # primary common-scale leaf width / Paddy median leaf width, rounded
+  leaf_width:
+    file: data/paddy_leaf_width_measurements.csv   # 30 photos of the nine untested classes, disclosed model rater
+    paddy_median_px: 64.5                # bootstrap 95% range of the median: 57.5 to 72.5
+    primary_common_scale_px: 194.9       # data/pixel_scale_decision.json, median_leaf_width_px
+    matched_factor_unrounded: 3.02       # range from the bootstrap: 2.69 to 3.39
+  caches:                                # one photo version (version 0, no augmentation) per cache
+    tiles:
+      native: paddy_e2_native
+      midway: paddy_e2_midway
+      matched: paddy_e2_matched
+    whole: paddy_e2_whole                # one description per photo and size: padded to a square, resized
+    whole_sizes: [224, 512]
+  inputs:
+    tile_methods: [mean, max, attention] # tile descriptions at each zoom level
+    whole_photo_methods: [probe_224, probe_512, whole224, whole512]   # the whole-photo description, no zoom levels
+    whole_image_models: [inceptionv3_224, efficientnetv2s_224, convnext_tiny_224, swin_tiny_224]
+    otsu_before_padding: true            # the Otsu conditions clean the photo first, then pad it to a square
+  methods:                               # the round-models scored: every method, rounds 1 to 5
+    session_selection: runs/session_selection.json              # the 11 headline methods (55 models)
+    condition_selection: runs/session_conditions_selection.json  # the Stage 5 conditions (45 models), when trained
+  report:
+    markdown: docs/reports/paddy_report.md
+    tables: results/tables/paddy_*.csv
+  comparison:                            # paired photo bootstrap on the 5-model committees; wins counted per round
+    min_round_wins: 4
+    ci_excludes_zero: true

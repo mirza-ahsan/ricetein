@@ -4,7 +4,7 @@
     uv run python scripts/import_kaggle_cache.py <source> <cache name>           e.g. 06b-caches-a e3_dinov2_vitb14, or pc paddy_e1_native
 
 ``<source>`` is the folder under kaggle/outputs/ that holds ``cache/<name>``. Works for the Stage 6 caches
-(``configs/embed/<name>.yaml``) and the Stage 10 Paddy Doctor caches (``configs/paddy_zero_shot.yaml``).
+(``configs/embed/<name>.yaml``) and the Stage 10 Paddy Doctor caches (``configs/paddy_zero_shot.yaml``, ``paddy_e2.yaml``, ``paddy_e3.yaml``).
 The cache is refused, before anything moves, unless it is complete, has the spec computed here, and does not
 replace an existing cache (same filesystem, so the move is one rename). After the move every photo file is
 validated again; a cache that fails (or an interrupted validation) is renamed ``<name>_rejected`` (numbered if
@@ -22,15 +22,16 @@ from typing import Any
 from src import embed, paddy_embed
 from src.config import REPO_ROOT, cache_folder, load_config
 
-PADDY = "configs/paddy_zero_shot.yaml"
+PADDY = ["configs/paddy_zero_shot.yaml", "configs/paddy_e2.yaml", "configs/paddy_e3.yaml"]   # E1, then Stage 11's E2 and E3
 
 
 def plan(name: str) -> tuple[dict[str, Any], Callable[[], dict[str, Any]]]:
     """The spec this cache must have, and the function that validates it once it is in cache/."""
-    paddy = load_config(PADDY)
-    caches = paddy_embed.description_caches(paddy)
-    if name in caches:
-        return paddy_embed.cache_spec(paddy, caches[name]), lambda: paddy_embed.validate(paddy, name)
+    for path in PADDY:
+        paddy = load_config(path)
+        caches = paddy_embed.description_caches(paddy)
+        if name in caches:
+            return paddy_embed.cache_spec(paddy, caches[name]), lambda: paddy_embed.validate(paddy, name)
     config = load_config(f"configs/embed/{name}.yaml")
     if config["embed"]["name"] != name:
         raise ValueError(f"configs/embed/{name}.yaml describes the cache {config['embed']['name']}, not {name}")

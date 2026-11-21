@@ -98,7 +98,9 @@ def validate(config: dict[str, Any], name: str) -> dict[str, Any]:
     spec = json.loads((folder / "spec.json").read_text())
     if spec != cache_spec(config, settings):
         raise ValueError(f"{folder}: cache settings differ")
-    dim, ids = config["encoders"][config["paddy"]["encoder"]]["dim"], photo_ids(config)
+    encoder = config["encoders"][config["paddy"]["encoder"]]
+    dim, ids = encoder["dim"], photo_ids(config)
+    keys = ("cls",) if encoder["library"] == "timm" else ("cls", "mean")   # a timm encoder has no patch average
     if list((folder / "v0").glob("*.tmp.npz")):
         raise ValueError(f"{folder}: unfinished files (*.tmp.npz)")
     rows = size = 0
@@ -107,7 +109,7 @@ def validate(config: dict[str, Any], name: str) -> dict[str, Any]:
         with np.load(path, allow_pickle=False) as data:
             n = len(data["cls"])
             ok = n > 0 and data["boxes"].shape == (n, 4)
-            for key in ("cls", "mean"):
+            for key in keys:
                 ok = ok and data[key].shape == (n, dim) and data[key].dtype == np.float16 and np.isfinite(data[key]).all()
             if not ok or (settings["kind"] == "whole" and n != len(settings["sizes"])):
                 raise ValueError(f"{path}: invalid descriptor arrays")
@@ -157,8 +159,9 @@ def describe_photos(config: dict[str, Any], name: str, workers: int = 6) -> int:
                 else:
                     outputs = [describe(model, images[i:i + BATCH], spec_e, config, device)
                                for i in range(0, len(images), BATCH)]
-            save(folder / "v0" / f"{photo_key(photo_id)}.npz", torch.cat([o[0] for o in outputs]).float(),
-                 torch.cat([o[1] for o in outputs]).float(), np.asarray(boxes))
+            mean = None if outputs[0][1] is None else torch.cat([o[1] for o in outputs]).float()
+            save(folder / "v0" / f"{photo_key(photo_id)}.npz", torch.cat([o[0] for o in outputs]).float(), mean,
+                 np.asarray(boxes))
         record = {"config": config, "code_version": get_code_version(), "hardware": get_hardware_info(),
                   "described": len(todo)}
         (folder / f"record_{len(list(folder.glob('record_*.json')))}.json").write_text(

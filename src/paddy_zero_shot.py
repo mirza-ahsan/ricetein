@@ -105,10 +105,11 @@ def pending(runs: list[str], zoom: str | None) -> list[str]:
 
 
 def save_once(config: dict[str, Any], folds: pd.DataFrame, run: str, zoom: str | None, round_: int,
-              probs: np.ndarray) -> None:
-    """Create the marker (it cannot exist yet), then write the predictions in one step."""
+              probs: np.ndarray, plan_sha256: str | None = None) -> None:
+    """Create the marker (it cannot exist yet), then write the predictions in one step. The marker records the
+    Stage 10 plan files unless a later stage passes the checksum of its own plan."""
     table_path, marker = paths(run, zoom)
-    plan = hashlib.sha256(b"".join((REPO_ROOT / p).read_bytes() for p in PLAN_FILES)).hexdigest()
+    plan = plan_sha256 or hashlib.sha256(b"".join((REPO_ROOT / p).read_bytes() for p in PLAN_FILES)).hexdigest()
     with marker.open("x") as out:
         json.dump({"code_version": require_clean_code(), "plan_sha256": plan}, out, indent=2)
     table = tw.prediction_table(folds, np.arange(len(folds)), probs, round_, "paddy", config["classes"])
@@ -135,13 +136,14 @@ def predict_tile_heads(config: dict[str, Any], zoom: str, runs: list[str], devic
     dim = config["encoders"][config["paddy"]["encoder"]]["dim"]
     heads = {run: load_head(run, dim, device) for run in runs}
     ids, probs = photo_ids(config), {run: [] for run in runs}
+    keys = sorted({key for _, parts in heads.values() for key in parts})   # a ConvNeXt (E2) cache has no "mean"
     for start in range(0, len(ids), batch):
         bags = []
         for photo_id in ids[start:start + batch]:
             with np.load(folder / "v0" / f"{photo_key(photo_id)}.npz") as saved:
-                bags.append({key: saved[key].astype(np.float32) for key in ("cls", "mean")})
+                bags.append({key: saved[key].astype(np.float32) for key in keys})
         size = max(len(bag["cls"]) for bag in bags)
-        padded = {key: torch.zeros(len(bags), size, dim) for key in ("cls", "mean")}
+        padded = {key: torch.zeros(len(bags), size, dim) for key in keys}
         mask = torch.zeros(len(bags), size, dtype=torch.bool)
         for i, bag in enumerate(bags):
             for key in padded:

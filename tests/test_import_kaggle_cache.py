@@ -53,9 +53,11 @@ def test_an_existing_cache_is_never_overwritten(folders):
 
 
 def test_the_spec_comes_from_the_paddy_config_for_a_paddy_cache_and_the_embed_config_for_a_stage_6_cache():
-    paddy = importer.load_config(importer.PADDY)
-    name, cache = next(iter(importer.paddy_embed.description_caches(paddy).items()))
-    assert importer.plan(name)[0] == importer.paddy_embed.cache_spec(paddy, cache)
+    for path in importer.PADDY:                      # E1 (Stage 10), then the E2 and E3 caches of Stage 11
+        paddy = importer.load_config(path)
+        name, cache = next(iter(importer.paddy_embed.description_caches(paddy).items()))
+        assert importer.plan(name)[0] == importer.paddy_embed.cache_spec(paddy, cache)
+    assert importer.plan("paddy_e2_native")[0]["encoder"]["name"] != importer.plan("paddy_e1_native")[0]["encoder"]["name"]
     config = importer.load_config("configs/embed/e3_dinov2_vitb14.yaml")
     assert importer.plan("e3_dinov2_vitb14")[0] == importer.embed.cache_spec(config)
 

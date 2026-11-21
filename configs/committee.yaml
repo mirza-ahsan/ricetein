@@ -1,0 +1,54 @@
+# ===================================================================
+# configs/committee.yaml: the Stage 11 plan as a settings file (handbook §24, 2026-11-21 "Stage 11 committee")
+# ===================================================================
+# Written after the declaration row and before any committee number. Choices use session-split validation
+# predictions only. Paddy Doctor is never used for training, tuning or selection.
+# ===================================================================
+extends: base.yaml
+
+committee:
+  rounds: [1, 2, 3, 4, 5]
+  split_file: splits/session_blocked/folds.csv
+  # Candidate members, in the declared order (the order breaks ties). Each has five round-models.
+  #   session:    the method's runs in runs/session_selection.json
+  #   conditions: the configuration's runs in runs/session_conditions_selection.json
+  #   pattern:    run names with {round} (the Stage 8 encoder ablation runs)
+  #   tile:       reads tile descriptions (a Paddy zoom level applies); the others read the whole photo
+  #   paddy:      the paddy_zero_shot config that describes the Paddy photos with this member's encoder
+  members:
+    attention_e1: {tile: true, session: attention}
+    attention_e2: {tile: true, pattern: "stage7_session_ablate_encoder_e2_r{round}", paddy: configs/paddy_e2.yaml}
+    attention_e3: {tile: true, pattern: "stage7_session_ablate_encoder_e3_r{round}", paddy: configs/paddy_e3.yaml}
+    inceptionv3_224: {tile: false, session: inceptionv3_224}
+    efficientnetv2s_224: {tile: false, session: efficientnetv2s_224}
+    convnext_tiny_224: {tile: false, session: convnext_tiny_224}
+    swin_tiny_224: {tile: false, session: swin_tiny_224}
+    convnext_tiny_448: {tile: false, conditions: convnext_tiny_448}
+  pools:
+    A: [attention_e1, attention_e2, attention_e3, inceptionv3_224, efficientnetv2s_224, convnext_tiny_224,
+        swin_tiny_224, convnext_tiny_448]
+    B: [inceptionv3_224, efficientnetv2s_224, convnext_tiny_224, swin_tiny_224, convnext_tiny_448]
+  best_single: attention_e1              # row 1, already tested (the headline)
+  forced_first: attention_e1             # used only if the pool A choice holds no tile head
+  choice:
+    min_members: 2                       # the second member is always added
+    max_members: 5
+    min_gain: 0.005                      # a further member (or a weighted variant) needs this much more S
+    tie: 1.0e-9                          # differences below this are ties
+    weights: [1, 2, 3]                   # the weighted variant: integer weights tried for every member
+  tta:
+    pool: B                              # the best whole-image member of this pool by mean validation macro-F1
+                                         # eight views: four rotations of 90 degrees, each with and without a flip
+  paddy:
+    zoom: native                         # the Stage 10 headline
+    comparison_member: attention_e1      # the Paddy paired test is committee against this member
+  files:
+    selection: runs/committee_selection.json
+    plan: runs/committee_plan.json
+    results: results/tables/committee_results.csv
+    paired: results/tables/committee_paired.csv
+    disagreement: results/tables/committee_disagreement.csv
+    paddy: results/tables/committee_paddy.csv
+    tta: results/tables/committee_tta.csv
+    report: docs/reports/committee_report.md
+  cost: "pending: Stage 13"
