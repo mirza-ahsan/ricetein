@@ -1,0 +1,17 @@
+% final_paired_committee.tex: built by src/make_tables.py; do not edit by hand.
+% source: results/tables/paired_committee.csv
+\begin{table*}[t]
+\centering
+\caption{Committee (ConvNeXt-T at 448 px and attention) against ConvNeXt-T at 448 px alone, session-blocked split, test. Difference of the pooled scores in points (committee minus ConvNeXt-T). The two are not independent: ConvNeXt-T is a member of the committee.}
+\label{tab:final_paired-committee}
+\footnotesize
+\setlength{\tabcolsep}{3pt}
+\begin{tabular}{lrrrrrll}
+\toprule
+Metric & Difference, pooled (points) & Photo range & Block range & Rounds won by the committee & Rounds won by ConvNeXt-T & Verdict (photo range) & Verdict (block range) \\
+\midrule
+macro-F1 & +2.2 & [1.2, 3.2] & [1.0, 3.8] & 4/5 & 1/5 & committee beats ConvNeXt-T & committee beats ConvNeXt-T \\
+balanced accuracy & +2.3 & [1.3, 3.3] & [0.9, 4.1] & 4/5 & 1/5 & committee beats ConvNeXt-T & committee beats ConvNeXt-T \\
+\bottomrule
+\end{tabular}
+\end{table*}

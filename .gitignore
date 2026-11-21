@@ -130,3 +130,6 @@ results/explain/background_fraction_paddy/
 # The files stay on disk; the CSV and JSON files of results/explain/ and the final figures stay tracked.
 results/explain/blind/
 results/explain/heatmaps/
+
+# LaTeX build output (compiled paper)
+paper/build/

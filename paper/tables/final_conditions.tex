@@ -1,0 +1,28 @@
+% final_conditions.tex: built by src/make_tables.py; do not edit by hand.
+% source: results/tables/session_conditions_scores.csv
+\begin{table}[t]
+\centering
+\caption{Whole-image models at other input conditions: test macro-F1 and balanced accuracy (\%), mean $\pm$ SD over 5 rounds, session-blocked split.}
+\label{tab:final_conditions}
+\footnotesize
+\setlength{\tabcolsep}{3pt}
+\begin{tabular}{lrrr}
+\toprule
+Model & Condition & Macro-F1 & Balanced acc. \\
+\midrule
+InceptionV3 & 224 px & 72.0 $\pm$ 3.6 & 72.2 $\pm$ 4.9 \\
+InceptionV3 & 128 px & 56.9 $\pm$ 6.4 & 56.7 $\pm$ 5.5 \\
+InceptionV3 & 224 px + Otsu & 71.3 $\pm$ 3.4 & 70.8 $\pm$ 3.9 \\
+EfficientNetV2-S & 224 px & 74.1 $\pm$ 4.8 & 73.9 $\pm$ 5.9 \\
+EfficientNetV2-S & 128 px & 62.8 $\pm$ 4.7 & 62.4 $\pm$ 6.1 \\
+EfficientNetV2-S & 224 px + Otsu & 70.2 $\pm$ 2.5 & 70.6 $\pm$ 4.2 \\
+ConvNeXt-T & 224 px & 75.0 $\pm$ 5.0 & 75.8 $\pm$ 3.7 \\
+ConvNeXt-T & 128 px & 67.8 $\pm$ 6.0 & 67.8 $\pm$ 6.4 \\
+ConvNeXt-T & 224 px + Otsu & 73.5 $\pm$ 3.4 & 74.2 $\pm$ 3.3 \\
+ConvNeXt-T & 448 px & 79.2 $\pm$ 3.8 & 79.1 $\pm$ 5.0 \\
+Swin-T & 224 px & 76.3 $\pm$ 4.1 & 75.8 $\pm$ 4.8 \\
+Swin-T & 128 px & 65.2 $\pm$ 4.4 & 65.6 $\pm$ 4.9 \\
+Swin-T & 224 px + Otsu & 71.7 $\pm$ 3.8 & 72.3 $\pm$ 4.9 \\
+\bottomrule
+\end{tabular}
+\end{table}

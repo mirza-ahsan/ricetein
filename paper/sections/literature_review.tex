@@ -1,323 +1,46 @@
-% Adapted from the frozen Phase 2 submission.
-\section{Literature Review}
-\label{sec:lit}
-% ===================================================================
+\section{Related Work}
+\label{sec:related}
 
-\subsection{Review Scope and Methodology}
+This section groups the studies that matter for the method and the protocol; it names the gap each group leaves.
+Candidate studies were found through Google Scholar, IEEE Xplore, ScienceDirect, SpringerLink and PubMed Central.
 
-Candidate studies were located through Google Scholar, IEEE Xplore, ScienceDirect,
-SpringerLink and PubMed Central using combinations of the terms \emph{rice leaf
-disease}, \emph{plant disease classification}, \emph{multiple instance
-learning}, \emph{patch-based}, \emph{foundation model}, \emph{data augmentation},
-\emph{disease severity} and \emph{edge deployment}. Studies were included if they
-reported a quantitative evaluation on rice or on closely related foliar disease
-imagery, or if they introduced a methodological component that the proposed
-pipeline depends upon. Twenty-six studies are characterised in the survey tables;
-of these, twenty-one were published between 2020 and 2026, with the remaining
-five retained because they are the methodological origin of a technique the
-project builds on. A small number of additional works are cited in the discussion
-purely as methodological anchors and are not tabulated: the multiple instance
-formulation \cite{dietterich1997}, attention-based instance aggregation
-\cite{ilse2018}, its weakly supervised application in computational pathology
-\cite{lu2021clam}, Otsu's thresholding operator \cite{otsu1979}, the paired
-image-to-image translation model used for generative augmentation in the rice
-literature \cite{isola2017}, and the residual and transformer backbones that
-recur as baselines \cite{he2016, dosovitskiy2021}.
+\textbf{Whole-image classifiers.} Early rice systems classified colour and texture descriptors of segmented lesions
+\cite{orillo2014, pugoy2011, azim2021, sethy2020}. After ImageNet-pretrained networks were shown to transfer to leaf
+photos \cite{mohanty2016}, rice studies applied most mainstream backbones to a few public datasets
+\cite{lu2017, chen2020, ghosal2020, tejaswini2022}, and later ones used vision transformers and two-stream hybrids
+\cite{dosovitskiy2021, he2016, alfalluji2025, vitresnet2025, globallocal2026}. Reported accuracies on the same Kaggle
+rice set span about 30 points across protocols \cite{thakur2023, tejaswini2022, ali2026}, so they do not isolate the
+architecture. Input size is fixed early, usually between 128 and 256 pixels, and not varied.
+A transformer attends across patches \emph{within} a 224-pixel input; it cannot recover detail lost by the resize.
 
-Tables~\ref{tab:survey1} and~\ref{tab:survey2} summarise each study by reference,
-year, method, dataset, evaluation metrics, reported performance and key
-limitations. Where a study reports qualitative results or metrics that are not
-comparable across the table, the performance column describes the reported
-outcome rather than quoting a single figure.
-\clearpage
+\textbf{Augmentation and background removal.} Adversarial augmentation is common in the rice literature
+\cite{ali2026, fhwd2025, isola2017}, and diffusion models are the emerging alternative \cite{muhammad2023}.
+One study reports that Pix2Pix augmentation alone lowered accuracy and helped only together with Otsu thresholding
+\cite{ali2026}; this useful negative result is why we use class-balanced loss and conventional augmentation and do not
+generate images. Learned segmentation avoids the two-peak assumption of Otsu's method \cite{otsu1979} but needs
+expert pixel labels, as in joint staging with attention \cite{sudhesh2025} and UAV mapping \cite{logavitool2025}; the
+mask collection RiceSeg-5932 \cite{riceseg2025} covers another image set.
 
+\textbf{Patch-level and weakly supervised learning.} The closest precedents classify image regions and aggregate them.
+DeChant \textit{et al.}\ combine per-region maize classifiers into heat maps \cite{dechant2017}; Barbedo classifies
+cropped lesions \cite{barbedo2019}; Bollis \textit{et al.}\ propose regions from activation maps and then apply MIL to
+citrus pests \cite{bollis2020}. Each needs manual region marks or two stages. MIL \cite{dietterich1997} in its
+attention form \cite{ilse2018} underlies weakly supervised pathology slide classification
+\cite{lu2021clam, shao2021transmil}. To our knowledge no published work applies end-to-end attention-based MIL over
+high-detail tiles from photo labels to rice leaf disease.
 
+\textbf{Frozen foundation features.} Self-supervised vision transformers \cite{oquab2024, simeoni2025dinov3,
+darcet2024registers} give strong frozen features. In agriculture a frozen linear probe stays competitive at a small
+fraction of the training cost \cite{dinoagri2025}, frozen features reduce the laboratory-to-field drop of supervised
+backbones \cite{nguyen2026}, and contrastive pretraining under a leakage-controlled protocol improves robustness
+\cite{plantclr2026}. These studies probe whole downsampled images; none uses frozen features as region descriptors under
+an aggregator, and none targets rice.
 
-\subsection{Critical Discussion by Methodological Group}
-
-\subsubsection{Classical image processing and handcrafted features}
-
-The earliest rice-specific systems operated on explicitly engineered
-representations. Orillo \textit{et al.} segmented lesions in MATLAB and
-classified colour and texture descriptors with a back-propagation network,
-reporting perfect accuracy on 134 images \cite{orillo2014}; Pugoy and Mariano
-combined histogram intersection with $k$-means clustering to isolate outlier
-regions \cite{pugoy2011}; Azim \textit{et al.} used a saturation threshold to
-remove background and a hue threshold to isolate lesions before applying XGBoost
-\cite{azim2021}; and Sethy \textit{et al.} occupy an intermediate position,
-extracting CNN features but classifying them with an SVM \cite{sethy2020}. Two
-observations matter for this project. First, the reported accuracies are
-uninformative as generalisation estimates: a 100\,\% score on 134 images
-\cite{orillo2014} and comparable figures on the 120-image UCI subset
-\cite{azim2021} reflect dataset size far more than method quality. Second, and
-more usefully, this group establishes the \emph{lineage} of the thresholding
-operations that persist in modern pipelines. When a recent deep pipeline applies
-Otsu thresholding as a preprocessing stage \cite{ali2026}, it is inheriting a
-design decision from this era, with the same underlying assumption of a clean
-bimodal separation between leaf and background. That assumption is testable, and
-the evidence within the literature is mixed at best: one study using the same
-rice dataset describes its backgrounds as essentially uniform and therefore not
-requiring background subtraction \cite{tejaswini2022}, while the same operator
-applied to raw images of that dataset has been reported to leave classifier
-accuracy largely unchanged \cite{ali2026}.
-
-\subsubsection{CNN transfer learning}
-
-This is by far the largest group and it is also the most saturated. Following
-Mohanty \textit{et al.} \cite{mohanty2016}, rice-specific studies have applied
-essentially every mainstream ImageNet backbone to essentially the same handful of
-public datasets \cite{lu2017, chen2020, ghosal2020, tejaswini2022}. The pattern
-of reported results is more revealing than any individual number. On the same
-Kaggle rice dataset, published accuracies span 58.15\,\% \cite{thakur2023},
-74--78\,\% \cite{tejaswini2022, ali2026} and 86.98\,\% \cite{ali2026}, a spread
-of nearly thirty points across differing protocols. Partitioning, preprocessing,
-augmentation and metric definitions may contribute to these differences; the
-reported scores do not isolate architecture. This motivates the internally
-consistent baseline comparisons in the present study. The group also shares two structural
-limitations. Input resolution is fixed early and never ablated, and evaluation is
-almost exclusively in-domain and accuracy-based. Ghosal and Sarkar's report of
-92.46\,\% training against 81\,\% test accuracy \cite{ghosal2020} is a useful
-illustration of how much information a single accuracy figure conceals.
-
-\subsubsection{Transformers and hybrid architectures}
-
-Recent work substitutes or supplements the convolutional backbone with
-self-attention \cite{alfalluji2025, vitresnet2025, globallocal2026}. The trend is
-towards two-stream designs in which a transformer branch captures global context
-and a convolutional branch captures local texture, fused by a learned attention
-mechanism \cite{globallocal2026}. Two of these studies provide additional evaluation detail: Ramesh \textit{et al.}
-report precision, recall, F1 and AUC rather than accuracy alone
-\cite{vitresnet2025}, and the two-stream study includes both cross-validation and
-cross-dataset testing \cite{globallocal2026}. Nevertheless, the group is subject
-to diminishing returns. Accuracies of 100\,\% and 99.72\,\% on a three-class rice
-task \cite{alfalluji2025} indicate that the benchmark, not the method, is the
-limiting factor; notably, the same study's accuracy falls to 90.69\,\% on a
-five-class task, a drop that is reported but not diagnosed. Critically, every
-model in this group still performs a single forward pass over one downsampled
-view of the leaf. A hierarchical transformer attends across patches \emph{within}
-a $224\times224$ input, which is a different operation from attending across
-regions of the original $1881\times1881$ capture; the information discarded by
-the resize is not recoverable by attention applied afterwards. This distinction
-is central to the gap this project targets.
-
-\subsubsection{Generative data augmentation}
-
-Two sub-lines exist. Adversarial approaches dominate the rice literature: the
-pipeline most directly relevant to this project pairs a Pix2Pix generator with
-Otsu preprocessing and an InceptionDenseNet classifier \cite{ali2026}, and more
-recent work improves generator fidelity through frequency-domain and
-dual-discriminator designs \cite{fhwd2025}. Diffusion-based augmentation is the
-emerging alternative and has been reported to produce more realistic and more
-diverse plant disease imagery than comparable GANs \cite{muhammad2023}. Three
-experimental considerations follow. First, fidelity is not the objective: FID measures how
-convincing an image looks, not whether adding it to the training set improves
-generalisation, and the causal link between the two is assumed far more often than
-it is demonstrated. Second, the rice literature contains a clear negative result
-worth taking seriously --- adversarial augmentation applied on its own has been
-reported to \emph{reduce} classifier accuracy relative to the raw data, with
-improvement appearing only when combined with a preprocessing stage
-\cite{ali2026}. Third, paired image-to-image generation such as Pix2Pix \cite{isola2017}
-requires an explicit conditioning representation and paired training data. This
-adds an experimental factor alongside the classifier and preprocessing. The
-present study therefore uses conventional augmentation and focuses on spatial
-representation and aggregation; it does not test whether synthetic augmentation
-would improve this protocol.
-
-\subsubsection{Segmentation-based preprocessing and severity quantification}
-
-A different response to background clutter replaces
-thresholding with a learned segmentation network. RCAMNet performs multi-class
-segmentation with U-Net, DeepLabv3 or Detectron2 and then applies dual-path
-attention for joint classification and severity staging \cite{sudhesh2025}, while
-a UAV study reaches 97.20\,\% mIoU using U-Net with a ResNet-101 encoder on
-multispectral imagery scored against the IRRI Standard Evaluation System
-\cite{logavitool2025}. These results confirm that lesion-level supervision, when
-available, is highly effective. The binding constraint is annotation. Both studies
-depend on purpose-built datasets with expert pixel-level labels, and the public
-rice datasets in general use provide no masks; the recently released
-\textit{RiceSeg-5932} mask collection \cite{riceseg2025} addresses this for a
-different rice image set but not for the datasets used here. There is also a
-subtler point: segmentation removes background but does not address resolution,
-since the segmented image is still resized before classification. A method that
-requires no masks and preserves resolution is therefore preferable on both counts,
-and this reasoning is why segmentation is treated in this project as a comparison
-point rather than as the proposed solution.
-
-\subsubsection{Patch-level, lesion-level and weakly supervised learning}
-
-This group contains the nearest precedents for the proposed method and is, at the
-same time, the thinnest group in the plant disease literature. DeChant
-\textit{et al.} tile field images of maize, classify each region with a CNN,
-assemble the per-region outputs into heat maps, and classify the whole image from
-those maps, reaching 96.7\,\% on held-out data \cite{dechant2017}. Barbedo shows
-that classifying individually cropped lesions substantially outperforms
-whole-leaf classification across fourteen species \cite{barbedo2019}. Bollis
-\textit{et al.} use activation maps to propose regions and then apply multiple
-instance learning over them for citrus pest classification \cite{bollis2020}.
-The formulation these works approach is multiple instance learning
-\cite{dietterich1997}, in which a labelled \emph{bag} of unlabelled
-\emph{instances} is classified as a whole; in its modern form, a learned
-attention function assigns each instance a weight and the bag representation is
-their weighted mean \cite{ilse2018}, a design that underpins clinical-grade
-weakly supervised classification of gigapixel pathology slides
-\cite{lu2021clam}. The structural correspondence to leaf imagery is close: a
-high-resolution image, a diagnostic region occupying a small fraction of it, and
-a label available only at whole-image level. What is missing is the combination.
-DeChant \textit{et al.} require manual lesion marking to train the region
-classifier and use a fixed, non-learned aggregation \cite{dechant2017}; Barbedo
-requires lesions to be cropped by hand \cite{barbedo2019}; Bollis \textit{et al.}
-use a two-stage saliency-then-MIL design on a pest task \cite{bollis2020}. To the
-best of our knowledge, no published work applies end-to-end attention-based
-instance aggregation over high-detail tiles, trained from image-level
-labels alone, to rice leaf disease recognition. This is the methodological centre
-of the gap identified in Section~\ref{sec:gap}.
-
-\subsubsection{Foundation models and frozen self-supervised features}
-
-Self-supervised vision transformers trained on web-scale unlabelled imagery
-\cite{oquab2024} have recently been evaluated in agriculture with results that
-are directly relevant here. Foundation features have been assessed in agriculture
-under linear probing, full fine-tuning and low-rank adaptation, with the frozen
-linear probe remaining competitive at a small fraction of the training cost and
-foundation features outperforming other self-supervised alternatives when
-distilled into a mobile backbone \cite{dinoagri2025}. More pointedly, frozen
-self-supervised features have been shown to substantially reduce the
-laboratory-to-field degradation that afflicts supervised backbones
-\cite{nguyen2026}, and contrastive self-supervised pretraining under an explicit
-leakage-controlled protocol improves robustness under domain shift
-\cite{plantclr2026}. Two properties make this group attractive as a component
-rather than a contribution. Because a frozen encoder is never trained on the
-target data, it cannot memorise dataset-specific background cues, which is
-exactly the failure mode that motivates background removal in the first place.
-And because embeddings can be computed once and cached, the cost of aggregating
-many regions per image becomes tractable, which is what makes a tile-based
-formulation feasible under student-level compute. The gap is that all of these
-studies probe features from whole downsampled images; none evaluates frozen
-features as region descriptors under a weakly supervised aggregator, and none
-targets rice.
-
-\subsubsection{Datasets, evaluation protocol and generalisation}
-
-This group supplies the evidence for the protocol gap. Xu \textit{et al.}
-provide a taxonomy of plant disease datasets and argue that the apparent success
-of deep learning in this field is partly illusory, identifying random splitting
-as a direct cause of overestimated test performance because near-duplicate views
-of one physical observation can be distributed across training and test
-partitions, and observing that splitting and annotation strategy are scarcely
-discussed in applied papers \cite{xu2024}. This is a field-wide reporting issue
-rather than a fault of any individual study: where the ordering of augmentation
-and partitioning, or the partition on which a confusion matrix was computed, is
-not stated, the reader simply cannot determine what a reported figure measures.
-The consequences are visible empirically. A model exceeding 90\,\% on four
-benchmarks reaches 58.15\,\% on an unseen rice dataset \cite{thakur2023}, and
-the laboratory-to-field drop documented for frozen-feature studies
-\cite{nguyen2026, plantclr2026} is larger than the margins by which competing
-architectures are separated. On the resource side, the group also supplies the
-remedy. Paddy Doctor offers 16{,}225 expert-annotated field images across 13
-classes with published transfer-learning baselines and an F1-based reporting
-convention \cite{petchiammal2023}, and PlantDoc demonstrates the value of
-deliberately in-the-wild data for breaking laboratory shortcuts
-\cite{singh2020}. The availability of a large, independently collected field
-dataset whose class vocabulary overlaps the primary dataset is what makes the
-zero-shot cross-dataset evaluation in objective~6 practical rather than
-aspirational.
-
-\subsubsection{Lightweight models and edge deployment}
-
-The final group addresses whether a model can run where it is needed.
-MobileNet-V4 has been benchmarked against earlier mobile backbones across GPU,
-CPU and Raspberry Pi 5, reporting 97.84\,\% accuracy at 88.91\,ms per inference
-on the Pi \cite{edge2026}, and structured pruning combined with channel-wise
-feature distillation compresses a YOLOv11 variant to 1.9\,MB while retaining
-97.4\,\% mAP@50 \cite{liu2025}. These studies are notable for measuring latency
-on real hardware rather than asserting deployability, a standard that much of the
-rice literature does not meet --- claims that a 98\,MB classifier is suitable for
-IoT or edge use are common but are rarely accompanied by an on-device
-measurement. The limitation is that this group optimises for in-domain accuracy
-under compression and does not test whether the compressed model retains
-generalisation. For this project the group functions as a cost benchmark: any
-region-based pipeline must be assessed for computational overhead against these
-figures, which is the purpose of objective~7.
-
-\subsection{Synthesis: Cross-Cutting Limitations}
-
-Reading across the nine groups, four limitations recur with enough consistency to
-be treated as properties of the field rather than of individual papers. Input
-resolution is treated as a fixed preprocessing constant and is never ablated,
-despite the two-order-of-magnitude information loss it entails on
-high-resolution captures. Background suppression is addressed at opposite
-extremes of the supervision spectrum --- hand-tuned global operators on one side
-\cite{ali2026, azim2021} and densely annotated segmentation networks on the other
-\cite{sudhesh2025, logavitool2025} --- with no annotation-free learned option
-evaluated in between. Overall accuracy on a randomly partitioned, strongly
-imbalanced dataset remains the dominant metric, so a model that never predicts a
-rare but agronomically important class pays almost no measured penalty, and
-repeated runs with reported variance are uncommon. Finally, cross-dataset
-evaluation is rare enough that the field-readiness claims made in the motivation
-sections of these papers are, in most cases, untested by their own experiments.
-
-It is worth being explicit that the four are connected rather than independent.
-Aggressive downsampling removes lesion-scale evidence, which leaves the
-classifier more reliant on whatever global cues are available, including
-background and acquisition artefacts; that reliance is invisible under in-domain
-accuracy on a randomly split single dataset, and surfaces only under
-cross-dataset evaluation, where it appears as the large degradations reported in
-\cite{thakur2023, nguyen2026}. A method that preserves resolution and learns
-region relevance therefore addresses the measurement problem and the modelling
-problem through the same mechanism, provided the evaluation is designed to detect
-the difference.
-
-\subsection{Research Gap}
-\label{sec:gap}
-
-Three gaps follow directly from the synthesis above.
-
-\begin{itemize}
-\item \textbf{Resolution gap.} Rice disease recognition pipelines almost
-universally downsample high-resolution captures to between 128 and 256 pixels
-before classification, discarding the fine textural evidence that distinguishes
-early-stage and visually similar lesions. No study in the reviewed literature
-treats input resolution as an experimental variable, and none evaluates
-resolution-preserving region aggregation as an alternative, although the
-technique is standard in gigapixel medical imaging \cite{ilse2018, lu2021clam}.
-
-\item \textbf{Supervision gap.} Suppression of diagnostically irrelevant image
-content is handled either by hand-engineered global operators that assume a
-bimodal leaf--background separation \cite{ali2026, azim2021, otsu1979}, or by
-segmentation networks that require pixel-level masks unavailable for the public
-rice datasets \cite{sudhesh2025, logavitool2025}. An annotation-free mechanism
-that \emph{learns} which regions are informative from image-level labels alone
-has been demonstrated in maize and citrus in partial forms
-\cite{dechant2017, barbedo2019, bollis2020} but has not been evaluated for rice
-in an end-to-end attention-based formulation.
-
-\item \textbf{Protocol and generalisation gap.} Reported performance in this
-field is difficult to interpret and difficult to compare, because partitioning
-strategy and the ordering of augmentation relative to partitioning are often
-unstated \cite{xu2024}, class-balanced metrics and run-to-run variance are often
-unreported, and zero-shot evaluation on an independently collected dataset is
-rare. Consequently the generalisation claims that motivate the work are largely
-unsupported by the experiments presented, as the observed collapse from above
-90\,\% to 58.15\,\% on an unseen rice dataset illustrates \cite{thakur2023}.
-\end{itemize}
-
-\subsection{Problem Statement}
-
-Given high-resolution rice leaf images annotated only with an image-level
-disease label, the problem is to classify the disease while (i) preserving
-lesion-scale spatial detail rather than discarding it through whole-image
-downsampling, (ii) suppressing diagnostically irrelevant regions through a
-learned mechanism that requires no pixel-level supervision, and (iii) reporting
-the result under an evaluation protocol that fixes partitioning before any
-augmentation, reports class-balanced metrics with variance across repeated runs,
-and, in the broader planned study, measures zero-shot transfer to an
-independently collected field dataset with overlapping disease classes. The
-present submission evaluates the in-domain component; external generalisation
-remains untested. The proposed approach treats each leaf image as a
-collection of high-detail regions at a common leaf scale and learns, from image-level labels
-alone, both a class prediction and an attention distribution over regions
-showing the model's learned weighting of the regions. These visual weights
-are descriptive; causal faithfulness requires the separately planned tests.
-
-\medskip
-
+\textbf{Protocol, field data and deployment.} Xu \textit{et al.}\ argue that random splitting over-estimates test
+performance when near-duplicate views of one observation sit on both sides \cite{xu2024}. This is a field-wide
+reporting issue rather than a fault of any study: where the order of augmentation and partitioning is unstated, a
+reader cannot tell what a score measures. Paddy Doctor offers 16{,}225 expert-annotated field photos
+\cite{petchiammal2023}, PlantDoc deliberately breaks laboratory shortcuts \cite{singh2020}, and Dhan-Shomadhan covers
+Bangladeshi varieties \cite{hossain2021}. On deployment, lightweight CNNs have been timed on real devices
+\cite{edge2026}, and pruning with distillation \cite{hinton2015distilling} yields very small detectors \cite{liu2025};
+these studies do not test whether generalisation survives compression.
