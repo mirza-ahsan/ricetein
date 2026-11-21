@@ -1,6 +1,6 @@
 # Dataset Records & Specifications
 
-This document records the provenance, download metadata, file counts, and license terms for all datasets used in this project, fulfilling written commitment P1-12 from the Phase 1 specification.
+This document records the provenance, download metadata, file counts, and license terms for all datasets used in this project, fulfilling written commitment P1-12 (`docs/commitments.md`).
 
 ---
 
@@ -52,7 +52,7 @@ Class counts derived directly from `LabelledRice/Labelled/`:
 
 * **Role**: Strictly held-out zero-shot evaluation on the 4 shared disease classes across 3 zoom levels (native, midway, matched). Never used for training or hyperparameter tuning.
 * **Original DOI / Source**: Petchiammal et al., *Paddy Doctor: a visual image dataset for automated paddy disease classification*, CODS-COMAD 2023. IEEE Dataport, DOI: [10.21227/hz4v-af08](https://dx.doi.org/10.21227/hz4v-af08).
-* **Private Kaggle Dataset ID**: `aztrek/paddy-doctor-full` (private, strictly un-redistributed per Phase 1 commitment).
+* **Private Kaggle Dataset ID**: `aztrek/paddy-doctor-full` (private, strictly un-redistributed per commitment P1-13).
 * **Download / Upload Date**: 2026-09-26 / 2026-09-27
 * **Owner / Manager**: Ahsan Baig (`aztrek`)
 * **Archive Size**: ~4.65 GB (16,225 images + metadata.csv)

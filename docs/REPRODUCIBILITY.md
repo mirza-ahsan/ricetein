@@ -1,7 +1,7 @@
 # Reproducibility package (written commitment P1-14)
 
-One page. It points to every item Phase 1 promised to publish (dataset versions and download dates, split files, background audit, re-derived counts), says how to rebuild the tables, figures, paper and notebook from `runs/`, and says what is not included and why.
-The project's single source of truth is `docs/HANDBOOK.md`; this page only points to files that exist in this repository.
+One page. It points to every item the project promised to publish (commitment P1-14 in `docs/commitments.md`) (dataset versions and download dates, split files, background audit, re-derived counts), says how to rebuild the tables, figures, paper and notebook from `runs/`, and says what is not included and why.
+It only points to files that exist in this repository.
 
 ## 1. What is published, and where
 
@@ -19,8 +19,7 @@ The project's single source of truth is `docs/HANDBOOK.md`; this page only point
 | Run records | `runs/<run>/` (config, commit, split checksum, data version, per-photo predictions; no checkpoints) | Every number in the paper traces to one |
 | Reports | `docs/reports/` | One per stage, generated from `runs/` |
 | Final tables and figures | `results/tables/final_*.csv|tex`, `results/figures/final_*`, `results/tables/final_provenance.json`, `results/figures/final_figures.json` | Each lists the source files and their SHA-256 |
-| Declarations made before the tests | `docs/HANDBOOK.md` §24 (dated rows), `docs/reports/paddy_pre_declaration.md`, `runs/*_plan.json`, `runs/*_declared.json` | Comparisons declared after the means were seen are marked post-hoc |
-| Day-by-day record | `docs/logbook.md` | Dated entries: done, found, decided, next |
+| Declarations made before the tests | `docs/commitments.md` (written before any experiment), `docs/reports/paddy_pre_declaration.md`, `runs/*_plan.json`, `runs/*_declared.json`; each report names the date its plan was declared | Comparisons declared after the means were seen are marked post-hoc |
 
 ## 2. Rebuilding from `runs/`
 
@@ -40,7 +39,7 @@ Everything below runs from the repository root. `uv sync` installs the locked en
 
 A rebuild of the tables from the committed `runs/` gives the committed tables again (checked 2026-11-22; only the code-version stamp in `final_provenance.json` changes). A rebuild of the figures gives the same pictures; the PDF files differ only in their embedded creation dates.
 
-To re-run the experiments themselves (hours of GPU time; needs the photos, the encoder weights and a clean commit), follow `manuals/HANDOFF.md` Part 8 and the stage sections of `docs/HANDBOOK.md`:
+To re-run the experiments themselves (hours of GPU time; needs the photos, the encoder weights and a clean commit), use these entry points (each module's docstring lists its actions and settings files):
 
 | Stage | Entry point |
 |---|---|
@@ -60,10 +59,10 @@ Test-set files are evaluated once per frozen configuration; a `test_started.json
 |---|---|
 | The photos (primary dataset and Paddy Doctor) | P1-13: no images are redistributed. The only photo images in the paper are two figures (`final_samples`, `final_heatmaps`); the per-photo heat-map and blind-rating PNGs are not tracked |
 | Encoder weights (DINOv3, DINOv2, ConvNeXt and the others) | Licence terms. They load through `pinned_pretrained()` at the pinned revisions listed in `data/DATASETS.md`; the DINOv3 licence is acknowledged in the paper |
-| Tile-description caches (`cache/`) and model checkpoints | Size (about 104 GB of caches on `halo`, 6.2 GB for the main tile cache alone). Rebuild with the Stage 6 pipeline; each cache passes the spec checks of `scripts/import_kaggle_cache.py` |
+| Tile-description caches (`cache/`) and model checkpoints | Size (about 104 GB of caches, 6.2 GB for the main tile cache alone). Rebuild with the Stage 6 pipeline; each cache passes the spec checks of `scripts/import_kaggle_cache.py` |
 | The private Paddy Doctor copy on Kaggle (`aztrek/paddy-doctor-full`) | It is a private copy kept so that the photos are not redistributed; the original is at IEEE Dataport, DOI 10.21227/hz4v-af08 |
 | Heat-map ratings by people | None exist: both sets of ratings are disclosed AI model ratings (`data/heatmap_ratings_provenance.txt`, `docs/reports/heatmap_ratings_report.md`) |
 
-## 4. The submission package
+## 4. The paper and the notebook
 
-`submission/final/` (git-ignored) holds the paper PDF, the executed notebook, the LaTeX sources as a zip for Overleaf, a short README and `verification.json`. The submitted files are frozen in `deliverables/final/`. The commit and tag they come from are in that README.
+`paper/ricetein_paper.pdf` is the final paper as submitted, and `notebooks/ricetein_final.ipynb` is the executed final notebook, with its outputs (`.gitattributes` exempts this one notebook from nbstripout). Both were built from the commit tagged `final-submission-20261122`. `submission/` is where the build commands above write; it is git-ignored.
