@@ -80,7 +80,9 @@ NOTES = {
     5: "The paired tests of Attention MIL against ConvNeXt-T at 448 px and against the 128 px and Otsu conditions were "
        "declared after the means were seen (post-hoc), and are marked so in the report.",
     11: "The paired test of the committee against ConvNeXt-T (448 px) alone was declared after both means were seen "
-        "(post-hoc). ConvNeXt-T is a member of the committee, so the two are not independent.",
+        "(post-hoc). ConvNeXt-T is a member of the committee, so the two are not independent. The last line of the "
+        "committee report, \"Cost column: pending: Stage 13\", was written before Stage 13 ran; the committee's cost "
+        "is in the cost table (`final_cost.csv`) shown below.",
     12: "Both sets of heat-map ratings (three raters each) are disclosed AI model raters; no person rated the maps. "
         "The importer's file and column names call the second set `human`, which only records how it was imported: "
         "the provenance note in the report below says that model agents filled it in. In the paper the two sets are "
