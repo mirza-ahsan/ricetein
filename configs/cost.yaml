@@ -1,0 +1,42 @@
+# ===================================================================
+# configs/cost.yaml: Stage 13, cost and compression (declared in handbook §24, 2026-11-21)
+# ===================================================================
+# Session-blocked split, E1 + attention as the main configuration. Nothing here is tuned: every number below is
+# what the declaration says. Change it only with a new dated §24 row.
+#   python -m src.cost sizes | time --device gpu|cpu | select | plan | test | report
+#   python -m src.compress fewer-tiles | int8 | export
+#   python -m src.distill
+# ===================================================================
+extends: mil/session_attention.yaml
+
+cost:
+  timing:
+    photos: 100             # timed photos: seeded draw from the TRAINING photos of round 1 (no label is read)
+    warmup: 5               # five more photos, run first and discarded
+    seed: 0
+    source_round: 1
+    cpu_threads: 8          # torch and onnxruntime (the Ryzen 7 7700 has 8 cores)
+    tile_batch: {cuda: 128, cpu: 16}   # tiles per encoder pass
+  quiet:                    # timing starts only on a quiet machine
+    max_process_cpu_percent: 15
+    max_total_cpu_percent: 20
+    max_gpu_mib: 1500
+  committee:                # Stage 11 members, as keys of src/cost.py METHODS (empty: no committee row)
+    members: []
+    test_macro_f1: null     # the committee's test macro-F1 as Stage 11 reports it (Stage 13 tests nothing for it)
+
+compress:
+  tiles: 16                 # tiles kept by the "fewer tiles" rule
+  shrink: 8                 # the quick look: the rescaled photo shrunk by this factor
+  min_leaf_share: 0.5       # a tile needs at least this share of leaf pixels to be eligible
+  int8:
+    photos: 400             # seeded, class-proportional subset of the photos that are validation photos in some round
+    seed: 0
+    cache: int8_e1          # cache/compress/<name>
+  final_margin_points: 2.0  # eligible for the final small model: validation macro-F1 within this of E1 + attention
+
+distill:
+  temperature: 1.0
+  teacher:                  # the Stage 11 committee, copied here before the first distillation run;
+    members: [mean, max, attention]   # fallback if Stage 11 gives none: the selected tile heads on E1
+    soft_answers_file: null # or a CSV from Stage 11 (photo_id, round, prob_<class>) with the training photos' answers
