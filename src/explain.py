@@ -967,7 +967,7 @@ def background_section(partition: str) -> list[str]:
 
 def fleiss_kappa(counts: np.ndarray) -> float:
     """Fleiss' kappa; ``counts[i, j]`` = raters who gave item i answer j (same number of raters per item)."""
-    raters = counts.sum(1)
+    raters = counts.sum(axis=1)
     if len(set(raters)) != 1 or raters[0] < 2:
         raise ValueError("Fleiss' kappa needs the same number (at least 2) of raters for every item")
     n = raters[0]
@@ -982,6 +982,8 @@ def rating_summary(ratings: pd.DataFrame, examples: pd.DataFrame) -> dict:
     Every rater must have rated every item once, with a valid answer and one kind per rater."""
     if not set(RATING_COLUMNS) <= set(ratings):
         raise ValueError(f"the ratings file needs the columns {RATING_COLUMNS}")
+    if ratings["rater"].isna().any():
+        raise ValueError("every rating needs a rater id")
     if not ratings["rating"].isin(ANSWERS).all() or not ratings["rater_kind"].isin(RATER_KINDS).all():
         raise ValueError(f"ratings must be one of {ANSWERS} and rater_kind one of {RATER_KINDS}")
     if (

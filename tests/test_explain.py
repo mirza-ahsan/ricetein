@@ -745,6 +745,8 @@ def test_rating_summary_gives_shares_agreement_and_checks_the_file():
     bad = ratings_of({"r1": a, "r2": b})
     with pytest.raises(ValueError, match="one of"):
         ex.rating_summary(bad.assign(rating="maybe"), sheet())
+    with pytest.raises(ValueError, match="rater id"):
+        ex.rating_summary(bad.assign(rater=[None] + list(bad["rater"][1:])), sheet())
     with pytest.raises(ValueError, match="twice"):
         ex.rating_summary(pd.concat([bad, bad.head(1)]), sheet())
     with pytest.raises(ValueError, match="every blind item"):
