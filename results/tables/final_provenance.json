@@ -1,5 +1,5 @@
 {
-  "code_version": "33ddcb9",
+  "code_version": "5b5a0ef",
   "tables": {
     "main": {
       "status": "present",
@@ -220,7 +220,7 @@
     },
     "explain_ratings": {
       "status": "present",
-      "stage": "Stage 12 (human ratings)",
+      "stage": "Stage 12 (heat-map ratings)",
       "reason": null,
       "rows": 2,
       "sources": {

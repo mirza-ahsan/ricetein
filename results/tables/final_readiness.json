@@ -58,7 +58,7 @@
     },
     "explain_ratings": {
       "status": "present",
-      "stage": "Stage 12 (human ratings)"
+      "stage": "Stage 12 (heat-map ratings)"
     },
     "cost": {
       "status": "present",
