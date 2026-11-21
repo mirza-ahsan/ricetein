@@ -1,0 +1,27 @@
+% final_cost.tex: built by src/make_tables.py; do not edit by hand.
+% source: results/tables/cost_results.csv
+\begin{table}[t]
+\centering
+\caption{Parameters, storage, time per photo and peak memory.}
+\label{tab:final_cost}
+\footnotesize
+\setlength{\tabcolsep}{3pt}
+\begin{tabular}{lrrrrrrrrrl}
+\toprule
+method & params\_encoder\_m & params\_decider\_m & disk\_mb & cache\_gb & seconds\_per\_photo & seconds\_per\_photo\_cpu & peak\_gpu\_mb & peak\_cpu\_rss\_mb & macro\_f1 & partition \\
+\midrule
+attention & 85.7 & 0.23 & 328 & 6.07 & 0.31 & 5.36 & 951 & 1.48e+03 & 77.9 & test \\
+mean & 85.7 & 0.396 & 328 & 6.07 & 0.299 & 5.37 & 952 & 1.47e+03 & 69.1 & test \\
+max & 85.7 & 0.0989 & 327 & 6.07 & 0.303 & 5.42 & 951 & 1.47e+03 & 73.4 & test \\
+probe\_224 & 85.7 & 0.00461 & 327 & 0.173 & 0.0924 & 0.147 & 347 & 1.32e+03 & 73.0 & test \\
+probe\_512 & 85.7 & 0.00461 & 327 & 0.173 & 0.103 & 0.42 & 370 & 1.32e+03 & 73.5 & test \\
+inceptionv3\_224 & 21.8 & 0.0082 & 83.4 & 0.614 & 0.0481 & 0.0621 & 100 & 1e+03 & 72.0 & test \\
+efficientnetv2s\_224 & 20.2 & 0.00512 & 77.8 & 0.614 & 0.0499 & 0.0623 & 92.7 & 1.02e+03 & 74.1 & test \\
+convnext\_tiny\_224 & 27.8 & 0.00308 & 106 & 0.614 & 0.0449 & 0.0655 & 128 & 1.02e+03 & 75.0 & test \\
+swin\_tiny\_224 & 27.5 & 0.00308 & 105 & 0.614 & 0.0466 & 0.0691 & 130 & 1.02e+03 & 76.3 & test \\
+convnext\_tiny\_448 & 27.8 & 0.00308 & 106 & 2.46 & 0.0472 & 0.115 & 151 & 1.02e+03 & 79.2 & test \\
+committee & 113 & 0.233 & 434 & 8.53 & 0.357 & 5.47 & 951 & 1.48e+03 & 81.6 & test \\
+final\_small\_model (e1\_top16) & 85.7 & 0.23 & 328 & 6.07 & 0.138 & 1.21 & 435 & 1.37e+03 & 76.7 & test \\
+\bottomrule
+\end{tabular}
+\end{table}

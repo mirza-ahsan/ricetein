@@ -1,0 +1,66 @@
+\section{Discussion}
+\label{sec:discussion}
+
+This section interprets the results against the five hypotheses and the seven objectives; the numbers are in
+Section~\ref{sec:results}.
+
+\textbf{H1, tiles against whole-photo input: supported on the headline split.} With the same encoder and head, tiles at
+a common leaf scale beat one whole-photo description at both sizes. Two further observations point the same way:
+whole-image scores rise with input size (Table~\ref{tab:final_conditions}), and tiles at the stored scale do worse than
+tiles at the common scale (Table~\ref{tab:final_ablations-test}). Detail matters. It does not follow that tiling matters:
+ConvNeXt-T at 448 px has the higher mean and the paired test finds no clear difference. What the tile pipeline offers is a
+different cost profile, a small head trained from cached descriptions, against fine-tuning a whole network at
+a larger input size. The Committee gain suggests that the two kinds of model make partly different errors.
+On the locked split the benefit over the 512-px control was not clear, which is a reminder that the split changes
+conclusions.
+
+\textbf{H2, attention against mean, max and Otsu: supported.} Most tiles hold background, and the head gives them far less than their share of its attention (Section~\ref{sec:results}). Mean pooling averages all of them with the few informative
+tiles, which is a likely reason for its low score; max pooling keeps the single strongest tile and comes close, without a clear
+difference on balanced accuracy. Hard background removal by Otsu's method did not help whole-image models and lowered the
+tile model, so a learned weighting looked more useful than a fixed mask; an earlier report found Otsu alone changed
+accuracy little \cite{ali2026}.
+
+\textbf{H3, frozen features on field photos: not shown.} All methods score low on Paddy Doctor and none is clearly
+ahead of the fine-tuned models, so in-domain scores say little about field behaviour. Matching the zoom did not
+help. We did not test the likely causes, such as lighting, camera and field context, and the primary photos have plain
+backgrounds (Section~\ref{sec:setup:data}); we therefore do \emph{not} claim robustness to clutter.
+
+\textbf{H4, heat maps point at symptoms: supported as a qualitative guide.} The deletion test shows that the decision
+rests on the attended tiles, but that alone does not show that those tiles are symptoms. The ratings are mixed, and about a
+quarter of the ratings in each set say no. The effect on field photos is small. We treat heat maps as an aid for a reader,
+not as a segmentation, and make no severity claim.
+
+\textbf{H5, cost: a descriptive answer.} The pipeline is slower per photo than whole-image models because of its many
+encoder passes. Fewer tiles and a distilled head reduce the cost at little loss of validation score, but the 8-bit encoder
+fails, so an on-device build is not shown.
+
+\textbf{What the shortcut and split checks mean for reading in-domain numbers.} The nearest-in-time baseline matches
+the models on the locked split, and the partition-order experiment shows that the order of augmenting and splitting
+moves a score more than most differences between methods. We therefore read differences between methods only on the
+session-blocked split and only through the paired rule, and we state the split beside every number. This is a general
+lesson for the field rather than a verdict on any study: the details of splitting are rarely reported
+\cite{xu2024}. The per-class results add that hispa and leaf blast are hard for every method, so a single accuracy figure
+hides the classes where errors concentrate; hispa photos are most often called healthy.
+
+\textbf{Objectives.} Table~\ref{tab:objectives} relates the seven objectives to the evidence.
+
+\begin{table}[t]
+\caption{The seven objectives, the evidence and the status.}
+\label{tab:objectives}
+\centering
+\scriptsize
+\renewcommand{\arraystretch}{1.1}
+\begin{tabular}{@{}L{3.1cm}L{3.5cm}L{1.1cm}@{}}
+\toprule
+Objective & Evidence & Status \\
+\midrule
+1 Two-dataset benchmark & Primary photos and Paddy Doctor (Section~\ref{sec:setup:data}) & met \\
+2 Leakage-free protocol & Grouped splits made first, mean $\pm$ SD, two ranges, one rule (Section~\ref{sec:setup}) & met \\
+3 Whole-image baselines, including Otsu & Four models at 128, 224 and 448 px, with and without Otsu (Tables~\ref{tab:final_main}, \ref{tab:final_conditions}) & met \\
+4 Tile-based weakly supervised model & Attention MIL (Section~\ref{sec:method}) & met \\
+5 Ablations of resolution, aggregation, Otsu & Tables~\ref{tab:final_conditions}, \ref{tab:final_main}, \ref{tab:final_ablations-test}, \ref{tab:final_ablations} & met \\
+6 Zero-shot transfer; attention against symptoms & Paddy Doctor (H3 not shown); deletion test and model-rater ratings; no expert or outline check & partly met \\
+7 Cost and compressibility & Table~\ref{tab:final_cost}; fewer tiles and distillation help, 8-bit fails; no on-device build & partly met \\
+\bottomrule
+\end{tabular}
+\end{table}

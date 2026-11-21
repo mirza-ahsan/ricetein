@@ -1,0 +1,11 @@
+\section{Conclusion}
+\label{sec:conclusion}
+
+We treated image resolution as a variable and the evaluation protocol as part of the method. A frozen DINOv3 encoder, high-detail
+tiles at a common leaf scale and a small attention head trained from photo labels gave a rice leaf disease classifier
+with a heat map. Under a protocol that groups near-duplicates and capture sessions, it was clearly better than
+whole-photo use of the same encoder and than simpler pooling, and not clearly different from a ConvNeXt-T fine-tuned at a larger input size; combining
+the two kinds of model helped. It did not transfer to field photos, and its price is many encoder passes per photo. The
+partition-order experiment and the controls that never see the leaf show that the split, not only the model, decides how
+good a score looks. Much published work reports a single downsampled view and leaves the split order unstated; stating
+both, with paired rules and negative results, is what we offer as a basis for future comparisons.

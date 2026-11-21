@@ -1,0 +1,115 @@
+%% ===================================================================
+%% paper.tex -- the complete research paper (Stage 14).
+%% A copy of main.tex (the clean template) with the project title and the
+%% author block of phase4_results.tex. Chapters live in sections/, copied
+%% result tables in tables/, copied result figures in fig/ (both refreshed
+%% with scripts/sync_paper_assets.sh; never edit the numbers by hand).
+%% Based on bare_conf.tex V1.3 by Michael Shell (IEEEtran.cls)
+%% Compile: see paper/BUILD.md (pdflatex -> biber -> pdflatex -> pdflatex).
+%% ===================================================================
+
+\documentclass[conference]{IEEEtran}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{microtype}
+\usepackage{adjustbox}
+\usepackage{etoolbox}
+\usepackage{tikz}
+\usetikzlibrary{positioning, arrows.meta, fit, calc}
+\usepackage{url}
+\usepackage[hidelinks]{hyperref}
+\usepackage[backend=biber, style=ieee]{biblatex}
+
+\addbibresource{ref.bib}
+
+\graphicspath{ {fig/} }
+
+% ---- ragged-right paragraph column for text-heavy tables: L{width} ----
+\newcolumntype{L}[1]{>{\raggedright\arraybackslash}p{#1}}
+
+% ---- float placement: lets large full-width tables place well ----
+\setcounter{dbltopnumber}{4}
+\renewcommand{\dbltopfraction}{0.99}
+\renewcommand{\dblfloatpagefraction}{0.5}
+\renewcommand{\topfraction}{0.95}
+\renewcommand{\textfraction}{0.05}
+\renewcommand{\floatpagefraction}{0.75}
+
+% ---- copied result tables ------------------------------------------
+% \PaperTable[layout]{file}{caption}
+% Inputs tables/final_<file>.tex exactly as copied (every number and cell is
+% untouched). Only the caption text is replaced (the source captions use
+% internal stage names), and an optional layout code may change the float
+% width or the font size for this paper.
+\newcommand{\PaperTable}[3][]{%
+  \begingroup
+  \let\paperorigcaption\caption
+  \renewcommand{\caption}[1]{\paperorigcaption{#3}}%
+  #1%
+  \input{tables/final_#2.tex}%
+  \endgroup}
+% layouts (layout changes only, never the content of a table):
+%   \ColumnLayout  a table* of the source placed in one column
+%   \WideLayout    a single-column table of the source placed across both columns
+%   \SmallWide     a smaller font
+% Every tabular that is wider than its float is scaled down to fit (adjustbox).
+\newcommand{\ColumnLayout}{%
+  \renewenvironment{table*}[1][t]{\begin{table}[##1]}{\end{table}}%
+  \let\footnotesize\scriptsize}
+\newcommand{\WideLayout}{%
+  \renewenvironment{table}[1][t]{\begin{table*}[##1]}{\end{table*}}%
+  \let\footnotesize\scriptsize}
+\newcommand{\SmallWide}{\let\footnotesize\scriptsize}
+\BeforeBeginEnvironment{tabular}{\begin{adjustbox}{max width=\linewidth}}
+\AfterEndEnvironment{tabular}{\end{adjustbox}}
+
+\begin{document}
+
+\title{Resolution-Preserving Weakly Supervised\\ Recognition of Rice Leaf Diseases}
+
+\author{\IEEEauthorblockN{Ahsan Baig, Harris Tabassum, and Muhammad Umer}
+\IEEEauthorblockA{23L-0515, 23L-0551, 23L-0845\\
+FAST School of Computing\\
+National University of Computer and Emerging Sciences (FAST-NUCES)\\
+Lahore, Pakistan\\
+Email: \{l230515, l230551, l230845\}@lhr.nu.edu.pk}}
+
+\maketitle
+
+\begin{abstract}
+\input{sections/abstract}
+\end{abstract}
+
+\begin{IEEEkeywords}
+rice leaf disease; multiple instance learning; attention pooling;
+self-supervised features; grouped evaluation; zero-shot transfer
+\end{IEEEkeywords}
+
+\IEEEpeerreviewmaketitle
+
+\input{sections/introduction}
+\input{sections/literature_review}
+\input{sections/methodology}
+\input{sections/setup}
+\input{sections/results}
+\input{sections/discussion}
+\input{sections/limitations}
+\input{sections/conclusion}
+
+\section*{Acknowledgements}
+\raggedright
+This work was supported by a NUCES research grant. It uses DINOv3 \cite{simeoni2025dinov3}, which is
+distributed under the DINOv3 License; as the licence requires, we acknowledge its use. The model versions
+are \path{facebook/dinov3-vitb16-pretrain-lvd1689m} (revision \path{5931719e}) and
+\path{facebook/dinov3-vits16-pretrain-lvd1689m} (revision \path{114c1379}). The primary dataset is
+released under the MIT licence \cite{do2019} and Paddy Doctor under CC~BY~4.0 \cite{petchiammal2023}.
+
+\printbibliography
+
+\appendix
+\input{sections/appendix}
+
+\end{document}

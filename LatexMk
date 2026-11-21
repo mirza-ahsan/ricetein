@@ -1,0 +1,4 @@
+# Used by ~/.local/bin/overleaf-pdf (it loads /work/LatexMk): all LaTeX output goes to paper/build/.
+$out_dir = 'build';
+$aux_dir = 'build';
+$biber = 'biber %O %S';

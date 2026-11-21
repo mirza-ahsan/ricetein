@@ -1,0 +1,15 @@
+Rice leaf photos are taken at high resolution, but most recognition systems shrink them to a few
+hundred pixels, and many reports do not say how the data were split.
+We study a resolution-preserving alternative that needs only photo-level labels. Each photo is
+brought to a common leaf scale and cut into 224-pixel tiles. A frozen DINOv3 encoder describes every tile once,
+and a small gated-attention head, trained from the photo label alone, combines the descriptions and
+produces a heat map. We compare it with four fine-tuned whole-image models, probes, simpler pooling rules and
+ablations. The protocol groups near-duplicates and capture sessions, reports macro-F1 and balanced accuracy with
+spread and bootstrap ranges, and adds a zero-shot test on field photos (Paddy Doctor).
+On the session-blocked split the head reaches 77.9\,\% test macro-F1. It is clearly above two of the four
+whole-image models at 224 px and above both whole-photo controls, and not clearly different from ConvNeXt-T at
+448 px, which has the higher mean. A committee of the two is clearly better than either.
+Zero-shot transfer to field photos is not shown: all methods score low.
+Removing the most-attended tiles hurts far more than removing random tiles.
+Augmenting before splitting raises the score by 11.5 to 17.2 points, which shows how much the split order matters.
+The price is about 80 encoder passes per photo. Negative results are reported as they are.

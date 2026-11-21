@@ -1,0 +1,16 @@
+\section{Secondary Results and Settings}
+\label{sec:appendix}
+
+This appendix holds the secondary tables cited in the text. The training settings are in Section~\ref{sec:setup:training}.
+
+\PaperTable[\SmallWide]{ablations}{All ablations on validation photos: macro-F1 (\%), mean $\pm$ SD over the 5 rounds, session-blocked split. Validation scores favour the main configuration (Attention MIL), whose settings were chosen on them; the variants were not tuned.}
+
+\PaperTable[\SmallWide]{paired_conditions}{Attention MIL against each whole-image condition at 128 px and with Otsu, session-blocked test photos: difference of the pooled scores in points (Attention MIL minus the condition), 95\,\% ranges, rounds won, and verdicts. Declared after the means were seen.}
+
+\PaperTable[\SmallWide]{paired_locked}{Attention MIL against every whole-image model and control on the locked split, test photos: difference of the pooled scores in points (Attention MIL minus the other), 95\,\% ranges, rounds won, and verdicts.}
+
+\PaperTable[\SmallWide]{confusion}{Confusion matrices (photo counts) of four methods on the session-blocked test photos, pooled over the 5 rounds. Rows are the true class.}
+
+\PaperTable[\SmallWide]{partition_order}{Partition-order experiment: pooled macro-F1 (\%) and its inflation over the correct set-up (A), with 95\,\% ranges, for EfficientNetV2-S and Attention MIL. L is the locked split; B, C and D are deliberately faulty set-ups (augment first, then split the copies at random; random split without grouping; train and score on the same photos) and are not estimates of performance.}
+
+
