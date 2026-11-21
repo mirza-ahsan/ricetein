@@ -1,17 +1,22 @@
 """Stage 12: does the attention head look at real symptoms? (handbook Stage 12; declared in §24, 2026-11-20)
 
-    uv run python -m src.explain select   [--partition val|test]   # rule-based example list (CSV first)
-    uv run python -m src.explain heatmaps [--partition val|test]   # labelled and blind heat maps
-    uv run python -m src.explain plan                              # freeze the declaration (once)
-    uv run python -m src.explain deletion   --partition test|val   # remove top-k / random-k tiles
-    uv run python -m src.explain background --partition test|val   # attention on background tiles
-    uv run python -m src.explain report                            # tables, figure and report
+    uv run python -m src.explain select   [--partition val|test|paddy]  # rule-based example list (CSV first)
+    uv run python -m src.explain heatmaps [--partition val|test|paddy]  # labelled and blind heat maps
+    uv run python -m src.explain plan                                   # freeze the declaration (once)
+    uv run python -m src.explain deletion   --partition test|val|paddy  # remove top-k / random-k tiles
+    uv run python -m src.explain background --partition test|val|paddy  # attention on background tiles
+    uv run python -m src.explain report                                 # tables, figure and report
 
 Models: the five session-split attention runs (``stage7_session_attention_r1..r5``, tested once) and, on
 validation photos only, their two stability seeds. Every action is resumable and writes only under
 ``results/``, ``docs/reports/``, ``data/heatmap_ratings.csv`` (header only, created once) and (the
 declaration and the run-once marker) ``runs/``. Test photos are read
 by ``deletion`` and ``background`` only, after ``plan`` froze what is measured.
+
+``--partition paddy`` (extension declared in handbook §24, 2026-11-21) treats Paddy Doctor photos like test
+photos: the same five models on the native-zoom cache ``paddy_e1_native``, after ``plan``, under run-once
+markers ``runs/explain_paddy_<action>_started.json``. Paddy has no capture blocks: its verdict uses the photo
+range only.
 """
 
 from __future__ import annotations
@@ -28,6 +33,7 @@ import pandas as pd
 import torch
 
 from src import followup_report, metrics, otsu, stats, tiling
+from src import paddy_zero_shot as pz
 from src import train_mil as tm
 from src.config import REPO_ROOT, cache_folder, dataset_dir, load_config
 from src.embed import load_version, photo_key, scale_factors, version_settings
@@ -35,6 +41,8 @@ from src.evaluate import checkpoint, digest
 from src.inventory import read_inventory
 from src.inventory_report import md_table
 from src.mil_models import MILModel
+from src.paddy_embed import TILE as PADDY_TILE
+from src.paddy_embed import verify as verify_paddy_cache
 from src.records import get_default_runs_dir, require_clean_code
 from src.seeding import seed_everything
 from src.split import read_folds
@@ -47,7 +55,14 @@ FIGURES = REPO_ROOT / "results/figures"
 REPORT = REPO_ROOT / "docs/reports/explain_report.md"
 RATINGS = REPO_ROOT / "data/heatmap_ratings.csv"
 RATING_COLUMNS = ["item_id", "rater", "rater_kind", "rating", "note"]  # rating: yes / partly / no
+ANSWERS = ("yes", "partly", "no")
+RATER_KINDS = ("model", "human")
 
+PADDY_CONFIG = "configs/paddy_zero_shot.yaml"
+PADDY_ZOOM = "native"  # the Stage 10 headline zoom; the only one used here
+PADDY_TOLERANCE = 1e-3  # no-removal probabilities must match the saved Stage 10 ones to this
+PREDICTION_FILES = {"val": "predictions.csv", "test": "test_predictions.csv"}  # an unknown partition raises
+ATTENTION_FILES = {"val": "attention_val.npz", "test": "attention.npz"}
 SEED_TAGS = {0: "", 1: "_s1", 2: "_s2"}  # model training seeds; only seed 0 was tested
 ROUNDS = (1, 2, 3, 4, 5)
 KS = (1, 2, 4, 8, 16)
@@ -68,8 +83,8 @@ def run_name(seed: int, round_: int) -> str:
 
 
 def runs_for(partition: str) -> list[str]:
-    """Test: only the five runs that were tested. Validation: all three training seeds."""
-    seeds = (0,) if partition == "test" else tuple(SEED_TAGS)
+    """Test and Paddy: only the five runs that were tested. Validation: all three training seeds."""
+    seeds = (0,) if partition in ("test", "paddy") else tuple(SEED_TAGS)
     return [run_name(s, r) for s in seeds for r in ROUNDS]
 
 
@@ -332,15 +347,25 @@ def draw_heatmap(
 # ---------------------------------------------------------------- files of the runs
 
 
+def paddy_predictions(run: str) -> Path:
+    """The saved Stage 10 predictions of one run at the native zoom."""
+    return pz.paths(run, PADDY_ZOOM)[0]
+
+
 def read_run_predictions(partition: str) -> pd.DataFrame:
-    """Seed-0 predictions of the five rounds on ``partition``."""
-    name = "test_predictions.csv" if partition == "test" else "predictions.csv"
+    """Seed-0 predictions of the five rounds on ``partition`` (Paddy: Stage 10 ones, native zoom)."""
     root = get_default_runs_dir()
-    return pd.concat([pd.read_csv(root / run_name(0, r) / name) for r in ROUNDS], ignore_index=True)
+    paths = [
+        paddy_predictions(run_name(0, r))
+        if partition == "paddy"
+        else root / run_name(0, r) / PREDICTION_FILES[partition]
+        for r in ROUNDS
+    ]
+    return pd.concat([pd.read_csv(path) for path in paths], ignore_index=True)
 
 
 def read_attention(run: str, partition: str) -> dict[str, np.ndarray]:
-    path = get_default_runs_dir() / run / ("attention.npz" if partition == "test" else "attention_val.npz")
+    path = get_default_runs_dir() / run / ATTENTION_FILES[partition]
     with np.load(path) as saved:
         return {key: saved[key] for key in saved.files}
 
@@ -354,10 +379,32 @@ def require_plan() -> Path:
     return path
 
 
-class Photos:
-    """Photo pixels at the common leaf scale (as the cache saw them) and the cache's tile boxes."""
+def declaration_for(partition: str) -> dict:
+    """The declaration, required before any test or Paddy photo is read; Paddy needs its extension in it."""
+    declaration = json.loads(require_plan().read_text())
+    if partition == "paddy" and "paddy" not in declaration:
+        raise RuntimeError(
+            "the declaration has no Paddy extension (handbook §24, 2026-11-21): it was written before it; "
+            "a new dated declaration is needed, because the plan file is never rewritten"
+        )
+    return declaration
 
-    def __init__(self) -> None:
+
+class Photos:
+    """Photo pixels at the common leaf scale (as the cache saw them) and the cache's tile boxes.
+
+    ``Photos("paddy")``: Paddy Doctor photos at the native zoom, from ``paddy_e1_native``."""
+
+    def __init__(self, partition: str = "primary") -> None:
+        if partition == "paddy":
+            self.config = load_config(PADDY_CONFIG)
+            self.root = dataset_dir(self.config, "paddy")
+            self.tile = PADDY_TILE
+            self.cache = cache_folder(self.config["paddy"]["caches"]["tiles"][PADDY_ZOOM])
+            self.factors = dict.fromkeys(
+                pz.photo_ids(self.config), self.config["paddy"]["zoom_factors"][PADDY_ZOOM]
+            )
+            return
         self.config = load_config(EMBED_CONFIG)
         self.root = dataset_dir(self.config, "primary")
         self.tile = self.config["embed"]["tile"]
@@ -374,18 +421,96 @@ class Photos:
             return saved["boxes"]
 
 
+# ---------------------------------------------------------------- Paddy Doctor photos
+
+
+class PaddyBags:
+    """Paddy photos' tile descriptions from the native-zoom cache, in the layout ``delete_and_score`` reads:
+    iterating gives (tiles, mask, labels, rows) and ``photo_ids[rows]`` names the photos."""
+
+    def __init__(self, config: dict, parts: list[str], ids: list[str] | None = None, batch: int = 8) -> None:
+        self.folder = cache_folder(config["paddy"]["caches"]["tiles"][PADDY_ZOOM])
+        truth = pz.truth(config).set_index("photo_id")["class"]
+        self.photo_ids = np.array(pz.photo_ids(config) if ids is None else ids)
+        self.labels = torch.tensor([config["classes"].index(truth[p]) for p in self.photo_ids])
+        self.parts, self.batch = parts, batch
+
+    def __iter__(self):
+        for start in range(0, len(self.photo_ids), self.batch):
+            rows = np.arange(start, min(start + self.batch, len(self.photo_ids)))
+            bags = []
+            for photo_id in self.photo_ids[rows]:
+                with np.load(self.folder / "v0" / f"{photo_key(photo_id)}.npz") as saved:
+                    bags.append(np.concatenate([saved[k].astype(np.float32) for k in self.parts], axis=1))
+            tiles = torch.zeros(len(bags), max(map(len, bags)), bags[0].shape[1])
+            mask = torch.zeros(tiles.shape[:2], dtype=torch.bool)
+            for i, bag in enumerate(bags):
+                tiles[i, : len(bag)], mask[i, : len(bag)] = torch.from_numpy(bag), True
+            yield tiles, mask, self.labels[rows], rows
+
+
+def check_paddy_predictions(declaration: dict) -> None:
+    """The saved Stage 10 predictions (they pick examples, check deletion) are the declared ones."""
+    for name, saved in declaration["paddy"]["predictions_sha256"].items():
+        if digest(paddy_predictions(name)) != saved:
+            raise ValueError(f"{name}: Paddy predictions changed after the declaration")
+
+
+def paddy_setup(declaration: dict) -> dict:
+    """The Paddy settings, after checking that the cache and the saved predictions are the declared ones."""
+    check_paddy_predictions(declaration)
+    config = load_config(PADDY_CONFIG)
+    manifest = verify_paddy_cache(config, config["paddy"]["caches"]["tiles"][PADDY_ZOOM])
+    if manifest["spec_sha256"] != declaration["paddy"]["cache_spec_sha256"]:
+        raise ValueError("the Paddy description cache is not the one that was declared")
+    return config
+
+
+def paddy_run(name: str, declaration: dict, config: dict, device: torch.device, ids: list[str] | None = None):
+    """One declared model with its Paddy bags (``ids`` limits the photos)."""
+    check_declared(name, declaration)
+    model, parts = pz.load_head(name, config["encoders"][config["paddy"]["encoder"]]["dim"], device)
+    return model, PaddyBags(config, parts, ids)
+
+
+def attention_of(model: MILModel, bags, device: torch.device) -> dict[str, np.ndarray]:
+    """Attention weights over the real tiles of every photo of ``bags``."""
+    rows, _, weights = tm.predict(model, bags, device)
+    return {bags.photo_ids[row]: w for row, w in zip(rows, weights)}
+
+
+def compute_device() -> torch.device:
+    return torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+
+def check_against_stage10(long: pd.DataFrame, name: str, classes: list[str]) -> None:
+    """With nothing removed, each photo's true-class probability must be the one Stage 10 saved."""
+    saved = pd.read_csv(paddy_predictions(name)).set_index("photo_id")
+    none = long[long["condition"] == "none"].set_index("photo_id")
+    probs = saved.loc[none.index, [f"prob_{c}" for c in classes]].to_numpy()
+    if not np.allclose(
+        none["p_true"].to_numpy(), probs[np.arange(len(none)), none["true"].to_numpy()], atol=PADDY_TOLERANCE
+    ):
+        raise ValueError(
+            f"{name}: probabilities with nothing removed differ from the saved Stage 10 predictions"
+        )
+
+
 # ---------------------------------------------------------------- actions
 
 
 def select(partition: str) -> None:
-    if partition == "test":
-        require_plan()
+    if partition in ("test", "paddy"):
+        declaration = declaration_for(partition)
     config = load_config(EMBED_CONFIG)
     classes = config["classes"]
+    if partition == "paddy":
+        check_paddy_predictions(declaration)
     predictions = read_run_predictions(partition)
-    examples = add_extras(
-        rank_examples(predictions, classes, PER_CELL, SELECT_SEED), predictions, EXTRA_ITEMS, SELECT_SEED
-    )
+    extra = 0 if partition == "paddy" else EXTRA_ITEMS  # Paddy: the 36 labelled examples only, no blind sheet
+    examples = rank_examples(predictions, classes, PER_CELL, SELECT_SEED)
+    if partition != "paddy":
+        examples = add_extras(examples, predictions, extra, SELECT_SEED)
     path = OUT / f"examples_{partition}.csv"
     if path.exists():
         pd.testing.assert_frame_equal(pd.read_csv(path), examples, check_dtype=False, atol=1e-6)  # same rule
@@ -393,18 +518,30 @@ def select(partition: str) -> None:
         write_csv(examples, path)
     if not RATINGS.exists():
         write_csv(pd.DataFrame(columns=RATING_COLUMNS), RATINGS)
-    wanted = len(classes) * len(CATEGORIES) * PER_CELL + EXTRA_ITEMS
+    wanted = len(classes) * len(CATEGORIES) * PER_CELL + extra
     if len(examples) != wanted:
         print(f"WARNING: {len(examples)} items instead of {wanted} (a class has too few wrong photos?)")
-    print(f"{len(examples)} examples ({len(examples) - EXTRA_ITEMS} by rule, {EXTRA_ITEMS} extra) -> {path}")
+    print(f"{len(examples)} examples ({len(examples) - extra} by rule, {extra} extra) -> {path}")
 
 
 def heatmaps(partition: str) -> None:
-    if partition == "test":
-        require_plan()
+    paddy = partition == "paddy"
+    if partition in ("test", "paddy"):
+        declaration = declaration_for(partition)
+    if paddy:
+        select(partition)  # the list on disk must be the one the rule gives from the declared predictions
     examples = pd.read_csv(OUT / f"examples_{partition}.csv")
-    photos = Photos()
-    attention = {r: read_attention(run_name(0, r), partition) for r in ROUNDS}
+    photos = Photos(partition)
+    if paddy:  # no saved attention for Paddy photos: the declared model is run on the chosen photos' bags
+        config, device = paddy_setup(declaration), compute_device()
+        attention = {
+            r: attention_of(
+                *paddy_run(run_name(0, r), declaration, config, device, list(chosen["photo_id"])), device
+            )
+            for r, chosen in examples.groupby("round")
+        }
+    else:
+        attention = {r: read_attention(run_name(0, r), partition) for r in ROUNDS}
     for row in examples.itertuples():
         labelled = (
             OUT
@@ -412,8 +549,8 @@ def heatmaps(partition: str) -> None:
             / partition
             / f"{row.true_class}_{row.category}_{row.rank}_{photo_key(row.photo_id)}.png"
         )
-        blind = OUT / "blind" / partition / f"{row.item_id}.png"
-        if blind.exists() and (labelled.exists() or row.category == "extra"):
+        blind = None if paddy else OUT / "blind" / partition / f"{row.item_id}.png"
+        if (blind is None or blind.exists()) and (labelled.exists() or row.category == "extra"):
             continue
         weights, boxes, rgb = (
             attention[row.round][row.photo_id],
@@ -421,7 +558,8 @@ def heatmaps(partition: str) -> None:
             photos.rgb(row.photo_id),
         )
         check_grid(rgb, boxes, photos.tile)
-        draw_heatmap(rgb, boxes, weights, photos.tile, blind, row.item_id)
+        if blind is not None:
+            draw_heatmap(rgb, boxes, weights, photos.tile, blind, row.item_id)
         if row.category != "extra":
             title = (
                 f"{row.true_class}, {row.category} #{row.rank}: predicted {row.pred_class} "
@@ -429,7 +567,10 @@ def heatmaps(partition: str) -> None:
                 f"{weights.max() * len(weights):.1f}x uniform"
             )
             draw_heatmap(rgb, boxes, weights, photos.tile, labelled, title)
-    print(f"heat maps -> {OUT / 'heatmaps' / partition} and {OUT / 'blind' / partition}")
+    print(
+        f"heat maps -> {OUT / 'heatmaps' / partition}"
+        + ("" if paddy else f" and {OUT / 'blind' / partition}")
+    )
 
 
 def plan() -> None:
@@ -440,6 +581,8 @@ def plan() -> None:
     if path.exists():
         print(f"{path} already declared; not changed")
         return
+    paddy_config = load_config(PADDY_CONFIG)
+    manifest = verify_paddy_cache(paddy_config, paddy_config["paddy"]["caches"]["tiles"][PADDY_ZOOM])
     runs = {}
     for name in runs_for("val"):
         tested = (root / name / "test_predictions.csv").exists()
@@ -454,7 +597,7 @@ def plan() -> None:
         "deletion": {
             "ks": list(KS),
             "random_seeds": list(RANDOM_SEEDS),
-            "partitions": ["test", "val"],
+            "partitions": ["test", "val", "paddy"],
             "ranking": "the model's own attention on the full bag, taken once",
             "removal": "switch the tiles off in the real-tile mask (equal to removing them)",
             "scores": ["accuracy", "macro_f1", "true-class probability"],
@@ -463,7 +606,7 @@ def plan() -> None:
             "threshold": BACKGROUND_SHARE,
             "mask": "Otsu leaf mask of the photo at the common leaf scale, a measuring tool only",
             "mask_flag_outside": list(MASK_SANE),
-            "partitions": ["test", "val"],
+            "partitions": ["test", "val", "paddy"],
         },
         "verdict": {
             "rule": "top-k matters more than random-k only if the photo-bootstrap and the capture-block-"
@@ -473,6 +616,15 @@ def plan() -> None:
             "comparison": base["evaluation"]["comparison"],
         },
         "examples": {"per_cell": PER_CELL, "extra": EXTRA_ITEMS, "seed": SELECT_SEED},
+        "paddy": {  # extension declared in handbook §24, 2026-11-21: same models and measures
+            "cache": paddy_config["paddy"]["caches"]["tiles"][PADDY_ZOOM],
+            "zoom": PADDY_ZOOM,
+            "cache_spec_sha256": manifest["spec_sha256"],
+            "photos": manifest["photos"],
+            "split_sha256": digest(REPO_ROOT / paddy_config["paddy"]["split_file"]),
+            "bootstrap": "photo only: no capture blocks; a photo's gap is averaged over the five models",
+            "predictions_sha256": {name: digest(paddy_predictions(name)) for name in runs_for("paddy")},
+        },
         "explain_sha256": digest(Path(__file__)),
         "test_runs": [n for n, v in runs.items() if v["tested"]],
         "runs": runs,
@@ -482,12 +634,13 @@ def plan() -> None:
 
 
 def start_marker(partition: str, action: str) -> dict:
-    """The declaration, and (for test) the run-once marker: a later call may resume, never restart."""
+    """The declaration, and (test, Paddy) the run-once marker: a later call may resume, never restart."""
     plan_path = require_plan()
-    declaration = json.loads(plan_path.read_text())
+    declaration = declaration_for(partition)
     version = require_clean_code()
-    if partition == "test":
-        marker, plan_sha = get_default_runs_dir() / f"explain_{action}_started.json", digest(plan_path)
+    if partition in ("test", "paddy"):
+        stem = f"explain_{action}" if partition == "test" else f"explain_paddy_{action}"
+        marker, plan_sha = get_default_runs_dir() / f"{stem}_started.json", digest(plan_path)
         if not marker.exists():
             write_once(marker, {"evaluation_code": version, "plan_sha256": plan_sha})
         elif json.loads(marker.read_text())["plan_sha256"] != plan_sha:
@@ -496,20 +649,24 @@ def start_marker(partition: str, action: str) -> dict:
 
 
 def names_for(partition: str, declaration: dict) -> list[str]:
-    """Test photos: only the runs declared as tested. Validation photos: all three training seeds."""
-    return declaration["test_runs"] if partition == "test" else runs_for("val")
+    """Test and Paddy photos: only the runs declared as tested. Validation: all three training seeds."""
+    return declaration["test_runs"] if partition in ("test", "paddy") else runs_for("val")
 
 
-def load_run(name: str, declaration: dict):
-    """Model, folds and config of one run, after checking the files are the ones that were declared."""
-    root = get_default_runs_dir()
-    expected = declaration["runs"][name]
-    record = json.loads((root / name / "record.json").read_text())
+def check_declared(name: str, declaration: dict) -> None:
+    root, expected = get_default_runs_dir(), declaration["runs"][name]
     if (
         digest(root / name / "record.json") != expected["record_sha256"]
         or digest(checkpoint(root / name)) != expected["checkpoint_sha256"]
     ):
         raise ValueError(f"{name}: changed after the declaration")
+
+
+def load_run(name: str, declaration: dict):
+    """Model, folds and config of one run, after checking the files are the ones that were declared."""
+    root = get_default_runs_dir()
+    check_declared(name, declaration)
+    record = json.loads((root / name / "record.json").read_text())
     config = record["config"]
     seed_everything(config.get("run_seed", config["seed"]), config["determinism"])
     folds, _ = read_folds(config)
@@ -523,7 +680,8 @@ def load_run(name: str, declaration: dict):
 def deletion(partition: str) -> None:
     declaration = start_marker(partition, "deletion")
     names = names_for(partition, declaration)
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    device, paddy = compute_device(), partition == "paddy"
+    paddy_config = paddy_setup(declaration) if paddy else None
     for name in names:
         scores_path, photos_path = (
             OUT / f"deletion_{partition}_{name}.csv",
@@ -531,11 +689,19 @@ def deletion(partition: str) -> None:
         )
         if scores_path.exists() and photos_path.exists():
             continue
-        model, store, folds, config = load_run(name, declaration)
-        r, classes = config["round"], config["classes"]
-        bags = tm.Bags(store, folds, r, partition, classes, 1, 0.0, config["mil"]["batch"], config["seed"])
-        stored = read_attention(name, partition)
-        long = delete_and_score(model.to(device), bags, device, stored)
+        if paddy:
+            model, bags = paddy_run(name, declaration, paddy_config, device)
+            r, classes = pz.record(name)["round"], paddy_config["classes"]
+            long = delete_and_score(model, bags, device)  # no saved attention to compare with
+            check_against_stage10(long, name, classes)
+        else:
+            model, store, folds, config = load_run(name, declaration)
+            r, classes = config["round"], config["classes"]
+            bags = tm.Bags(
+                store, folds, r, partition, classes, 1, 0.0, config["mil"]["batch"], config["seed"]
+            )
+            stored = read_attention(name, partition)
+            long = delete_and_score(model.to(device), bags, device, stored)
         write_csv(photo_table(long, classes).assign(run=name, round=r), photos_path)
         write_csv(score_conditions(long, classes).assign(run=name, round=r), scores_path)
         print(f"{name}: deletion test on {partition} photos done", flush=True)
@@ -557,14 +723,26 @@ def photo_background(photos: Photos, photo_id: str, folder: Path) -> tuple[np.nd
 def background(partition: str) -> None:
     declaration = start_marker(partition, "background")
     names = names_for(partition, declaration)
-    photos, folder = Photos(), OUT / "background_fraction"
-    attention = {name: read_attention(name, partition) for name in names}
+    paddy = partition == "paddy"
+    photos, folder = (
+        Photos(partition),
+        OUT / ("background_fraction_paddy" if paddy else "background_fraction"),
+    )
+    if paddy:
+        paddy_config, device = paddy_setup(declaration), compute_device()
+        attention = {
+            name: attention_of(*paddy_run(name, declaration, paddy_config, device), device) for name in names
+        }
+    else:
+        attention = {name: read_attention(name, partition) for name in names}
     wanted = sorted({photo_id for weights in attention.values() for photo_id in weights})
     with ThreadPoolExecutor(max_workers=8) as pool:  # decoding and the Otsu mask release the GIL
         measured = dict(
             zip(wanted, pool.map(lambda photo_id: photo_background(photos, photo_id, folder), wanted))
         )
-    classes = read_folds(load_config(SPLIT_CONFIG))[0].set_index("photo_id")["class"]
+    classes = (pz.truth(paddy_config) if paddy else read_folds(load_config(SPLIT_CONFIG))[0]).set_index(
+        "photo_id"
+    )["class"]
     rows = []
     for name in names:
         for photo_id, weights in attention[name].items():
@@ -606,34 +784,49 @@ def bootstrap_range(
 
 
 def deletion_summary(
-    scores: pd.DataFrame, photos: pd.DataFrame, blocks: pd.Series, settings: dict, comparison: dict
+    scores: pd.DataFrame, photos: pd.DataFrame, blocks: pd.Series | None, settings: dict, comparison: dict
 ) -> pd.DataFrame:
     """Per k on the pooled photos of the runs given: top-k against random-k, and the verdict of rule 9.
 
     ``blocks`` maps photo_id to capture block. The range is given twice (decision D9): resampling photos
     and resampling whole capture blocks; the verdict needs both above 0 and the round wins. All five
     rounds must be present. Probabilities are means over photos, like the gap.
+
+    ``blocks=None`` (Paddy Doctor has no capture blocks): the five round-models score the same photos, so
+    each photo's values are averaged over them first; the photos are resampled; the verdict needs the photo
+    range above 0 and the round wins (handbook §24, 2026-11-21).
     """
     if scores["round"].nunique() != len(ROUNDS):
         raise ValueError(f"deletion results of {scores['round'].nunique()} rounds, expected {len(ROUNDS)}")
     random = scores[scores["condition"] == "random"].groupby(["run", "round", "k"]).mean(numeric_only=True)
     top = scores[scores["condition"] == "top"].set_index(["run", "round", "k"])
     full_f1 = scores[scores["condition"] == "none"]["macro_f1"].mean()
-    rows = []
+    rows, suffix = [], "" if blocks is not None else " (photo range only)"
     for k in sorted(top.index.get_level_values("k").unique()):
         t, rnd = top.xs(k, level="k"), random.xs(k, level="k")
         p = photos[photos["k"] == k]
+        if blocks is None:
+            p = p.groupby("photo_id", as_index=False).agg(
+                true_class=("true_class", "first"),
+                p_full=("p_full", "mean"),
+                p_top=("p_top", "mean"),
+                p_random=("p_random", "mean"),
+            )
         gap = (p["p_random"] - p["p_top"]).to_numpy()
         photo_sets = stats.resample_indices(
             p["true_class"].to_numpy(), settings["resamples"], settings["stratified"], 0
         )
-        block_sets = followup_report.block_samples(
-            p["photo_id"].map(blocks).to_numpy(), settings["resamples"], 0
-        )
         low, high = bootstrap_range(gap, photo_sets, settings["confidence"])
-        block_low, block_high = bootstrap_range(gap, block_sets, settings["confidence"])
+        ranges, lows = {"gap_low": low, "gap_high": high}, [low]
+        if blocks is not None:
+            block_sets = followup_report.block_samples(
+                p["photo_id"].map(blocks).to_numpy(), settings["resamples"], 0
+            )
+            block_low, block_high = bootstrap_range(gap, block_sets, settings["confidence"])
+            ranges |= {"gap_block_low": block_low, "gap_block_high": block_high}
+            lows.append(block_low)
         wins = int((rnd["p_true"] > t["p_true"]).sum())
-        better = min(low, block_low) > 0 and wins >= comparison["min_round_wins"]
+        better = min(lows) > 0 and wins >= comparison["min_round_wins"]
         rows.append(
             {
                 "k": k,
@@ -644,13 +837,10 @@ def deletion_summary(
                 "top_p_true": p["p_top"].mean(),
                 "random_p_true": p["p_random"].mean(),
                 "gap_p_true": gap.mean(),
-                "gap_low": low,
-                "gap_high": high,
-                "gap_block_low": block_low,
-                "gap_block_high": block_high,
+                **ranges,
                 "round_wins": wins,
                 "rounds": len(t),
-                "verdict": "top-k matters more than random-k" if better else "no clear difference",
+                "verdict": ("top-k matters more than random-k" if better else "no clear difference") + suffix,
             }
         )
     return pd.DataFrame(rows)
@@ -684,10 +874,14 @@ def deletion_figure(summary: pd.DataFrame, path: Path, partition: str) -> None:
     plt.close(figure)
 
 
+def photos_label(partition: str) -> str:
+    return "Paddy Doctor photos at native zoom" if partition == "paddy" else f"{partition} photos"
+
+
 def deletion_section(partition: str, settings: dict, comparison: dict) -> list[str]:
     scores = read_all(f"deletion_{partition}_*.csv")
     photos = read_all(f"deletion_photos_{partition}_*.csv")
-    title = f"## Deletion test, {partition} photos (seed-0 models)"
+    title = f"## Deletion test, {photos_label(partition)} (seed-0 models)"
     if scores is None:
         return [title, "", "Not run yet.", ""]
     if seed0(scores)["round"].nunique() != len(ROUNDS):
@@ -697,7 +891,8 @@ def deletion_section(partition: str, settings: dict, comparison: dict) -> list[s
             f"Incomplete: {seed0(scores)['run'].nunique()} of {len(ROUNDS)} runs finished.",
             "",
         ]
-    summary = deletion_summary(seed0(scores), seed0(photos), followup_report.block_of(), settings, comparison)
+    blocks = None if partition == "paddy" else followup_report.block_of()
+    summary = deletion_summary(seed0(scores), seed0(photos), blocks, settings, comparison)
     TABLES.mkdir(parents=True, exist_ok=True)
     summary.to_csv(TABLES / f"explain_deletion_{partition}.csv", index=False)
     scores.to_csv(TABLES / f"explain_deletion_rounds_{partition}.csv", index=False)
@@ -711,9 +906,16 @@ def deletion_section(partition: str, settings: dict, comparison: dict) -> list[s
         "",
         "Percentages. `gap` = true-class probability with random-k removed minus with top-k removed; "
         "ranges = "
-        "95% paired bootstrap over photos and over whole capture blocks (decision D9). Rule: top-k matters "
-        "more than random-k only if both ranges are above 0 and the gap is positive in at least "
-        f"{comparison['min_round_wins']} of {len(ROUNDS)} rounds."
+        + (
+            "95% paired bootstrap over photos only (Paddy Doctor has no capture blocks; each photo's five "
+            "round-model values are averaged first; near-duplicate photos are not grouped, so the range is "
+            "narrower than it would be with groups). Rule: top-k matters more than random-k only if the "
+            "photo range is above 0 and the gap is positive in at least "
+            if partition == "paddy"
+            else "95% paired bootstrap over photos and over whole capture blocks (decision D9). Rule: top-k "
+            "matters more than random-k only if both ranges are above 0 and the gap is positive in at least "
+        )
+        + f"{comparison['min_round_wins']} of {len(ROUNDS)} rounds."
         + (
             " A validation photo can be in several rounds; each appearance counts."
             if partition == "val"
@@ -735,7 +937,7 @@ def deletion_section(partition: str, settings: dict, comparison: dict) -> list[s
 
 def background_section(partition: str) -> list[str]:
     table = OUT / f"background_{partition}.csv"
-    title = f"## Attention on background tiles, {partition} photos (seed-0 models)"
+    title = f"## Attention on background tiles, {photos_label(partition)} (seed-0 models)"
     if not table.exists():
         return [title, "", "Not run yet.", ""]
     data = seed0(pd.read_csv(table))
@@ -763,20 +965,112 @@ def background_section(partition: str) -> list[str]:
     ]
 
 
+def fleiss_kappa(counts: np.ndarray) -> float:
+    """Fleiss' kappa; ``counts[i, j]`` = raters who gave item i answer j (same number of raters per item)."""
+    raters = counts.sum(axis=1)
+    if len(set(raters)) != 1 or raters[0] < 2:
+        raise ValueError("Fleiss' kappa needs the same number (at least 2) of raters for every item")
+    n = raters[0]
+    agreement = ((counts**2).sum(1) - n) / (n * (n - 1))
+    chance = ((counts.sum(0) / counts.sum()) ** 2).sum()
+    return float("nan") if chance == 1 else float((agreement.mean() - chance) / (1 - chance))
+
+
+def rating_summary(ratings: pd.DataFrame, examples: pd.DataFrame) -> dict:
+    """Checks the ratings file against the blind sheet and gives shares and agreement.
+
+    Every rater must have rated every item once, with a valid answer and one kind per rater."""
+    if not set(RATING_COLUMNS) <= set(ratings):
+        raise ValueError(f"the ratings file needs the columns {RATING_COLUMNS}")
+    if ratings["rater"].isna().any():
+        raise ValueError("every rating needs a rater id")
+    if not ratings["rating"].isin(ANSWERS).all() or not ratings["rater_kind"].isin(RATER_KINDS).all():
+        raise ValueError(f"ratings must be one of {ANSWERS} and rater_kind one of {RATER_KINDS}")
+    if (
+        ratings.duplicated(["item_id", "rater"]).any()
+        or (ratings.groupby("rater")["rater_kind"].nunique() > 1).any()
+    ):
+        raise ValueError("a rater rated an item twice, or has two kinds")
+    items = set(examples["item_id"])
+    if (
+        not set(ratings["item_id"]) <= items
+        or (ratings.groupby("rater")["item_id"].nunique() != len(items)).any()
+    ):
+        raise ValueError("every rater must rate every blind item, and only those")
+    wide = ratings.pivot(index="item_id", columns="rater", values="rating")
+    counts = np.stack([(wide == a).sum(1).to_numpy() for a in ANSWERS], axis=1)
+    shares = pd.crosstab(ratings["rater"], ratings["rating"], normalize="index").reindex(
+        columns=list(ANSWERS), fill_value=0
+    )
+    shares.loc["all ratings"] = (
+        ratings["rating"].value_counts(normalize=True).reindex(list(ANSWERS), fill_value=0)
+    )
+    by_category = (
+        ratings.merge(examples[["item_id", "category"]], on="item_id")
+        .groupby("category")["rating"]
+        .value_counts(normalize=True)
+        .unstack(fill_value=0)
+        .reindex(columns=list(ANSWERS), fill_value=0)
+    )
+    return {
+        "shares": shares,
+        "by_category": by_category,
+        "raters": ratings.drop_duplicates("rater").set_index("rater")["rater_kind"],
+        "items": len(items),
+        "all_agree": float((wide.nunique(axis=1) == 1).mean()),
+        "kappa": fleiss_kappa(counts),
+    }
+
+
+def ratings_section() -> list[str]:
+    title = "## Blind rating of the heat maps (Objective 6)"
+    examples_path = OUT / "examples_val.csv"
+    ratings = pd.read_csv(RATINGS) if RATINGS.exists() else pd.DataFrame()
+    if ratings.empty or not examples_path.exists():
+        return [title, "", "No ratings yet.", ""]
+    summary = rating_summary(ratings, pd.read_csv(examples_path))
+    TABLES.mkdir(parents=True, exist_ok=True)
+    summary["shares"].reset_index().to_csv(TABLES / "explain_ratings.csv", index=False)
+
+    def show(table: pd.DataFrame) -> str:
+        return md_table((table * 100).round(1).reset_index())
+
+    raters = ", ".join(f"`{name}` ({kind})" for name, kind in summary["raters"].items())
+    return [
+        title,
+        "",
+        f"{summary['items']} blind heat maps (the rule's validation examples and random extras, shown "
+        f"without the true class or the prediction). Raters, all disclosed: {raters}. Question: does the hot "
+        "area cover visible symptoms? Percentages of ratings.",
+        "",
+        show(summary["shares"]),
+        "",
+        f"All raters gave the same answer on {summary['all_agree']:.1%} of the maps; Fleiss' kappa "
+        f"{summary['kappa']:.2f} (three answers; 0 = chance level, 1 = perfect agreement). By example "
+        "category (`extra` = random photos; `wrong` = the rule's confident mistakes), seen only after "
+        "rating:",
+        "",
+        show(summary["by_category"]),
+        "",
+    ]
+
+
 def report() -> None:
     evaluation = load_config("configs/base.yaml")["evaluation"]
     text = [
         "# Stage 12: does the attention head look at real symptoms?",
         "",
         "Generated by `python -m src.explain report` from the files in `results/explain/`; nothing is typed "
-        "by hand. The declaration is `runs/explain_plan.json` (handbook §24, 2026-11-20).",
+        "by hand. The declaration is `runs/explain_plan.json` (handbook §24, 2026-11-20; the Paddy Doctor "
+        "extension, 2026-11-21).",
         "",
     ]
-    for partition in ("test", "val"):
+    for partition in ("test", "val", "paddy"):
         text += deletion_section(partition, evaluation["bootstrap"], evaluation["comparison"])
-    for partition in ("test", "val"):
+    for partition in ("test", "val", "paddy"):
         text += background_section(partition)
-    for partition in ("val", "test"):
+    text += ratings_section()
+    for partition in ("val", "test", "paddy"):
         path = OUT / f"examples_{partition}.csv"
         if path.exists():
             text += [
@@ -793,7 +1087,7 @@ def report() -> None:
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("action", choices=["select", "heatmaps", "plan", "deletion", "background", "report"])
-    parser.add_argument("--partition", choices=["val", "test"], default="val")
+    parser.add_argument("--partition", choices=["val", "test", "paddy"], default="val")
     args = parser.parse_args()
     {
         "select": lambda: select(args.partition),
