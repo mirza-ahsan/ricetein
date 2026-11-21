@@ -690,3 +690,78 @@ def test_the_deletion_check_against_stage_10_is_called(tmp_path, monkeypatch):
     monkeypatch.setattr(ex, "check_against_stage10", lambda *a: called.append(a[1]) or real(*a))
     ex.deletion("paddy")
     assert called == ex.runs_for("paddy")
+
+
+# ------------------------------------------------------------------ blind ratings
+
+
+def sheet(n=10):
+    return pd.DataFrame(
+        {"item_id": [f"H{i:02d}" for i in range(n)], "category": (["correct", "wrong"] * n)[:n]}
+    )
+
+
+def ratings_of(answers, kinds=None):
+    rows = []
+    for rater, given in answers.items():
+        for i, answer in enumerate(given):
+            rows.append(
+                {"item_id": f"H{i:02d}", "rater": rater, "rater_kind": "model", "rating": answer, "note": ""}
+            )
+    return pd.DataFrame(rows)
+
+
+def test_fleiss_kappa_on_known_cases():
+    assert ex.fleiss_kappa(np.array([[3, 0, 0], [0, 3, 0], [0, 0, 3], [3, 0, 0]])) == pytest.approx(1.0)
+    # Fleiss et al.'s classic example (10 items, 14 raters, 5 categories): kappa = 0.210
+    table = np.array(
+        [
+            [0, 0, 0, 0, 14],
+            [0, 2, 6, 4, 2],
+            [0, 0, 3, 5, 6],
+            [0, 3, 9, 2, 0],
+            [2, 2, 8, 1, 1],
+            [7, 7, 0, 0, 0],
+            [3, 2, 6, 3, 0],
+            [2, 5, 3, 2, 2],
+            [6, 5, 2, 1, 0],
+            [0, 2, 2, 3, 7],
+        ]
+    )
+    assert ex.fleiss_kappa(table) == pytest.approx(0.210, abs=0.001)
+    with pytest.raises(ValueError, match="same number"):
+        ex.fleiss_kappa(np.array([[2, 0, 0], [1, 0, 0]]))
+
+
+def test_rating_summary_gives_shares_agreement_and_checks_the_file():
+    a = ["yes"] * 5 + ["partly"] * 3 + ["no"] * 2
+    b = ["yes"] * 5 + ["partly"] * 2 + ["no"] * 3
+    c = ["yes"] * 4 + ["no"] * 1 + ["partly"] * 3 + ["no"] * 2
+    out = ex.rating_summary(ratings_of({"r1": a, "r2": b, "r3": c}), sheet())
+    assert out["shares"].loc["r1"].tolist() == [0.5, 0.3, 0.2] and out["items"] == 10
+    assert out["shares"].loc["all ratings"].sum() == pytest.approx(1.0)
+    assert out["all_agree"] == pytest.approx(0.8)  # items 4 and 7 differ; the other eight agree
+    assert -1 <= out["kappa"] <= 1 and set(out["by_category"].index) == {"correct", "wrong"}
+    bad = ratings_of({"r1": a, "r2": b})
+    with pytest.raises(ValueError, match="one of"):
+        ex.rating_summary(bad.assign(rating="maybe"), sheet())
+    with pytest.raises(ValueError, match="twice"):
+        ex.rating_summary(pd.concat([bad, bad.head(1)]), sheet())
+    with pytest.raises(ValueError, match="every blind item"):
+        ex.rating_summary(bad.iloc[:-1], sheet())
+    with pytest.raises(ValueError, match="every blind item"):
+        ex.rating_summary(bad.assign(item_id=bad["item_id"].str.replace("H", "Z")), sheet())
+
+
+def test_report_reads_the_ratings_file(tmp_path, monkeypatch):
+    paddy_world(tmp_path, monkeypatch)
+    (tmp_path / "explain").mkdir()
+    sheet().to_csv(tmp_path / "explain" / "examples_val.csv", index=False)
+    assert ex.ratings_section()[2] == "No ratings yet."
+    pd.DataFrame(columns=ex.RATING_COLUMNS).to_csv(ex.RATINGS, index=False)
+    assert ex.ratings_section()[2] == "No ratings yet."  # header only
+    answers = {"r1": ["yes", "no"] * 5, "r2": ["yes", "partly"] * 5}
+    ratings_of(answers).to_csv(ex.RATINGS, index=False)
+    text = "\n".join(ex.ratings_section())
+    assert "Fleiss' kappa" in text and "`r1` (model)" in text
+    assert (tmp_path / "tables" / "explain_ratings.csv").exists()

@@ -55,6 +55,8 @@ FIGURES = REPO_ROOT / "results/figures"
 REPORT = REPO_ROOT / "docs/reports/explain_report.md"
 RATINGS = REPO_ROOT / "data/heatmap_ratings.csv"
 RATING_COLUMNS = ["item_id", "rater", "rater_kind", "rating", "note"]  # rating: yes / partly / no
+ANSWERS = ("yes", "partly", "no")
+RATER_KINDS = ("model", "human")
 
 PADDY_CONFIG = "configs/paddy_zero_shot.yaml"
 PADDY_ZOOM = "native"  # the Stage 10 headline zoom; the only one used here
@@ -969,6 +971,90 @@ def background_section(partition: str) -> list[str]:
     ]
 
 
+def fleiss_kappa(counts: np.ndarray) -> float:
+    """Fleiss' kappa; ``counts[i, j]`` = raters who gave item i answer j (same number of raters per item)."""
+    raters = counts.sum(1)
+    if len(set(raters)) != 1 or raters[0] < 2:
+        raise ValueError("Fleiss' kappa needs the same number (at least 2) of raters for every item")
+    n = raters[0]
+    agreement = ((counts**2).sum(1) - n) / (n * (n - 1))
+    chance = ((counts.sum(0) / counts.sum()) ** 2).sum()
+    return float("nan") if chance == 1 else float((agreement.mean() - chance) / (1 - chance))
+
+
+def rating_summary(ratings: pd.DataFrame, examples: pd.DataFrame) -> dict:
+    """Checks the ratings file against the blind sheet and gives shares and agreement.
+
+    Every rater must have rated every item once, with a valid answer and one kind per rater."""
+    if not set(RATING_COLUMNS) <= set(ratings):
+        raise ValueError(f"the ratings file needs the columns {RATING_COLUMNS}")
+    if not ratings["rating"].isin(ANSWERS).all() or not ratings["rater_kind"].isin(RATER_KINDS).all():
+        raise ValueError(f"ratings must be one of {ANSWERS} and rater_kind one of {RATER_KINDS}")
+    if (
+        ratings.duplicated(["item_id", "rater"]).any()
+        or (ratings.groupby("rater")["rater_kind"].nunique() > 1).any()
+    ):
+        raise ValueError("a rater rated an item twice, or has two kinds")
+    items = set(examples["item_id"])
+    if (
+        not set(ratings["item_id"]) <= items
+        or (ratings.groupby("rater")["item_id"].nunique() != len(items)).any()
+    ):
+        raise ValueError("every rater must rate every blind item, and only those")
+    wide = ratings.pivot(index="item_id", columns="rater", values="rating")
+    counts = np.stack([(wide == a).sum(1).to_numpy() for a in ANSWERS], axis=1)
+    shares = pd.crosstab(ratings["rater"], ratings["rating"], normalize="index").reindex(
+        columns=list(ANSWERS), fill_value=0
+    )
+    shares.loc["all ratings"] = (
+        ratings["rating"].value_counts(normalize=True).reindex(list(ANSWERS), fill_value=0)
+    )
+    by_category = (
+        ratings.merge(examples[["item_id", "category"]], on="item_id")
+        .groupby("category")["rating"]
+        .value_counts(normalize=True)
+        .unstack(fill_value=0)
+        .reindex(columns=list(ANSWERS), fill_value=0)
+    )
+    return {
+        "shares": shares,
+        "by_category": by_category,
+        "raters": ratings.drop_duplicates("rater").set_index("rater")["rater_kind"],
+        "items": len(items),
+        "all_agree": float((wide.nunique(axis=1) == 1).mean()),
+        "kappa": fleiss_kappa(counts),
+    }
+
+
+def ratings_section() -> list[str]:
+    title = "## Blind rating of the heat maps (Objective 6)"
+    examples_path = OUT / "examples_val.csv"
+    if not RATINGS.exists() or not examples_path.exists() or RATINGS.read_text().count("\n") < 2:
+        return [title, "", "No ratings yet.", ""]
+    summary = rating_summary(pd.read_csv(RATINGS), pd.read_csv(examples_path))
+    TABLES.mkdir(parents=True, exist_ok=True)
+    summary["shares"].reset_index().to_csv(TABLES / "explain_ratings.csv", index=False)
+    show = lambda table: md_table((table * 100).round(1).reset_index())  # noqa: E731
+    raters = ", ".join(f"`{name}` ({kind})" for name, kind in summary["raters"].items())
+    return [
+        title,
+        "",
+        f"{summary['items']} blind heat maps (the rule's validation examples and random extras, shown "
+        f"without the true class or the prediction). Raters, all disclosed: {raters}. Question: does the hot "
+        "area cover visible symptoms? Percentages of ratings.",
+        "",
+        show(summary["shares"]),
+        "",
+        f"All raters gave the same answer on {summary['all_agree']:.1%} of the maps; Fleiss' kappa "
+        f"{summary['kappa']:.2f} (three answers; 0 = chance level, 1 = perfect agreement). By example "
+        "category (`extra` = random photos; `wrong` = the rule's confident mistakes), seen only after "
+        "rating:",
+        "",
+        show(summary["by_category"]),
+        "",
+    ]
+
+
 def report() -> None:
     evaluation = load_config("configs/base.yaml")["evaluation"]
     text = [
@@ -983,6 +1069,7 @@ def report() -> None:
         text += deletion_section(partition, evaluation["bootstrap"], evaluation["comparison"])
     for partition in ("test", "val", "paddy"):
         text += background_section(partition)
+    text += ratings_section()
     for partition in ("val", "test", "paddy"):
         path = OUT / f"examples_{partition}.csv"
         if path.exists():
