@@ -149,3 +149,153 @@ H47,model_rater_3,model,no,hot tile on healthy-looking leaf
 H48,model_rater_3,model,partly,hot tile near small dark spots
 H49,model_rater_3,model,partly,hot tile on pale damaged tissue
 H50,model_rater_3,model,yes,hot tile on the brown lesion
+H01,human_rater_2,human,yes,hot tile on brown lesion
+H02,human_rater_2,human,yes,hot tile on brown spots near base
+H03,human_rater_2,human,no,hot tile at leaf tip with no marks
+H04,human_rater_2,human,partly,hot tile on leaf with faint pale flecks
+H05,human_rater_2,human,partly,hot tile on leaf with only tiny marks
+H06,human_rater_2,human,yes,hot tile on brown lesion
+H07,human_rater_2,human,yes,hot tile on white patches
+H08,human_rater_2,human,partly,hot on leaf with faint flecks
+H09,human_rater_2,human,partly,hot at leaf edge near pale streaks
+H10,human_rater_2,human,no,hot on plain leaf without marks
+H11,human_rater_2,human,partly,hot tile beside small white mark
+H12,human_rater_2,human,partly,hot on leaf near faint orange spot
+H13,human_rater_2,human,no,hot on leaf tip without marks
+H14,human_rater_2,human,yes,hot tile on white streaks
+H15,human_rater_2,human,partly,hot near small brown spot on leaf
+H16,human_rater_2,human,no,hot on plain leaf without marks
+H17,human_rater_2,human,yes,hot tile covers white mark
+H18,human_rater_2,human,partly,hot on leaf with pale flecks
+H19,human_rater_2,human,yes,hot tiles on brown spots
+H20,human_rater_2,human,no,hot on background and healthy leaf
+H21,human_rater_2,human,yes,hot tile on brown spots
+H22,human_rater_2,human,partly,hot at leaf edge some spots nearby
+H23,human_rater_2,human,partly,hot on leaf with tiny red mark
+H24,human_rater_2,human,no,hot on plain leaf without marks
+H25,human_rater_2,human,yes,hot tile on brown streak
+H26,human_rater_2,human,yes,hot tile on white marks at base
+H27,human_rater_2,human,yes,hot tile on brown spot
+H28,human_rater_2,human,no,hot on plain leaf without marks
+H29,human_rater_2,human,no,hot on background
+H30,human_rater_2,human,yes,hot tiles on brown spots
+H31,human_rater_2,human,no,hot on plain leaf without marks
+H32,human_rater_2,human,yes,hot tile on brown streak
+H33,human_rater_2,human,no,hot on plain leaf and background
+H34,human_rater_2,human,yes,hot tile on dark spot
+H35,human_rater_2,human,yes,hot tiles on brown spots
+H36,human_rater_2,human,no,hot on plain leaf without marks
+H37,human_rater_2,human,yes,hot tile on white streaks
+H38,human_rater_2,human,yes,hot tile on lesion
+H39,human_rater_2,human,yes,hot tile on small pale spot
+H40,human_rater_2,human,yes,hot tile on dark spot
+H41,human_rater_2,human,yes,hot tile on dark spot
+H42,human_rater_2,human,yes,hot tile on brown spot
+H43,human_rater_2,human,no,hot on plain leaf without marks
+H44,human_rater_2,human,yes,hot tile on lesion
+H45,human_rater_2,human,no,hot on plain leaf without marks
+H46,human_rater_2,human,yes,hot tile on large lesion
+H47,human_rater_2,human,no,hot on plain leaf without marks
+H48,human_rater_2,human,yes,hot tile on dark spots
+H49,human_rater_2,human,partly,hot tiles on leaf with pale patches
+H50,human_rater_2,human,yes,hot tile on brown lesion
+H01,human_rater_1,human,partly,hot tile just beside small brown lesion
+H02,human_rater_1,human,partly,hot tile near brown spots at leaf base
+H03,human_rater_1,human,no,hot tile at leaf tip corner no marks
+H04,human_rater_1,human,yes,hot tiles on leaf with pale spots
+H05,human_rater_1,human,partly,hot tile on leaf with only faint marks
+H06,human_rater_1,human,yes,hot tile on brown lesion
+H07,human_rater_1,human,yes,hot tile on white scraped patches
+H08,human_rater_1,human,yes,hot tiles on spotted leaf part
+H09,human_rater_1,human,partly,hot tiles at leaf end marks faint
+H10,human_rater_1,human,no,leaf edge only no marks visible
+H11,human_rater_1,human,partly,hot tile at leaf edge near tiny white mark
+H12,human_rater_1,human,yes,hot tile on small brown spot
+H13,human_rater_1,human,no,hot tile on leaf edge no marks
+H14,human_rater_1,human,yes,hot tile on white streaks
+H15,human_rater_1,human,partly,hot tile on leaf with tiny spots
+H16,human_rater_1,human,no,plain leaf no marks
+H17,human_rater_1,human,partly,hot tile covers tiny white specks on leaf
+H18,human_rater_1,human,yes,hot tiles on leaf with pale spots
+H19,human_rater_1,human,yes,hot tiles on brown spots
+H20,human_rater_1,human,no,hot tiles on background no marks
+H21,human_rater_1,human,yes,hot tile on brown spots
+H22,human_rater_1,human,partly,hot tile on leaf edge some marks nearby
+H23,human_rater_1,human,yes,hot tile over small red mark
+H24,human_rater_1,human,no,no marks visible hot tile on plain leaf
+H25,human_rater_1,human,yes,hot tile on brown streak lesion
+H26,human_rater_1,human,yes,hot tile on white spots at base
+H27,human_rater_1,human,yes,hot tile over small brown spot
+H28,human_rater_1,human,no,plain leaf and background no marks
+H29,human_rater_1,human,no,hot tile on background
+H30,human_rater_1,human,yes,hot tiles on brown spots
+H31,human_rater_1,human,no,no marks hot tile at top edge
+H32,human_rater_1,human,yes,hot tile on pale lesion
+H33,human_rater_1,human,no,hot tiles beside leaf on background
+H34,human_rater_1,human,yes,hot tile on brown spots
+H35,human_rater_1,human,yes,hot tiles on brown spots
+H36,human_rater_1,human,partly,hot tile on leaf with small pale streak
+H37,human_rater_1,human,yes,hot tile on white streaks
+H38,human_rater_1,human,yes,hot tile on pale oval lesion
+H39,human_rater_1,human,yes,hot tile on small pale spot
+H40,human_rater_1,human,partly,hot tile on tiny dark spot only
+H41,human_rater_1,human,yes,hot tile on brown spot
+H42,human_rater_1,human,yes,hot tile on brown spot
+H43,human_rater_1,human,no,no marks visible on thin leaf
+H44,human_rater_1,human,yes,hot tile on large lesion
+H45,human_rater_1,human,no,no marks visible on thin leaf
+H46,human_rater_1,human,yes,hot tile at edge of large lesion
+H47,human_rater_1,human,no,hot tile on plain leaf
+H48,human_rater_1,human,yes,hot tile on dark spots
+H49,human_rater_1,human,partly,bottom hot tile on scrape others on plain leaf
+H50,human_rater_1,human,yes,hot tile on brown lesion
+H01,human_rater_3,human,yes,hot tile on small brown lesion
+H02,human_rater_3,human,yes,hot tile on brown spots near base
+H03,human_rater_3,human,no,hot corner tile with no mark
+H04,human_rater_3,human,partly,hot tile on leaf with faint pale dots
+H05,human_rater_3,human,partly,hot tile near faint spots on leaf
+H06,human_rater_3,human,yes,hot tile on brown lesion
+H07,human_rater_3,human,yes,hot tile on white scraped patches
+H08,human_rater_3,human,partly,hot tiles on leaf with faint yellow flecks
+H09,human_rater_3,human,partly,hot tile at leaf end with faint marks
+H10,human_rater_3,human,no,hot tile on plain leaf with no marks
+H11,human_rater_3,human,partly,hot tile half on background near speck
+H12,human_rater_3,human,partly,hot tile on leaf with faint brown
+H13,human_rater_3,human,no,hot tile on background and leaf tip
+H14,human_rater_3,human,yes,hot tile on white streaks
+H15,human_rater_3,human,partly,hot tile at leaf edge near small spots
+H16,human_rater_3,human,no,hot tile on clean leaf
+H17,human_rater_3,human,partly,hot tile half background near tiny speck
+H18,human_rater_3,human,yes,hot tiles on leaf with pale streaks
+H19,human_rater_3,human,yes,hot tiles on brown spots
+H20,human_rater_3,human,no,hot tiles on background
+H21,human_rater_3,human,yes,hot tile on brown spots
+H22,human_rater_3,human,partly,hot tile at leaf edge near spots
+H23,human_rater_3,human,partly,hot tile on leaf with tiny red mark
+H24,human_rater_3,human,no,hot tile on clean dark leaf
+H25,human_rater_3,human,yes,hot tile on brown streak lesion
+H26,human_rater_3,human,yes,hot tile on pale streaks at bottom
+H27,human_rater_3,human,partly,hot tile with small brown spot and background
+H28,human_rater_3,human,no,hot tile on clean leaf
+H29,human_rater_3,human,no,hot tile on background
+H30,human_rater_3,human,yes,hot tiles on brown spots
+H31,human_rater_3,human,no,hot tile on clean leaf
+H32,human_rater_3,human,yes,hot tile on brown streak lesion
+H33,human_rater_3,human,no,hot tiles on background and clean leaf
+H34,human_rater_3,human,yes,hot tile on dark brown spots
+H35,human_rater_3,human,yes,hot tiles on brown spots
+H36,human_rater_3,human,partly,hot tile near white streak
+H37,human_rater_3,human,yes,hot tile on white streaks
+H38,human_rater_3,human,yes,hot tile on lesion
+H39,human_rater_3,human,yes,hot tile on small spot
+H40,human_rater_3,human,yes,hot tile on dark speck
+H41,human_rater_3,human,yes,hot tile on brown spot
+H42,human_rater_3,human,yes,hot tile on brown spot
+H43,human_rater_3,human,no,hot tiles on clean thin leaf
+H44,human_rater_3,human,yes,hot tile on large lesion
+H45,human_rater_3,human,no,hot tiles on clean leaf
+H46,human_rater_3,human,partly,hot tile at lesion edge
+H47,human_rater_3,human,no,hot tile on clean leaf
+H48,human_rater_3,human,yes,hot tile on dark specks
+H49,human_rater_3,human,partly,hot tiles on pale patches and clean leaf
+H50,human_rater_3,human,yes,hot tile on brown lesion
