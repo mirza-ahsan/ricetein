@@ -1,5 +1,5 @@
 {
-  "code_version": "61415fe",
+  "code_version": "f3b71e5",
   "tables": {
     "main": {
       "status": "present",
@@ -198,11 +198,13 @@
       "sources": {}
     },
     "explain": {
-      "status": "pending",
+      "status": "present",
       "stage": "Stage 12",
-      "reason": "missing results/tables/explain_deletion_test.csv",
-      "rows": 1,
-      "sources": {}
+      "reason": null,
+      "rows": 5,
+      "sources": {
+        "results/tables/explain_deletion_test.csv": "e60b8761708c8bd125429709cc25423646d6d36f66d2dfa453c80c45f772f8e5"
+      }
     },
     "cost": {
       "status": "pending",

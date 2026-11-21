@@ -49,7 +49,7 @@
       "stage": "Stage 11"
     },
     "explain": {
-      "status": "pending",
+      "status": "present",
       "stage": "Stage 12"
     },
     "cost": {
@@ -79,11 +79,11 @@
       "stage": "Stage 10"
     },
     "deletion": {
-      "status": "pending",
+      "status": "present",
       "stage": "Stage 12"
     },
     "heatmaps": {
-      "status": "pending",
+      "status": "present",
       "stage": "Stage 12"
     },
     "cost": {
@@ -226,11 +226,9 @@
       "id": "P1-15",
       "commitment": "Attention reported as qualitative interpretability; no severity claims",
       "delivered_by": "Stage 12",
-      "document_status": "\ud83d\udfe1 code ready (`src/explain.py`, 2026-11-20); runs and wording still to do",
-      "status": "pending",
-      "missing": [
-        "docs/reports/explain_report.md"
-      ]
+      "document_status": "\ud83d\udfe1 2026-11-21 runs done (`docs/reports/explain_report.md`); the paper wording (qualitative interpretability, no severity claims, the limits listed in the logbook) is still to do",
+      "status": "present",
+      "missing": []
     },
     {
       "id": "P1-16",
@@ -292,12 +290,9 @@
       "id": "O6",
       "commitment": "Zero-shot evaluation of **all** models on the secondary dataset; compare attention maps with visible symptoms",
       "delivered_by": "Stages 10, 12",
-      "document_status": "\ud83d\udfe1 2026-11-21 first half done: all 130 round-models (11 headline methods and 9 Stage 5 conditions, 5 rounds each) scored zero-shot on Paddy Doctor, `docs/reports/paddy_report.md`; H3 not shown. The comparison of attention maps with visible symptoms is Stage 12 (not run yet)",
-      "status": "pending",
-      "missing": [
-        "docs/reports/explain_report.md",
-        "table:explain"
-      ]
+      "document_status": "\ud83d\udfe1 2026-11-21 first half done: all 130 round-models (11 headline methods and 9 Stage 5 conditions, 5 rounds each) scored zero-shot on Paddy Doctor, `docs/reports/paddy_report.md`; H3 not shown. The comparison of attention maps with visible symptoms (Stage 12, 2026-11-21, `docs/reports/explain_report.md`): 50 blind heat maps rated by three disclosed model raters, yes 39.3%, partly 32.0%, no 28.7%, all agree on 88.0% (Fleiss' kappa 0.88); deletion test on test photos shows the attended tiles matter (gap 25.4 points at k=16, both ranges); on Paddy photos the effect is small (2.2 points, photo range only). \ud83d\udfe2 second half done with model raters (human raters not used)",
+      "status": "present",
+      "missing": []
     },
     {
       "id": "O7",
@@ -312,9 +307,9 @@
     }
   ],
   "present_counts": {
-    "tables": 11,
-    "figures": 5,
+    "tables": 12,
+    "figures": 7,
     "dataset_reports": 3,
-    "commitments": 16
+    "commitments": 18
   }
 }
