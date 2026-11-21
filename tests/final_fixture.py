@@ -131,7 +131,7 @@ def make_fixture(root: Path, *, paddy: bool = False, explain: bool = False, cost
              "gap_block_low": 0.02, "gap_block_high": 0.2, "round_wins": 5, "rounds": 5,
              "verdict": "top-k matters more than random-k"} for n, k in enumerate((1, 4, 16))]))
         for cls in CLASSES:
-            folder = root / "results/explain/heatmaps/test"
+            folder = root / "results/explain/heatmaps/val"
             folder.mkdir(parents=True, exist_ok=True)
             plt.imsave(folder / f"{cls}_correct_1_abc.png", np.random.default_rng(0).random((20, 20)))
     if cost:

@@ -173,16 +173,16 @@ def deletion(root: Path) -> Result:
 
 
 def heatmaps(root: Path) -> Result:
-    folder = root / "results/explain/heatmaps/test"
+    folder = root / "results/explain/heatmaps/val"
     files = sorted(folder.glob("*.png")) if folder.is_dir() else []
     if not files:
-        raise Missing("results/explain/heatmaps/test/*.png")
+        raise Missing("results/explain/heatmaps/val/*.png")
     chosen = []
     for cls in CLASSES:
         mine = [f for f in files if f.name.startswith(f"{cls}_")]
         good = [f for f in mine if "_correct_1_" in f.name]
         if not mine:
-            raise Missing(f"results/explain/heatmaps/test/{cls}_*.png")
+            raise Missing(f"results/explain/heatmaps/val/{cls}_*.png")
         chosen.append((good or mine)[0])
     figure, axes = plt.subplots(2, 2, figsize=(PAGE, PAGE * 0.55))
     for axis, f in zip(axes.ravel(), chosen):
@@ -210,8 +210,9 @@ def cost(root: Path) -> Result:
     return figure, [root / path]
 
 
-NOTES = {"heatmaps": "One example per class, the 'correct, rank 1' heat map of the Stage 12 example rule (the best case of each "
-                     "class); say so in the caption.",
+NOTES = {"heatmaps": "One example per class: the most confident correct photo ('correct, rank 1') of the Stage 12 example rule, "
+                     "chosen from the validation predictions and drawn from validation photos. It is the best case of each class, "
+                     "not a typical one; say so in the caption.",
          "confusion": "Row-normalised (% of the true class); the bold row is hispa, the pre-declared diagnostic."}
 
 

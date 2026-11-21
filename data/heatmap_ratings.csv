@@ -1,0 +1,151 @@
+item_id,rater,rater_kind,rating,note
+H01,model_rater_1,model,yes,hot tile covers the brown lesion on the leaf
+H02,model_rater_1,model,yes,hot tile on dark brown spots near leaf base
+H03,model_rater_1,model,no,hot tile at leaf tip corner with no visible symptoms
+H04,model_rater_1,model,partly,hot tile on leaf with faint pale speckles
+H05,model_rater_1,model,partly,hot tile on leaf with small faint spots
+H06,model_rater_1,model,yes,hot tile exactly on the brown lesion
+H07,model_rater_1,model,yes,hot tile on pale lesions on the leaf
+H08,model_rater_1,model,partly,hot tiles on leaf with pale yellowish flecks
+H09,model_rater_1,model,no,hot tile at leaf edge with no clear symptoms
+H10,model_rater_1,model,no,hot tile on healthy leaf strip at image bottom
+H11,model_rater_1,model,partly,hot tile near small pale speck on leaf edge
+H12,model_rater_1,model,partly,hot tile on leaf near faint brownish mark
+H13,model_rater_1,model,no,hot tile on background left of healthy leaf
+H14,model_rater_1,model,yes,hot tile on leaf with pale streaks and flecks
+H15,model_rater_1,model,partly,hot tile on leaf near tiny brown spots
+H16,model_rater_1,model,no,hot tile on healthy-looking leaf edge
+H17,model_rater_1,model,partly,hot tile on leaf near small pale speck
+H18,model_rater_1,model,yes,hot tile on leaf covered with pale flecks
+H19,model_rater_1,model,yes,hot tiles on brown spots on the leaf
+H20,model_rater_1,model,no,hot area on background and healthy leaf
+H21,model_rater_1,model,partly,hot tile near spots but other spots missed
+H22,model_rater_1,model,partly,hot tile near edge with only minor spots
+H23,model_rater_1,model,partly,hot tile at a small reddish spot on leaf
+H24,model_rater_1,model,no,hot tile on healthy-looking leaf with no clear lesions
+H25,model_rater_1,model,yes,hot tile on the brownish lesion on the leaf
+H26,model_rater_1,model,partly,hot tile at leaf base with pale flecks
+H27,model_rater_1,model,partly,hot tile on leaf near small brown spot
+H28,model_rater_1,model,no,hot tile on healthy-looking leaf with no symptoms
+H29,model_rater_1,model,no,hot area on background with healthy leaf
+H30,model_rater_1,model,yes,hot tiles on brown spotted and discoloured leaf
+H31,model_rater_1,model,no,hot tile at leaf edge with no visible symptoms
+H32,model_rater_1,model,yes,hot tile on brown streak lesion on leaf
+H33,model_rater_1,model,no,hot tiles on leaf edge with only yellow tint
+H34,model_rater_1,model,yes,hot tile on dark brown spot on yellowed leaf
+H35,model_rater_1,model,yes,hot tiles on brown spots on yellowed leaf
+H36,model_rater_1,model,no,hot tile on leaf with no clear symptoms
+H37,model_rater_1,model,partly,hot tile on leaf with pale flecks
+H38,model_rater_1,model,yes,hot tile on the tan lesion on the leaf
+H39,model_rater_1,model,yes,hot tile on small pale spot on leaf
+H40,model_rater_1,model,partly,hot tile on leaf near tiny dark spot
+H41,model_rater_1,model,yes,hot tile on small dark brown spot
+H42,model_rater_1,model,yes,hot tile on brown spot with dark centre
+H43,model_rater_1,model,no,hot tiles on thin leaf with no clear symptoms
+H44,model_rater_1,model,yes,hot tile on the spindle-shaped lesion
+H45,model_rater_1,model,no,hot tiles on thin healthy-looking leaf
+H46,model_rater_1,model,yes,hot tile on the large dark lesion
+H47,model_rater_1,model,no,hot tile on dark healthy-looking leaf
+H48,model_rater_1,model,partly,hot tile on leaf with small brown specks
+H49,model_rater_1,model,yes,hot tile on pale damaged streaks of twisted leaf
+H50,model_rater_1,model,yes,hot tile on the brown lesion with pale centre
+H01,model_rater_2,model,yes,hot tile sits on the brown lesion
+H02,model_rater_2,model,yes,hot tile on dark spots at leaf base
+H03,model_rater_2,model,no,hot tile at the leaf tip with no visible lesion
+H04,model_rater_2,model,partly,hot tile on a leaf segment with faint pale flecks
+H05,model_rater_2,model,partly,hot tile on leaf with only tiny faint specks
+H06,model_rater_2,model,yes,hot tile covers the brown lesion
+H07,model_rater_2,model,yes,hot tile on pale streaks and lesions
+H08,model_rater_2,model,partly,hot tiles on leaf with faint yellow flecks
+H09,model_rater_2,model,no,hot tile on leaf edge with no clear symptoms
+H10,model_rater_2,model,no,hot tile on healthy leaf edge at image bottom
+H11,model_rater_2,model,partly,hot tile near small whitish speck on leaf edge
+H12,model_rater_2,model,partly,hot tile near faint orange-brown discolouration
+H13,model_rater_2,model,no,hot tile on background beside healthy leaf
+H14,model_rater_2,model,yes,hot tile on pale streaks on the leaf
+H15,model_rater_2,model,partly,hot tile near small faint spots on leaf edge
+H16,model_rater_2,model,no,hot tile on healthy leaf with no symptoms
+H17,model_rater_2,model,partly,hot tile on tiny whitish speck on leaf
+H18,model_rater_2,model,partly,hot tile on leaf with scattered pale flecks
+H19,model_rater_2,model,yes,hot tiles sit on brown spots
+H20,model_rater_2,model,no,attention spread over background with no symptoms
+H21,model_rater_2,model,yes,hot tile on brown spots on leaf
+H22,model_rater_2,model,partly,hot tile at leaf edge and some brown specks
+H23,model_rater_2,model,partly,hot tile on tiny red-brown speck
+H24,model_rater_2,model,no,hot tile on leaf with no clear lesion
+H25,model_rater_2,model,yes,hot tile on brown streak lesion
+H26,model_rater_2,model,partly,hot tile at leaf base near pale flecks
+H27,model_rater_2,model,yes,hot tile covers small brown lesion
+H28,model_rater_2,model,no,hot tile on healthy-looking leaf with no symptoms
+H29,model_rater_2,model,no,attention on background and healthy leaf
+H30,model_rater_2,model,yes,hot tiles on brown spots and streaks
+H31,model_rater_2,model,no,hot tile at leaf edge with no symptoms
+H32,model_rater_2,model,yes,hot tile on brown lesion streak
+H33,model_rater_2,model,no,hot area on leaf edge yellowing only faint
+H34,model_rater_2,model,yes,hot tile on dark brown spot
+H35,model_rater_2,model,yes,hot tiles on dark brown spots
+H36,model_rater_2,model,no,hot tile on healthy leaf with faint pale marks
+H37,model_rater_2,model,partly,hot tile on leaf with some pale streaks
+H38,model_rater_2,model,yes,hot tile covers pale lesion with brown edge
+H39,model_rater_2,model,yes,hot tile on small pale spot
+H40,model_rater_2,model,partly,hot tile near a small dark spot
+H41,model_rater_2,model,yes,hot tile on small dark brown lesion
+H42,model_rater_2,model,yes,hot tile on dark brown lesion
+H43,model_rater_2,model,no,hot tiles on healthy-looking narrow leaf
+H44,model_rater_2,model,yes,hot tile on large brown lesion
+H45,model_rater_2,model,no,hot tiles on narrow leaf with no visible symptoms
+H46,model_rater_2,model,yes,hot tile on dark brown lesion area
+H47,model_rater_2,model,no,hot tile on healthy-looking leaf
+H48,model_rater_2,model,partly,hot tile on leaf with small dark specks
+H49,model_rater_2,model,partly,hot tiles on pale damaged patches and healthy leaf
+H50,model_rater_2,model,yes,hot tile on brown lesion
+H01,model_rater_3,model,yes,hot tile on the brown lesion
+H02,model_rater_3,model,yes,hot tile on dark spots near the leaf base
+H03,model_rater_3,model,no,hot tile at the leaf tip with no visible symptoms
+H04,model_rater_3,model,partly,hot tile on leaf with faint pale speckles
+H05,model_rater_3,model,partly,hot tile near small speckles and a brown dot
+H06,model_rater_3,model,yes,hot tile on the brown lesion
+H07,model_rater_3,model,yes,hot tile on pale streak lesions
+H08,model_rater_3,model,partly,hot tiles on faint yellow speckled leaf
+H09,model_rater_3,model,partly,hot tile at leaf edge with faint pale marks
+H10,model_rater_3,model,no,leaf portion tiny and healthy-looking
+H11,model_rater_3,model,partly,hot tile on tiny pale speck at leaf edge
+H12,model_rater_3,model,partly,hot tile on leaf with faint reddish marks
+H13,model_rater_3,model,no,hot tile on background beside healthy leaf
+H14,model_rater_3,model,yes,hot tile on pale streaks on the leaf
+H15,model_rater_3,model,partly,hot tile at leaf edge with tiny brown dot
+H16,model_rater_3,model,no,hot tile on healthy-looking leaf
+H17,model_rater_3,model,partly,hot tile on tiny pale speck
+H18,model_rater_3,model,partly,hot tile near pale speckles at leaf end
+H19,model_rater_3,model,yes,hot tiles on brown spots
+H20,model_rater_3,model,no,hot area on background and healthy leaf
+H21,model_rater_3,model,yes,hot tile on brown spots
+H22,model_rater_3,model,partly,hot tile near edge with few brown specks
+H23,model_rater_3,model,partly,hot tile near small reddish speck
+H24,model_rater_3,model,no,hot tile on healthy-looking dark leaf
+H25,model_rater_3,model,yes,hot tile on brown streak lesion
+H26,model_rater_3,model,partly,hot tile at leaf base with pale marks
+H27,model_rater_3,model,partly,hot tile near small brown dot
+H28,model_rater_3,model,no,hot tile on healthy-looking leaf
+H29,model_rater_3,model,no,hot area on background with healthy leaf
+H30,model_rater_3,model,yes,hot tiles on brown lesions and spots
+H31,model_rater_3,model,no,hot tile on healthy leaf edge
+H32,model_rater_3,model,yes,hot tile on brown streak lesion
+H33,model_rater_3,model,no,hot tiles on healthy yellowish leaf
+H34,model_rater_3,model,yes,hot tile on brown spots
+H35,model_rater_3,model,yes,hot tiles on brown spots
+H36,model_rater_3,model,partly,hot tile on faint pale streak
+H37,model_rater_3,model,partly,hot tile on pale streaks
+H38,model_rater_3,model,yes,hot tile on the lesion
+H39,model_rater_3,model,yes,hot tile near the small pale spot
+H40,model_rater_3,model,partly,hot tile near a tiny dark spot
+H41,model_rater_3,model,yes,hot tile on dark brown spot
+H42,model_rater_3,model,yes,hot tile on the brown lesion
+H43,model_rater_3,model,no,hot tiles on healthy dark leaf
+H44,model_rater_3,model,yes,hot tile on the lesion
+H45,model_rater_3,model,no,hot tiles on healthy-looking narrow leaf
+H46,model_rater_3,model,yes,hot tile on large lesion margin
+H47,model_rater_3,model,no,hot tile on healthy-looking leaf
+H48,model_rater_3,model,partly,hot tile near small dark spots
+H49,model_rater_3,model,partly,hot tile on pale damaged tissue
+H50,model_rater_3,model,yes,hot tile on the brown lesion

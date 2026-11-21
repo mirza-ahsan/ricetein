@@ -1,0 +1,162 @@
+{
+  "declared": "2026-11-21",
+  "code_version": "c6be293",
+  "deletion": {
+    "ks": [
+      1,
+      2,
+      4,
+      8,
+      16
+    ],
+    "random_seeds": [
+      0,
+      1,
+      2,
+      3,
+      4
+    ],
+    "partitions": [
+      "test",
+      "val",
+      "paddy"
+    ],
+    "ranking": "the model's own attention on the full bag, taken once",
+    "removal": "switch the tiles off in the real-tile mask (equal to removing them)",
+    "scores": [
+      "accuracy",
+      "macro_f1",
+      "true-class probability"
+    ]
+  },
+  "background": {
+    "threshold": 0.9,
+    "mask": "Otsu leaf mask of the photo at the common leaf scale, a measuring tool only",
+    "mask_flag_outside": [
+      0.02,
+      0.6
+    ],
+    "partitions": [
+      "test",
+      "val",
+      "paddy"
+    ]
+  },
+  "verdict": {
+    "rule": "top-k matters more than random-k only if the photo-bootstrap and the capture-block-bootstrap ranges of the true-class-probability gap are both above 0 and the gap is positive in at least min_round_wins rounds",
+    "bootstrap": {
+      "resamples": 2000,
+      "confidence": 0.95,
+      "stratified": true
+    },
+    "comparison": {
+      "ci_excludes_zero": true,
+      "min_round_wins": 4
+    }
+  },
+  "examples": {
+    "per_cell": 3,
+    "extra": 14,
+    "seed": 0
+  },
+  "paddy": {
+    "cache": "paddy_e1_native",
+    "zoom": "native",
+    "cache_spec_sha256": "c005668d320cecbe965cddf9cd171f538fbfe5daed9e4fb35562563f2689beb3",
+    "photos": 8086,
+    "split_sha256": "f07ef2a215ef9527a35417654c118c70b5b1b478f864dab933731e07480fe54d",
+    "bootstrap": "photo only: no capture blocks; a photo's gap is averaged over the five models",
+    "predictions_sha256": {
+      "stage7_session_attention_r1": "b16f564cd0a287901434ddc5d720b89ac611d9aaced3256e9eb95901738c0369",
+      "stage7_session_attention_r2": "b914d0272c2f675ca478150c20270d318c02aa66497693fbf6ffed1133866843",
+      "stage7_session_attention_r3": "2060a59de41e4104c83a1280070b8a86f39ae47c04739390fb7df118636dc787",
+      "stage7_session_attention_r4": "1b525e8bf3dd317ab3645b1943655f7c59b832c9574e771a3f4d14d8f9103ba3",
+      "stage7_session_attention_r5": "a5e0123c9746821d09c9878d41366f609cbfcdda57b8f2cfaa125369b26f7768"
+    }
+  },
+  "explain_sha256": "0d3b940c0e7b0df00603a0ff225a2e7b417ce0e5e01c5b02bed9ded2925a7ab1",
+  "test_runs": [
+    "stage7_session_attention_r1",
+    "stage7_session_attention_r2",
+    "stage7_session_attention_r3",
+    "stage7_session_attention_r4",
+    "stage7_session_attention_r5"
+  ],
+  "runs": {
+    "stage7_session_attention_r1": {
+      "tested": true,
+      "record_sha256": "2913ed37b66027be8bafe1928d0789e99e2ae3d731cfd1d8034c286c9d5596bf",
+      "checkpoint_sha256": "7df97df864ddd093983dcefc62c708cfbbe217e95b3f32eb2e89eb434f750c8d"
+    },
+    "stage7_session_attention_r2": {
+      "tested": true,
+      "record_sha256": "e7ca23a7b4f3057c95b6f53b289c097e0a754a03b2204fb8549f12b7d69ec1c5",
+      "checkpoint_sha256": "4226dea9ba26d82a9f8a870e43333a5fb782f7046cfc847ad11f8806d71e028a"
+    },
+    "stage7_session_attention_r3": {
+      "tested": true,
+      "record_sha256": "19dd12ab6f1d36127059585e6dbd1519a3029e7940b98f13fd23913ba9cdb323",
+      "checkpoint_sha256": "636a91cb971fcbdb0c2503462d14eac22bd065e292c33422e7361125d0276498"
+    },
+    "stage7_session_attention_r4": {
+      "tested": true,
+      "record_sha256": "922adec3081a7ab60be6a8c7bf10874c8124137cd4e2a792b4b3cc7fb9e498ae",
+      "checkpoint_sha256": "552277126913949e11783e2a0d86b42b19a7cf31fd4d8770b14577ba0eccc955"
+    },
+    "stage7_session_attention_r5": {
+      "tested": true,
+      "record_sha256": "d668aa747bb13b70ade432fb78a52e56827e485fdde3c95bad96962015528995",
+      "checkpoint_sha256": "c396c2c8e1218626429c48a6e6aec09c6ce3f48383ec699fb1c3728c82f91789"
+    },
+    "stage7_session_attention_s1_r1": {
+      "tested": false,
+      "record_sha256": "7b6076665fca7a235cd742165afb5e39889848902af0d5388906a72f1650c0fe",
+      "checkpoint_sha256": "a8126a3ed14f2a37855a50114c618d375ef48f04ae0c6cedbd00ba5ed3d0df25"
+    },
+    "stage7_session_attention_s1_r2": {
+      "tested": false,
+      "record_sha256": "4fe3be778673f68b5285b50f0660f9493763888ab20b0d4b20bfd6585ba9d75c",
+      "checkpoint_sha256": "da772cdc36780ac3b88b890bb9f540a09e272f31275cce776a4cb8277030f044"
+    },
+    "stage7_session_attention_s1_r3": {
+      "tested": false,
+      "record_sha256": "29971e827856ca28c2959f89e25c00197fd9adf3347f6fac2e3550371d083c8e",
+      "checkpoint_sha256": "a3f196f10f9e2d1aaa92047e4440e23102d635d0b78fd2df2f5d40d9f266cbcf"
+    },
+    "stage7_session_attention_s1_r4": {
+      "tested": false,
+      "record_sha256": "a34a70e1b09a5a91d5b933e407d137610d782a4f4d1bbf267833a49cc2cabfc8",
+      "checkpoint_sha256": "9dc2c0d14161ea6287240018de4ea6db8bc80b1cc23438d8f3f91e40c57a57d8"
+    },
+    "stage7_session_attention_s1_r5": {
+      "tested": false,
+      "record_sha256": "e6e1dd8f7d43a2b0fda8d68e8788ce7e6d9ea4f8384ebed3df3aaca1f263d783",
+      "checkpoint_sha256": "eb7f855c56c823921a7b57532db7a61b732d2f4ce01e5c6b0206aca797b858c0"
+    },
+    "stage7_session_attention_s2_r1": {
+      "tested": false,
+      "record_sha256": "0fd8eaa8ac82628400308fd83ba93316655182aec4b98c63d7af0bafb65585b0",
+      "checkpoint_sha256": "48e1bad608a1f6b91fbeeb135b9c33984b18c17fb287cbe764f2757ef16b7cf2"
+    },
+    "stage7_session_attention_s2_r2": {
+      "tested": false,
+      "record_sha256": "804b0ffe2531691d01cf53595c38ff7e671e9d74f87b111ca0905914535c7961",
+      "checkpoint_sha256": "87ecd50f58f12ddaa1e05ee7677f4421c68bfb8685a40dab2fbe794c86b0ceca"
+    },
+    "stage7_session_attention_s2_r3": {
+      "tested": false,
+      "record_sha256": "b6f68373e99927153ef5dc7a060d5e33e1695b1c247fbe04ad6cf71bf6fc3851",
+      "checkpoint_sha256": "4238990d42453c80c1fd0de49226d2f111f76f3b28155f7f0d866940b01308fa"
+    },
+    "stage7_session_attention_s2_r4": {
+      "tested": false,
+      "record_sha256": "7e47d537d737cb5c80ab137227897375f3a818f1373be087e0fbee91db68211a",
+      "checkpoint_sha256": "fa47f98ec51584413b5737a52b2972718b3eb3ce5952098b79a7f5825b63db1a"
+    },
+    "stage7_session_attention_s2_r5": {
+      "tested": false,
+      "record_sha256": "c0f885eb791ae6e1f3658f03c1b60f7674982b695c0f96d638a9817192723dae",
+      "checkpoint_sha256": "6016bcb1b87d474bdfb64951c667f8fb81d07163d77abdc3b47ba616fcf1439a"
+    }
+  }
+}
