@@ -125,3 +125,8 @@ submission/phase4/
 submission/final/
 results/explain/background_fraction/
 results/explain/background_fraction_paddy/
+
+# Per-photo heat maps and blind rating sheets contain the dataset photos (never commit photos; commitment P1-13).
+# The files stay on disk; the CSV and JSON files of results/explain/ and the final figures stay tracked.
+results/explain/blind/
+results/explain/heatmaps/
