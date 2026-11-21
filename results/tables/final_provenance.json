@@ -1,5 +1,5 @@
 {
-  "code_version": "165d494",
+  "code_version": "bfa5bca",
   "tables": {
     "main": {
       "status": "present",
@@ -131,6 +131,15 @@
       "rows": 18,
       "sources": {
         "results/tables/paired_conditions.csv": "78ddd8960144a15e9535a7cdb5804e76fc2d2809042ed20f10948929dbd192a8"
+      }
+    },
+    "paired_committee": {
+      "status": "present",
+      "stage": "Stage 11 paired test (branch stage11/paired-committee-convnext)",
+      "reason": null,
+      "rows": 2,
+      "sources": {
+        "results/tables/paired_committee.csv": "96b8f8820358940c8fdf2ce6556863a6e004550897d8cc68ee1dab7718bbcd7e"
       }
     },
     "paired_locked": {

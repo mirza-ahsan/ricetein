@@ -1,0 +1,3 @@
+A,B,metric,difference,photo_low,photo_high,block_low,block_high,round_wins,rounds,verdict_photo,verdict_block,round_losses
+row2_plain,convnext_tiny_448,macro_f1,0.02158834009227739,0.011526031069212081,0.032071782661644795,0.009831202312657857,0.03829737404158283,4,5,A beats B,A beats B,1
+row2_plain,convnext_tiny_448,balanced_accuracy,0.022830350318239323,0.012555254760770535,0.033391200204097624,0.008721558139339433,0.040774030081271014,4,5,A beats B,A beats B,1

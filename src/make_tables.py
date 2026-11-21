@@ -280,6 +280,24 @@ def paired_conditions_table(root: Path) -> Built:
     return paired_view(frame, "condition", "attention_round_wins", "condition_round_wins", condition_name), [root / path]
 
 
+def paired_committee_table(root: Path) -> Built:
+    """The committee against ConvNeXt-T at 448 px alone (columns of src/paired_committee.py: A is the committee)."""
+    path = f"{TABLES}/paired_committee.csv"
+    frame = read_table(root, path)
+
+    def words(verdict: str) -> str:
+        return verdict.replace("A beats B", "committee beats ConvNeXt-T").replace("B beats A", "ConvNeXt-T beats committee")
+
+    shown = pd.DataFrame({
+        "Metric": [METRICS[m] for m in frame["metric"]], "Difference, pooled (points)": frame["difference"].map(pts),
+        "Photo range": [rng(a, b) for a, b in zip(frame.photo_low, frame.photo_high)],
+        "Block range": [rng(a, b) for a, b in zip(frame.block_low, frame.block_high)],
+        "Rounds won by the committee": [f"{w}/{n}" for w, n in zip(frame.round_wins, frame.rounds)],
+        "Rounds won by ConvNeXt-T": [f"{w}/{n}" for w, n in zip(frame.round_losses, frame.rounds)],
+        "Verdict (photo range)": frame["verdict_photo"].map(words), "Verdict (block range)": frame["verdict_block"].map(words)})
+    return shown, [root / path]
+
+
 def ablations_table(root: Path) -> Built:
     path = f"{TABLES}/session_ablations.csv"
     ab = read_table(root, path)
@@ -436,6 +454,10 @@ SPECS = [
          paired_table(f"{TABLES}/session_paired.csv"), wide=True),
     Spec("paired_conditions", "Stage 5 paired test (branch stage5/paired-conditions)",
          "Attention against each Stage 5 condition, session-blocked split, test. Difference of the pooled scores in points (attention minus the condition).", paired_conditions_table, wide=True),
+    Spec("paired_committee", "Stage 11 paired test (branch stage11/paired-committee-convnext)",
+         "Committee (ConvNeXt-T at 448 px and attention) against ConvNeXt-T at 448 px alone, session-blocked split, test. "
+         "Difference of the pooled scores in points (committee minus ConvNeXt-T). The two are not independent: ConvNeXt-T is a member of the committee.",
+         paired_committee_table, wide=True),
     Spec("paired_locked", "Stage 7 (locked split)",
          "Attention against every other method, locked split, test. Difference of the pooled scores in points (attention minus the other).", paired_table(f"{TABLES}/followup_paired.csv"), wide=True),
     Spec("ablations", "Stage 8",
