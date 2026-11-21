@@ -1,5 +1,5 @@
 {
-  "code_version": "5b5a0ef",
+  "code_version": "0f65839",
   "tables": {
     "main": {
       "status": "present",
@@ -166,7 +166,7 @@
       "reason": null,
       "rows": 4,
       "sources": {
-        "docs/reports/session_ablation_report.md": "8077005d69b87e40df55c9681f9b91e2e167ca9d853b1cdbcbf499e6bb06c290",
+        "docs/reports/session_ablation_report.md": "cc3b3a748e50f31fb4e17d3ca001a440ef91935295654efd7af166e234c5f9d8",
         "results/tables/session_final.csv": "e12b414cd4b55b0dae937cfa7f640615f68c0c0b2f2cfdc1d01105842c8e8a84",
         "runs/session_ablations_plan.json": "d23a11ba591e1224c2801168efacfcdd9ccb86d461e1f30777b9b780f64bb9c6",
         "runs/stage7_session_ablate_native_scale_r1/test_metrics.json": "8e24641d6f8c1a2f4c26e70d9ec0fad00bb4a13c742a854837df3deefb1a3370",

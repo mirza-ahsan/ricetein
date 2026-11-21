@@ -122,7 +122,7 @@
       "id": "P1-1",
       "commitment": "Re-derive class counts from the download; report any difference from published counts",
       "delivered_by": "Stage 1",
-      "document_status": "\u2705 `data/inventory.csv` + `docs/reports/inventory_report.md` \u00a71 (2026-11-05): 3,355 photos, Hispa 565 vs published 563",
+      "document_status": "`data/inventory.csv`, `docs/reports/inventory_report.md` \u00a71: 3,355 photos, Hispa 565 against the published 563",
       "status": "present",
       "missing": []
     },
@@ -130,7 +130,7 @@
       "id": "P1-2",
       "commitment": "Audit \u2265200 random primary images for background type; report the distribution",
       "delivered_by": "Stage 2a",
-      "document_status": "\u2705 240-photo audit complete (2026-11-08), all plain after adjudication; disclosed model raters, not two human raters (`docs/reports/audit_report.md`)",
+      "document_status": "240-photo audit, all plain after adjudication; disclosed AI model raters, not two human raters (`docs/reports/audit_report.md`)",
       "status": "present",
       "missing": []
     },
@@ -138,15 +138,15 @@
       "id": "P1-3",
       "commitment": "Split before any other processing; index files committed; identical splits for every experiment",
       "delivered_by": "Stage 3",
-      "document_status": "\u2705 Locked grouped folds and deduplicated Paddy Doctor list created before model fitting; `docs/reports/split_report.md` A session-blocked sensitivity split (`splits/session_blocked/folds.csv`) exists as well (2026-11-14); the locked split is unchanged",
+      "document_status": "Locked grouped folds and the deduplicated Paddy Doctor list, made before any model was fitted (`docs/reports/split_report.md`); the session-blocked split (`splits/session_blocked/folds.csv`, `docs/reports/session_split_report.md`) follows the same rules",
       "status": "present",
       "missing": []
     },
     {
       "id": "P1-4",
       "commitment": "Leakage rules enforced **in code**: no augmentation before the split; variants stay with their source; test used once per model after tuning",
-      "delivered_by": "Golden rules; `tests/test_split.py`, `test_leakage.py`, `test_mil_leakage.py`",
-      "document_status": "\u2705 Implemented and tested (`tests/test_split.py`, `test_leakage.py`, `test_mil_leakage.py`); every experiment ran under these rules, and the session-blocked split follows the same rules. Development closed 2026-11-21 Stated in the paper (Section IV-B: automated tests enforce it; review edit 2026-11-22).",
+      "delivered_by": "Leakage rules; `tests/test_split.py`, `test_leakage.py`, `test_mil_leakage.py`",
+      "document_status": "Implemented and tested (`tests/test_split.py`, `test_leakage.py`, `test_mil_leakage.py`); every experiment ran under these rules. Paper, Section IV-B",
       "status": "present",
       "missing": []
     },
@@ -154,7 +154,7 @@
       "id": "P1-5",
       "commitment": "Paddy Doctor 4-class subset held out entirely; full release used; version and download date stated",
       "delivered_by": "Stages 1, 10",
-      "document_status": "\u2705 2026-11-21: the four tested classes (`splits/paddy4.csv`, 8,086 photos, 78 byte-identical copies removed) were scored zero-shot only, nothing trained, tuned or chosen on them; full release (CC BY 4.0), version and download date in `data/DATASETS.md`; `docs/reports/paddy_report.md` Source and version of both datasets are in the paper (Section IV-A; review edit 2026-11-22).",
+      "document_status": "The four tested classes (`splits/paddy4.csv`, 8,086 photos after 78 byte-identical copies were removed) were scored zero-shot only; nothing was trained, tuned or chosen on them. Full release (CC BY 4.0); version and download date in `data/DATASETS.md`; `docs/reports/paddy_report.md`; paper, Section IV-A",
       "status": "present",
       "missing": []
     },
@@ -162,7 +162,7 @@
       "id": "P1-6",
       "commitment": "Five repetitions; every metric reported as mean \u00b1 std",
       "delivered_by": "All stages (5 rounds)",
-      "document_status": "\u2705 Five rounds for every method and ablation; every table shows mean \u00b1 SD (development closed 2026-11-21)",
+      "document_status": "Five rounds for every method and ablation; every table shows mean \u00b1 SD",
       "status": "present",
       "missing": []
     },
@@ -170,7 +170,7 @@
       "id": "P1-7",
       "commitment": "Whole-image inputs at 128 and 224; tiled input at native resolution",
       "delivered_by": "Stages 5, 6, 8",
-      "document_status": "\u2705 2026-11-21 (Stage 5 whole-image 128 and 224 px; Stage 8 `native_scale`: 74.7 \u00b1 5.4 test macro-F1 against 77.9 \u00b1 3.1 at the common scale). The headline tiles are at a common leaf scale (Stage 1 rule); native-resolution tiles are delivered as the declared Stage 8 ablation, evaluated on test. Say so in Phase 4",
+      "document_status": "Whole images at 128 and 224 px (Stage 5). The headline tiles are at a common leaf scale; native-resolution tiles are the declared Stage 8 ablation `native_scale`, evaluated on test (74.7 \u00b1 5.4 test macro-F1 against 77.9 \u00b1 3.1 at the common scale)",
       "status": "present",
       "missing": []
     },
@@ -178,7 +178,7 @@
       "id": "P1-8",
       "commitment": "Accuracy for continuity; macro-F1 and balanced accuracy primary; per-class precision/recall; confusion matrix on test only; partition stated for every number",
       "delivered_by": "Stage 4a, Stage 14",
-      "document_status": "\u2705 Final tables `final_main`, `final_per_class`, `final_confusion` (confusion on test photos only; partition stated in every table). Development closed 2026-11-21 Paper (Section IV-E): plain accuracy is kept in every run record and per-class precision follows from the confusion counts in the appendix table.",
+      "document_status": "Final tables `final_main`, `final_per_class`, `final_confusion` (confusion on test photos only; the partition is stated in every table). Plain accuracy is in every run record; per-class precision follows from the confusion counts (paper, Section IV-E and the appendix)",
       "status": "present",
       "missing": []
     },
@@ -186,7 +186,7 @@
       "id": "P1-9",
       "commitment": "No generative oversampling; class-balanced loss instead",
       "delivered_by": "Stages 5, 7",
-      "document_status": "\u2705 No generative oversampling; inverse-frequency class weights in the loss (`configs/base.yaml`). Development closed 2026-11-21",
+      "document_status": "No generative oversampling; inverse-frequency class weights in the loss (`configs/base.yaml`)",
       "status": "manual",
       "missing": []
     },
@@ -194,7 +194,7 @@
       "id": "P1-10",
       "commitment": "Hispa recall reported and discussed as a pre-declared diagnostic",
       "delivered_by": "Stages 7, 14",
-      "document_status": "\u2705 Hispa recall is a labelled diagnostic column of `results/tables/final_per_class.csv`; discussed in Section V-E of the paper (2026-11-22)",
+      "document_status": "A labelled diagnostic column of `results/tables/final_per_class.csv`; discussed in Section V-E of the paper",
       "status": "present",
       "missing": []
     },
@@ -202,7 +202,7 @@
       "id": "P1-11",
       "commitment": "If a class shows anomalous recall, report a manual inspection of its misclassified images",
       "delivered_by": "Stages 2d, 7, 12",
-      "document_status": "\u2705 Addressed in paper text (Ahsan, 2026-11-22): hispa or leaf blast is the lowest-recall class for every method (hispa for 8 of 11), so it is a class pattern, not one method's anomaly; the confusion table shows which classes they are mistaken for (Section V-E, `final_per_class`, `final_confusion`). No manual inspection is claimed",
+      "document_status": "Hispa or leaf blast is the lowest-recall class for every method (hispa for 8 of 11), so it is a class pattern, not one method's anomaly; the confusion table shows which classes they are mistaken for (paper, Section V-E; `final_per_class`, `final_confusion`). No manual inspection is claimed",
       "status": "manual",
       "missing": []
     },
@@ -210,15 +210,15 @@
       "id": "P1-12",
       "commitment": "Record each dataset's licence terms at download; reproduce them in the final paper",
       "delivered_by": "Stage 1 (`data/DATASETS.md`), final paper",
-      "document_status": "\u2705 Licence terms recorded (primary: MIT; Paddy Doctor: CC BY 4.0); reproduced in the paper (Section IV-A, Acknowledgements, 2026-11-22)",
+      "document_status": "Primary: MIT; Paddy Doctor: CC BY 4.0. Recorded in `data/DATASETS.md`; reproduced in the paper (Section IV-A and the acknowledgements)",
       "status": "manual",
       "missing": []
     },
     {
       "id": "P1-13",
       "commitment": "No images redistributed",
-      "delivered_by": "Always (`.gitignore`; Paddy Doctor on Kaggle is private). **2026-11-21:** the 122 per-photo heat-map and blind-rating PNGs of `results/explain/` are no longer tracked (they show the photos at 900 px); the files stay on disk. The final figures that show dataset photos (`final_samples`, `final_heatmaps`) stay tracked and are the only photo images the paper uses. Git history still holds the old files because the repository is private (Ahsan, 2026-11-21)",
-      "document_status": "\u2705 At close, the tracked images are the final figures (`results/figures/`), the Phase 3 sample figure and the two paper copies of `samples.jpg`; no per-photo images. Standing rule for the packaging step",
+      "delivered_by": "Always (`.gitignore`)",
+      "document_status": "No dataset photo is in the repository or its history. The only images that show dataset photos are the two final figures the paper uses (`final_samples`, `final_heatmaps`, in `results/figures/` and `paper/fig/`)",
       "status": "manual",
       "missing": []
     },
@@ -226,7 +226,7 @@
       "id": "P1-14",
       "commitment": "Publish dataset versions and download dates, split files, background audit, re-derived counts",
       "delivered_by": "Stage 14 reproducibility package",
-      "document_status": "\u2705 `docs/REPRODUCIBILITY.md` (2026-11-22) points to the dataset versions and download dates, the split files, the background audit and the re-derived counts, and says what is not included and why",
+      "document_status": "`docs/REPRODUCIBILITY.md` points to each of them and says what is not included and why",
       "status": "present",
       "missing": []
     },
@@ -234,7 +234,7 @@
       "id": "P1-15",
       "commitment": "Attention reported as qualitative interpretability; no severity claims",
       "delivered_by": "Stage 12",
-      "document_status": "\u2705 Runs done (`docs/reports/explain_report.md`). Maps rated by two sets of model raters, no person rated them; paper wording (qualitative interpretability, no severity claims) is in Sections V-G, VI and VII (2026-11-22)",
+      "document_status": "`docs/reports/explain_report.md`. The maps were rated by two sets of AI model raters; no person rated them. Paper, Sections V-G, VI and VII",
       "status": "present",
       "missing": []
     },
@@ -242,7 +242,7 @@
       "id": "P1-16",
       "commitment": "If backgrounds turn out mostly uniform, don't claim robustness to clutter from in-domain results; rest that claim on Paddy Doctor",
       "delivered_by": "Stages 2a, 10; Discussion",
-      "document_status": "\u2705 2026-11-21: the primary photos have plain backgrounds (audit `docs/reports/audit_report.md`), and on Paddy Doctor field photos no method transfers well (macro-F1 13.5 to 30.1%, H3 not shown): **do not claim robustness to clutter**; `docs/reports/paddy_report.md`",
+      "document_status": "The primary photos have plain backgrounds (`docs/reports/audit_report.md`), and on the Paddy Doctor field photos no method transfers well (macro-F1 13.5 to 30.1%, H3 not shown), so no robustness to clutter is claimed (`docs/reports/paddy_report.md`)",
       "status": "present",
       "missing": []
     },
@@ -250,7 +250,7 @@
       "id": "P1-17",
       "commitment": "Dhan-Shomadhan only if the main programme is complete",
       "delivered_by": "Optional",
-      "document_status": "\ud83d\udd2d Future work: skipped by Ahsan (2026-11-21); named as future work in the paper",
+      "document_status": "Not done; named as future work in the paper",
       "status": "manual",
       "missing": []
     },
@@ -258,7 +258,7 @@
       "id": "O1",
       "commitment": "Two-dataset benchmark (high-resolution primary + independent expert-labelled field set)",
       "delivered_by": "Stages 1, 10",
-      "document_status": "\u2705 2026-11-21: primary (3,334 photos) and Paddy Doctor (8,086 photos of the four classes), both with the same protocol; Paddy Doctor scored zero-shot once (`docs/reports/paddy_report.md`)",
+      "document_status": "Primary (3,334 photos) and Paddy Doctor (8,086 photos of the four classes), both with the same protocol; Paddy Doctor scored zero-shot once (`docs/reports/paddy_report.md`)",
       "status": "present",
       "missing": []
     },
@@ -266,7 +266,7 @@
       "id": "O2",
       "commitment": "Leakage-free protocol: split before augmentation, published splits, macro-F1 + balanced accuracy + accuracy, mean \u00b1 std",
       "delivered_by": "Stages 3, 4",
-      "document_status": "\u2705 Protocol applied in every stage (split before augmentation, published splits, macro-F1, balanced accuracy and accuracy, mean \u00b1 SD). Development closed 2026-11-21",
+      "document_status": "Applied in every stage",
       "status": "present",
       "missing": []
     },
@@ -274,7 +274,7 @@
       "id": "O3",
       "commitment": "Reproduce competitive whole-image baselines, including the threshold (Otsu) pipeline and modern **convolutional and transformer** backbones",
       "delivered_by": "Stage 5 (InceptionV3, EfficientNetV2-S, ConvNeXt-T, Swin-T)",
-      "document_status": "\u2705 2026-11-21 (224 px tuned, 128 px, 224 px + Otsu and 448 px tested on the session split)",
+      "document_status": "224 px tuned; 128 px, 224 px + Otsu and 448 px tested on the session-blocked split",
       "status": "present",
       "missing": []
     },
@@ -282,7 +282,7 @@
       "id": "O4",
       "commitment": "Tile-based weakly supervised model: tiling, frozen-encoder descriptions, attention combining from image-level labels",
       "delivered_by": "Stages 6, 7",
-      "document_status": "\u2705 Stages 6 and 7 (tile descriptions cached, attention head trained from photo labels); development closed 2026-11-21",
+      "document_status": "Tile descriptions cached (Stage 6); attention head trained from photo labels (Stage 7)",
       "status": "present",
       "missing": []
     },
@@ -290,7 +290,7 @@
       "id": "O5",
       "commitment": "Ablations over input resolution, aggregation function, Otsu on/off",
       "delivered_by": "Stage 8",
-      "document_status": "\u2705 2026-11-21 Resolution: whole-image 128 / 224 / 448 px (Stage 5) and 448 px tiles; aggregation: mean / max / attention (Stage 7); Otsu on whole images (Stage 5) and on tiles (`otsu_on`, test, main wins by 5.2 points); pixel scale (`native_scale`, test, main wins by 2.9); encoders, loss, versions, tile dropout, description on validation only (`docs/reports/session_ablation_report.md`)",
+      "document_status": "Resolution: whole images at 128 / 224 / 448 px (Stage 5) and 448 px tiles; aggregation: mean / max / attention (Stage 7); Otsu on whole images (Stage 5) and on tiles (`otsu_on`, test: the main configuration wins by 5.2 points); pixel scale (`native_scale`, test: the main configuration wins by 2.9); encoders, loss, versions, tile dropout and description on validation only (`docs/reports/session_ablation_report.md`)",
       "status": "present",
       "missing": []
     },
@@ -298,7 +298,7 @@
       "id": "O6",
       "commitment": "Zero-shot evaluation of **all** models on the secondary dataset; compare attention maps with visible symptoms",
       "delivered_by": "Stages 10, 12",
-      "document_status": "\u2705 Done 2026-11-21. First half: all 130 round-models (11 headline methods and 9 Stage 5 conditions, 5 rounds each) scored zero-shot on Paddy Doctor, `docs/reports/paddy_report.md`; H3 not shown. The comparison of attention maps with visible symptoms (Stage 12, 2026-11-21, `docs/reports/explain_report.md`): 50 blind heat maps rated by three disclosed model raters, yes 39.3%, partly 32.0%, no 28.7%, all agree on 88.0% (Fleiss' kappa 0.88); deletion test on test photos shows the attended tiles matter (gap 25.4 points at k=16, both ranges); on Paddy photos the effect is small (2.2 points, photo range only). Second half done with model raters (set 1). A second set of three agent ratings (set 2) was imported on 2026-11-21 under the importer's kind label `human` (Ahsan's decision; `docs/reports/heatmap_ratings_report.md`: yes 49.3%, partly 24.0%, no 26.7%, all agree 76.0%, kappa 0.75; majority equals the model majority on 84.0% of maps); **no person has rated the maps**, so write both sets as model ratings (\"Model raters, set 1\" and \"set 2\", as in `final_explain_ratings`) **Paper verdict (2026-11-22): met (H3 not shown)**: both evaluations were run; H3 not being shown is a result.",
+      "document_status": "All 130 round-models scored zero-shot on Paddy Doctor (`docs/reports/paddy_report.md`; H3 not shown). Heat maps against visible symptoms: deletion test (gap 25.4 points at k=16 on test photos; 2.2 points on Paddy photos) and 50 blind heat maps rated by two sets of three disclosed AI model raters (`docs/reports/explain_report.md`, `docs/reports/heatmap_ratings_report.md`); no person rated the maps",
       "status": "present",
       "missing": []
     },
@@ -306,7 +306,7 @@
       "id": "O7",
       "commitment": "Parameters, storage, inference latency; assess compressibility for on-device use",
       "delivered_by": "Stage 13",
-      "document_status": "\u2705 2026-11-21 (`docs/reports/cost_report.md`, `results/tables/cost_results.csv`, `cost_compression.csv`; compressibility: fewer tiles and distillation help, the 8-bit encoder fails, ONNX on the CPU 0.93 s per photo)",
+      "document_status": "`docs/reports/cost_report.md`, `results/tables/cost_results.csv`, `cost_compression.csv`: fewer tiles and distillation help, the 8-bit encoder fails, ONNX on the CPU takes 0.93 s per photo",
       "status": "present",
       "missing": []
     }
