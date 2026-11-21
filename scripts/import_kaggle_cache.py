@@ -1,17 +1,14 @@
-"""Bring one cache built on Kaggle into cache/, after checking that it is the cache we asked for.
+"""Bring one cache built on another machine into cache/, after checking that it is the cache we asked for.
 
-    ./scripts/kaggle_pull.sh <kernel>
-    uv run python scripts/import_kaggle_cache.py <kernel> <cache name>      e.g. 06b-caches-a e3_dinov2_vitb14
+    ./scripts/kaggle_pull.sh <kernel>                                            (Kaggle), or rsync into kaggle/outputs/pc/cache/ (the PC)
+    uv run python scripts/import_kaggle_cache.py <source> <cache name>           e.g. 06b-caches-a e3_dinov2_vitb14, or pc paddy_e1_native
 
-Works for the Stage 6 caches (``configs/embed/<name>.yaml``) and the Stage 10 Paddy Doctor caches
-(``configs/paddy_zero_shot.yaml``). Checks, in this order (a failure stops before anything is moved):
-1. the cache folder exists in kaggle/outputs/<kernel>/cache/, has a complete.json and no unfinished ``*.tmp.npz``;
-2. its spec.json equals the spec computed here from the settings and the source files checked out here, so
-   encoder, tile settings, code and inputs are the same as for the caches built on this machine;
-3. cache/<name> does not exist yet (an existing cache is never overwritten), and both folders are on one
-   filesystem, so that the move is one atomic rename and a crash cannot leave a half-copied cache.
-After the move every photo file is validated again with the function that ends a local build. A cache that
-fails is renamed ``<name>_rejected`` (numbered if that exists) and the error is raised.
+``<source>`` is the folder under kaggle/outputs/ that holds ``cache/<name>``. Works for the Stage 6 caches
+(``configs/embed/<name>.yaml``) and the Stage 10 Paddy Doctor caches (``configs/paddy_zero_shot.yaml``).
+The cache is refused, before anything moves, unless it is complete, has the spec computed here, and does not
+replace an existing cache (same filesystem, so the move is one rename). After the move every photo file is
+validated again; a cache that fails (or an interrupted validation) is renamed ``<name>_rejected`` (numbered if
+that exists).
 """
 
 from __future__ import annotations
@@ -42,7 +39,7 @@ def plan(name: str) -> tuple[dict[str, Any], Callable[[], dict[str, Any]]]:
 
 def check(source: Path, expected_spec: dict[str, Any], target: Path) -> None:
     if not (source / "complete.json").exists():
-        raise ValueError(f"{source}: no complete.json; the Kaggle run did not finish this cache")
+        raise ValueError(f"{source}: no complete.json; the build did not finish this cache")
     if list(source.glob("v*/*.tmp.npz")):
         raise ValueError(f"{source}: unfinished files (*.tmp.npz)")
     if json.loads((source / "spec.json").read_text()) != expected_spec:
@@ -61,9 +58,9 @@ def reject(target: Path) -> None:
     target.rename(rejected)
 
 
-def bring_in(kernel: str, name: str) -> dict[str, Any]:
+def bring_in(source_name: str, name: str) -> dict[str, Any]:
     expected_spec, validate = plan(name)
-    source = REPO_ROOT / "kaggle" / "outputs" / kernel / "cache" / name
+    source = REPO_ROOT / "kaggle" / "outputs" / source_name / "cache" / name
     target = cache_folder(name, write=True)
     target.parent.mkdir(parents=True, exist_ok=True)
     check(source, expected_spec, target)
@@ -72,7 +69,7 @@ def bring_in(kernel: str, name: str) -> dict[str, Any]:
         complete = validate()
         if complete["spec_sha256"] != json.loads((target / "complete.json").read_text())["spec_sha256"]:
             raise ValueError(f"{name}: the manifest from Kaggle does not match the validated cache")
-    except Exception:
+    except BaseException:                  # an interrupted validation must not leave an unchecked cache in cache/
         reject(target)
         raise
     return complete
@@ -80,10 +77,10 @@ def bring_in(kernel: str, name: str) -> dict[str, Any]:
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    parser.add_argument("kernel")
+    parser.add_argument("source")
     parser.add_argument("name")
     args = parser.parse_args()
-    complete = bring_in(args.kernel, args.name)
+    complete = bring_in(args.source, args.name)
     print(f"{args.name}: {complete['photos']} photos x {complete['versions']} versions, "
           f"{complete['descriptor_rows']} descriptor rows, {complete['bytes'] / 1e9:.1f} GB, validated")
 
