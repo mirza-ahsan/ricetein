@@ -1,0 +1,443 @@
+{
+  "code_version": "6d9030b",
+  "partition": "val",
+  "split": "splits/session_blocked/folds.csv",
+  "pools": {
+    "A": [
+      "attention_e1",
+      "attention_e2",
+      "attention_e3",
+      "inceptionv3_224",
+      "efficientnetv2s_224",
+      "convnext_tiny_224",
+      "swin_tiny_224",
+      "convnext_tiny_448"
+    ],
+    "B": [
+      "inceptionv3_224",
+      "efficientnetv2s_224",
+      "convnext_tiny_224",
+      "swin_tiny_224",
+      "convnext_tiny_448"
+    ]
+  },
+  "member_runs": {
+    "attention_e1": [
+      "stage7_session_attention_r1",
+      "stage7_session_attention_r2",
+      "stage7_session_attention_r3",
+      "stage7_session_attention_r4",
+      "stage7_session_attention_r5"
+    ],
+    "attention_e2": [
+      "stage7_session_ablate_encoder_e2_r1",
+      "stage7_session_ablate_encoder_e2_r2",
+      "stage7_session_ablate_encoder_e2_r3",
+      "stage7_session_ablate_encoder_e2_r4",
+      "stage7_session_ablate_encoder_e2_r5"
+    ],
+    "attention_e3": [
+      "stage7_session_ablate_encoder_e3_r1",
+      "stage7_session_ablate_encoder_e3_r2",
+      "stage7_session_ablate_encoder_e3_r3",
+      "stage7_session_ablate_encoder_e3_r4",
+      "stage7_session_ablate_encoder_e3_r5"
+    ],
+    "inceptionv3_224": [
+      "stage5_inceptionv3_session_224_lr0.001_r1",
+      "stage5_inceptionv3_session_224_lr0.001_r2",
+      "stage5_inceptionv3_session_224_lr0.001_r3",
+      "stage5_inceptionv3_session_224_lr0.001_r4",
+      "stage5_inceptionv3_session_224_lr0.001_r5"
+    ],
+    "efficientnetv2s_224": [
+      "stage5_efficientnetv2s_session_224_lr0.001_r1",
+      "stage5_efficientnetv2s_session_224_lr0.001_r2",
+      "stage5_efficientnetv2s_session_224_lr0.001_r3",
+      "stage5_efficientnetv2s_session_224_lr0.001_r4",
+      "stage5_efficientnetv2s_session_224_lr0.001_r5"
+    ],
+    "convnext_tiny_224": [
+      "stage5_convnext_tiny_session_224_lr0.0003_r1",
+      "stage5_convnext_tiny_session_224_lr0.0003_r2",
+      "stage5_convnext_tiny_session_224_lr0.0003_r3",
+      "stage5_convnext_tiny_session_224_lr0.0003_r4",
+      "stage5_convnext_tiny_session_224_lr0.0003_r5"
+    ],
+    "swin_tiny_224": [
+      "stage5_swin_tiny_session_224_lr0.0001_r1",
+      "stage5_swin_tiny_session_224_lr0.0001_r2",
+      "stage5_swin_tiny_session_224_lr0.0001_r3",
+      "stage5_swin_tiny_session_224_lr0.0001_r4",
+      "stage5_swin_tiny_session_224_lr0.0001_r5"
+    ],
+    "convnext_tiny_448": [
+      "stage5_convnext_tiny_session_448_lr0.0003_r1",
+      "stage5_convnext_tiny_session_448_lr0.0003_r2",
+      "stage5_convnext_tiny_session_448_lr0.0003_r3",
+      "stage5_convnext_tiny_session_448_lr0.0003_r4",
+      "stage5_convnext_tiny_session_448_lr0.0003_r5"
+    ]
+  },
+  "member_scores": {
+    "attention_e1": 0.7848686376459739,
+    "attention_e2": 0.6647687250888934,
+    "attention_e3": 0.7613429648918376,
+    "inceptionv3_224": 0.7312493746232186,
+    "efficientnetv2s_224": 0.758651414045863,
+    "convnext_tiny_224": 0.7718116967169901,
+    "swin_tiny_224": 0.7712907100848969,
+    "convnext_tiny_448": 0.8109824126006435
+  },
+  "committees": {
+    "row2_plain": {
+      "row": 2,
+      "variant": "plain",
+      "members": [
+        "convnext_tiny_448",
+        "attention_e1"
+      ],
+      "weights": [
+        1,
+        1
+      ],
+      "score": 0.8170575974507572,
+      "steps": [
+        {
+          "added": "convnext_tiny_448",
+          "score": 0.8109824126006435,
+          "gain": null
+        },
+        {
+          "added": "attention_e1",
+          "score": 0.8170575974507572,
+          "gain": 0.006075184850113713
+        }
+      ],
+      "forced_first": false
+    },
+    "row2_weighted": {
+      "row": 2,
+      "variant": "weighted",
+      "members": [
+        "convnext_tiny_448",
+        "attention_e1"
+      ],
+      "weights": [
+        1,
+        1
+      ],
+      "score": 0.8170575974507572,
+      "steps": [
+        {
+          "added": "convnext_tiny_448",
+          "score": 0.8109824126006435,
+          "gain": null
+        },
+        {
+          "added": "attention_e1",
+          "score": 0.8170575974507572,
+          "gain": 0.006075184850113713
+        }
+      ],
+      "forced_first": false,
+      "same_as_plain": true
+    },
+    "row3_plain": {
+      "row": 3,
+      "variant": "plain",
+      "members": [
+        "convnext_tiny_448",
+        "swin_tiny_224"
+      ],
+      "weights": [
+        1,
+        1
+      ],
+      "score": 0.8010442593400728,
+      "steps": [
+        {
+          "added": "convnext_tiny_448",
+          "score": 0.8109824126006435,
+          "gain": null
+        },
+        {
+          "added": "swin_tiny_224",
+          "score": 0.8010442593400728,
+          "gain": -0.009938153260570681
+        }
+      ],
+      "forced_first": false
+    },
+    "row3_weighted": {
+      "row": 3,
+      "variant": "weighted",
+      "members": [
+        "convnext_tiny_448",
+        "swin_tiny_224"
+      ],
+      "weights": [
+        2,
+        1
+      ],
+      "score": 0.8197304049678665,
+      "steps": [
+        {
+          "added": "convnext_tiny_448",
+          "score": 0.8109824126006435,
+          "gain": null
+        },
+        {
+          "added": "swin_tiny_224",
+          "score": 0.8010442593400728,
+          "gain": -0.009938153260570681
+        }
+      ],
+      "forced_first": false,
+      "same_as_plain": false
+    }
+  },
+  "tta_member": "convnext_tiny_448",
+  "disagreement": [
+    {
+      "kind": "pair",
+      "a": "attention_e1",
+      "b": "attention_e2",
+      "disagreement": 0.24512987012987014,
+      "double_fault": 0.09848484848484848,
+      "oracle": NaN
+    },
+    {
+      "kind": "pair",
+      "a": "attention_e1",
+      "b": "attention_e3",
+      "disagreement": 0.16017316017316016,
+      "double_fault": 0.09848484848484848,
+      "oracle": NaN
+    },
+    {
+      "kind": "pair",
+      "a": "attention_e1",
+      "b": "inceptionv3_224",
+      "disagreement": 0.2132034632034632,
+      "double_fault": 0.0882034632034632,
+      "oracle": NaN
+    },
+    {
+      "kind": "pair",
+      "a": "attention_e1",
+      "b": "efficientnetv2s_224",
+      "disagreement": 0.18831168831168832,
+      "double_fault": 0.09036796536796536,
+      "oracle": NaN
+    },
+    {
+      "kind": "pair",
+      "a": "attention_e1",
+      "b": "convnext_tiny_224",
+      "disagreement": 0.1812770562770563,
+      "double_fault": 0.0854978354978355,
+      "oracle": NaN
+    },
+    {
+      "kind": "pair",
+      "a": "attention_e1",
+      "b": "swin_tiny_224",
+      "disagreement": 0.17532467532467533,
+      "double_fault": 0.08441558441558442,
+      "oracle": NaN
+    },
+    {
+      "kind": "pair",
+      "a": "attention_e1",
+      "b": "convnext_tiny_448",
+      "disagreement": 0.16125541125541126,
+      "double_fault": 0.07575757575757576,
+      "oracle": NaN
+    },
+    {
+      "kind": "pair",
+      "a": "attention_e2",
+      "b": "attention_e3",
+      "disagreement": 0.23376623376623376,
+      "double_fault": 0.11742424242424243,
+      "oracle": NaN
+    },
+    {
+      "kind": "pair",
+      "a": "attention_e2",
+      "b": "inceptionv3_224",
+      "disagreement": 0.262987012987013,
+      "double_fault": 0.1185064935064935,
+      "oracle": NaN
+    },
+    {
+      "kind": "pair",
+      "a": "attention_e2",
+      "b": "efficientnetv2s_224",
+      "disagreement": 0.2532467532467532,
+      "double_fault": 0.10984848484848485,
+      "oracle": NaN
+    },
+    {
+      "kind": "pair",
+      "a": "attention_e2",
+      "b": "convnext_tiny_224",
+      "disagreement": 0.26136363636363635,
+      "double_fault": 0.10173160173160173,
+      "oracle": NaN
+    },
+    {
+      "kind": "pair",
+      "a": "attention_e2",
+      "b": "swin_tiny_224",
+      "disagreement": 0.237012987012987,
+      "double_fault": 0.10714285714285714,
+      "oracle": NaN
+    },
+    {
+      "kind": "pair",
+      "a": "attention_e2",
+      "b": "convnext_tiny_448",
+      "disagreement": 0.237012987012987,
+      "double_fault": 0.09199134199134198,
+      "oracle": NaN
+    },
+    {
+      "kind": "pair",
+      "a": "attention_e3",
+      "b": "inceptionv3_224",
+      "disagreement": 0.21807359307359309,
+      "double_fault": 0.09848484848484848,
+      "oracle": NaN
+    },
+    {
+      "kind": "pair",
+      "a": "attention_e3",
+      "b": "efficientnetv2s_224",
+      "disagreement": 0.19913419913419914,
+      "double_fault": 0.09632034632034632,
+      "oracle": NaN
+    },
+    {
+      "kind": "pair",
+      "a": "attention_e3",
+      "b": "convnext_tiny_224",
+      "disagreement": 0.19913419913419914,
+      "double_fault": 0.08874458874458875,
+      "oracle": NaN
+    },
+    {
+      "kind": "pair",
+      "a": "attention_e3",
+      "b": "swin_tiny_224",
+      "disagreement": 0.18831168831168832,
+      "double_fault": 0.08874458874458875,
+      "oracle": NaN
+    },
+    {
+      "kind": "pair",
+      "a": "attention_e3",
+      "b": "convnext_tiny_448",
+      "disagreement": 0.1774891774891775,
+      "double_fault": 0.08225108225108226,
+      "oracle": NaN
+    },
+    {
+      "kind": "pair",
+      "a": "inceptionv3_224",
+      "b": "efficientnetv2s_224",
+      "disagreement": 0.17424242424242425,
+      "double_fault": 0.12337662337662338,
+      "oracle": NaN
+    },
+    {
+      "kind": "pair",
+      "a": "inceptionv3_224",
+      "b": "convnext_tiny_224",
+      "disagreement": 0.18398268398268397,
+      "double_fault": 0.11147186147186147,
+      "oracle": NaN
+    },
+    {
+      "kind": "pair",
+      "a": "inceptionv3_224",
+      "b": "swin_tiny_224",
+      "disagreement": 0.1791125541125541,
+      "double_fault": 0.10930735930735931,
+      "oracle": NaN
+    },
+    {
+      "kind": "pair",
+      "a": "inceptionv3_224",
+      "b": "convnext_tiny_448",
+      "disagreement": 0.1791125541125541,
+      "double_fault": 0.09740259740259741,
+      "oracle": NaN
+    },
+    {
+      "kind": "pair",
+      "a": "efficientnetv2s_224",
+      "b": "convnext_tiny_224",
+      "disagreement": 0.16125541125541126,
+      "double_fault": 0.11255411255411256,
+      "oracle": NaN
+    },
+    {
+      "kind": "pair",
+      "a": "efficientnetv2s_224",
+      "b": "swin_tiny_224",
+      "disagreement": 0.15476190476190477,
+      "double_fault": 0.11093073593073594,
+      "oracle": NaN
+    },
+    {
+      "kind": "pair",
+      "a": "efficientnetv2s_224",
+      "b": "convnext_tiny_448",
+      "disagreement": 0.15800865800865802,
+      "double_fault": 0.09307359307359307,
+      "oracle": NaN
+    },
+    {
+      "kind": "pair",
+      "a": "convnext_tiny_224",
+      "b": "swin_tiny_224",
+      "disagreement": 0.15043290043290045,
+      "double_fault": 0.10443722943722944,
+      "oracle": NaN
+    },
+    {
+      "kind": "pair",
+      "a": "convnext_tiny_224",
+      "b": "convnext_tiny_448",
+      "disagreement": 0.15097402597402598,
+      "double_fault": 0.09199134199134198,
+      "oracle": NaN
+    },
+    {
+      "kind": "pair",
+      "a": "swin_tiny_224",
+      "b": "convnext_tiny_448",
+      "disagreement": 0.15151515151515152,
+      "double_fault": 0.0882034632034632,
+      "oracle": NaN
+    },
+    {
+      "kind": "committee",
+      "a": "row2_plain",
+      "b": "convnext_tiny_448+attention_e1",
+      "disagreement": 0.16125541125541126,
+      "double_fault": 0.07575757575757576,
+      "oracle": 0.9242424242424242
+    },
+    {
+      "kind": "committee",
+      "a": "row3_plain",
+      "b": "convnext_tiny_448+swin_tiny_224",
+      "disagreement": 0.15151515151515152,
+      "double_fault": 0.0882034632034632,
+      "oracle": 0.9117965367965368
+    }
+  ]
+}

@@ -1,0 +1,138 @@
+{
+  "selection_partition": "val",
+  "code_version": "5f5b2ff",
+  "selection_sha256": "c977748bdabfd09e09dacee4fabaa3756498aac5633016494099ae669909663b",
+  "tta_member": "convnext_tiny_448",
+  "committees": {
+    "row2_plain": {
+      "members": [
+        "convnext_tiny_448",
+        "attention_e1"
+      ],
+      "weights": [
+        1,
+        1
+      ],
+      "runs": {
+        "convnext_tiny_448": [
+          "stage5_convnext_tiny_session_448_lr0.0003_r1",
+          "stage5_convnext_tiny_session_448_lr0.0003_r2",
+          "stage5_convnext_tiny_session_448_lr0.0003_r3",
+          "stage5_convnext_tiny_session_448_lr0.0003_r4",
+          "stage5_convnext_tiny_session_448_lr0.0003_r5"
+        ],
+        "attention_e1": [
+          "stage7_session_attention_r1",
+          "stage7_session_attention_r2",
+          "stage7_session_attention_r3",
+          "stage7_session_attention_r4",
+          "stage7_session_attention_r5"
+        ]
+      }
+    },
+    "row3_plain": {
+      "members": [
+        "convnext_tiny_448",
+        "swin_tiny_224"
+      ],
+      "weights": [
+        1,
+        1
+      ],
+      "runs": {
+        "convnext_tiny_448": [
+          "stage5_convnext_tiny_session_448_lr0.0003_r1",
+          "stage5_convnext_tiny_session_448_lr0.0003_r2",
+          "stage5_convnext_tiny_session_448_lr0.0003_r3",
+          "stage5_convnext_tiny_session_448_lr0.0003_r4",
+          "stage5_convnext_tiny_session_448_lr0.0003_r5"
+        ],
+        "swin_tiny_224": [
+          "stage5_swin_tiny_session_224_lr0.0001_r1",
+          "stage5_swin_tiny_session_224_lr0.0001_r2",
+          "stage5_swin_tiny_session_224_lr0.0001_r3",
+          "stage5_swin_tiny_session_224_lr0.0001_r4",
+          "stage5_swin_tiny_session_224_lr0.0001_r5"
+        ]
+      }
+    },
+    "row3_weighted": {
+      "members": [
+        "convnext_tiny_448",
+        "swin_tiny_224"
+      ],
+      "weights": [
+        2,
+        1
+      ],
+      "runs": {
+        "convnext_tiny_448": [
+          "stage5_convnext_tiny_session_448_lr0.0003_r1",
+          "stage5_convnext_tiny_session_448_lr0.0003_r2",
+          "stage5_convnext_tiny_session_448_lr0.0003_r3",
+          "stage5_convnext_tiny_session_448_lr0.0003_r4",
+          "stage5_convnext_tiny_session_448_lr0.0003_r5"
+        ],
+        "swin_tiny_224": [
+          "stage5_swin_tiny_session_224_lr0.0001_r1",
+          "stage5_swin_tiny_session_224_lr0.0001_r2",
+          "stage5_swin_tiny_session_224_lr0.0001_r3",
+          "stage5_swin_tiny_session_224_lr0.0001_r4",
+          "stage5_swin_tiny_session_224_lr0.0001_r5"
+        ]
+      }
+    }
+  },
+  "runs": {},
+  "tested_members_test_sha256": {
+    "stage5_convnext_tiny_session_448_lr0.0003_r1": "66311c2087b4127b9d91f55ba62ecb82a23041faf26ec92e6fdc7b48e44f7467",
+    "stage5_convnext_tiny_session_448_lr0.0003_r2": "15ca5fcb9867624e212d5d0ef53ef532bea18925941960a9cf15d3b1f62d088d",
+    "stage5_convnext_tiny_session_448_lr0.0003_r3": "c23e0faacb73c98266b62da651581bea642f794d7f8cbba45fa14d0b7d34b72f",
+    "stage5_convnext_tiny_session_448_lr0.0003_r4": "281579c7d7a212220d69766c2ad992ca24f21e407e4a536ed4f4a9d430dadd87",
+    "stage5_convnext_tiny_session_448_lr0.0003_r5": "ec158d5055bd174a5389b777414d90a4a78ce07ebdf800b77535f2dc0757e1a0",
+    "stage5_swin_tiny_session_224_lr0.0001_r1": "6bdfef2ea4719aff792b7e2e269e889e5f585c6cf340fbd4eff8061c68771694",
+    "stage5_swin_tiny_session_224_lr0.0001_r2": "fb344410d6debf3f9b22686285e309d8279e222a42ff18326f76a44925d94917",
+    "stage5_swin_tiny_session_224_lr0.0001_r3": "2bd01fe0b26133d3a5ef01d425af85b705e674de82d6095037c4183109cf8cda",
+    "stage5_swin_tiny_session_224_lr0.0001_r4": "f98ab3fcd8810bc9c5290a97ec230e9ba5685fea5098a4520bf0ed836c8d5b43",
+    "stage5_swin_tiny_session_224_lr0.0001_r5": "78df86af2d8000864701b527270e0e90378e65ecf5af1d52dd34964ab5395099",
+    "stage7_session_attention_r1": "d081b8b29cc5b46bcc1a8073d8b6ff46a1caf40c6a5163b55eae72c29212ad9a",
+    "stage7_session_attention_r2": "0544e145896baccbe6a5c552172ae09b36e2d674462a68e7236741260a0c19ab",
+    "stage7_session_attention_r3": "a554ca473c0a3ab69a77081d2eec92168b6c889f5312f12f97343866fed1643a",
+    "stage7_session_attention_r4": "6d7952814a372a3f0606e97b81a32ecd9a2c9eddcdd91da4f511605592631e1d",
+    "stage7_session_attention_r5": "3c3bba1e9bb3f2389f51536ad6b2209527b742fce6447cbbbb56adf68c2f4d71"
+  },
+  "validation_sha256": {
+    "stage5_convnext_tiny_session_448_lr0.0003_r1": "1e207c45aed7a8584baa6174a41a8a6b422e8f6dbdfb8431fe8f3e556c49a01c",
+    "stage5_convnext_tiny_session_448_lr0.0003_r2": "ada2cd12c1ed2027d15e186825960f91c6f0f4f3dd97e8d0135229711d83dae6",
+    "stage5_convnext_tiny_session_448_lr0.0003_r3": "9a9003ed7633a3008b68d83b5e0387e82c9fa83423198eff254ddfd68b8c0f88",
+    "stage5_convnext_tiny_session_448_lr0.0003_r4": "503dcad76bf43339d0ba77fbf90420b7f73dfc7c0bbd4b4a17b922d00cea7f87",
+    "stage5_convnext_tiny_session_448_lr0.0003_r5": "e45b33beb6ae78b9c057509fcbfcb78f26f0cb843121fa01df486e0c11292fe0",
+    "stage5_swin_tiny_session_224_lr0.0001_r1": "8ae3736f8cb9fc3b432a188bbae72a32b9583539a68103cc5fe69cc4343fec31",
+    "stage5_swin_tiny_session_224_lr0.0001_r2": "1e48acb9de3994dae995ad5e972901d5eb771ff35a7e133023021bc16f1fe043",
+    "stage5_swin_tiny_session_224_lr0.0001_r3": "27bf024256c784a2d2893cf8fe06e692465b9dfb11e978c227ff2ac1a15b47e0",
+    "stage5_swin_tiny_session_224_lr0.0001_r4": "3bde960a951b0640c457b5b8ff62785b29129bf06c05efa65c6c02a52499e354",
+    "stage5_swin_tiny_session_224_lr0.0001_r5": "72bad3384c820bc5e04af56138ec2127ccb65566dea572cff49bc8c373429bc1",
+    "stage7_session_attention_r1": "d5fd13b619bd24ae0a9f047bbae79bb2c1a35581debc68ce0fc01dfeaf08f58f",
+    "stage7_session_attention_r2": "ffb046133f58b07344c7d69d2622ab464cb8d5226258480b4dfe395b9ec23b18",
+    "stage7_session_attention_r3": "fdd56d66491e042658deb47a9e8e9ca820fb4d5d231426245414708c8b298336",
+    "stage7_session_attention_r4": "e0317ffc4b9b1e71c29550876e3b9332ee2f6e64e763d41c20e6c8050a18df9e",
+    "stage7_session_attention_r5": "85e8e5c082caf121e1d5f85450197c2c6ef88b1e47c87e0c62e1014e1c265035"
+  },
+  "stage10_paddy_sha256": {
+    "stage5_convnext_tiny_session_448_lr0.0003_r1": "26911d922b87169b8884214071af232f81dcdf76c7532f073ce9e99bade06010",
+    "stage5_convnext_tiny_session_448_lr0.0003_r2": "6c50a14423a66d5789bf553207f28d68293ebb41425b1447e9db35bc935b24f4",
+    "stage5_convnext_tiny_session_448_lr0.0003_r3": "9c11aae15bf7468c6f6dbbbcf1aa2263437b14e890ba3b545cfc472fd500524f",
+    "stage5_convnext_tiny_session_448_lr0.0003_r4": "ab9d0560e15eba3f733898692f2afc968d7e014c3a1d3312cdf29f3e076ab4c0",
+    "stage5_convnext_tiny_session_448_lr0.0003_r5": "1138d8ab901d1831ece01e5503ab4dc5d38259d0c41f2b785c78cdb804fbdb53",
+    "stage7_session_attention_r1": "b16f564cd0a287901434ddc5d720b89ac611d9aaced3256e9eb95901738c0369",
+    "stage7_session_attention_r2": "b914d0272c2f675ca478150c20270d318c02aa66497693fbf6ffed1133866843",
+    "stage7_session_attention_r3": "2060a59de41e4104c83a1280070b8a86f39ae47c04739390fb7df118636dc787",
+    "stage7_session_attention_r4": "1b525e8bf3dd317ab3645b1943655f7c59b832c9574e771a3f4d14d8f9103ba3",
+    "stage7_session_attention_r5": "a5e0123c9746821d09c9878d41366f609cbfcdda57b8f2cfaa125369b26f7768",
+    "stage5_swin_tiny_session_224_lr0.0001_r1": "f1db029354d35b711e8e3ecf388e19df2b9aae9398a1cbe1be410ddf8ffd4994",
+    "stage5_swin_tiny_session_224_lr0.0001_r2": "d20bdd462ad3490aead083632453e02ef23065a3bf224b98842db2f5188356d9",
+    "stage5_swin_tiny_session_224_lr0.0001_r3": "bc0bd9df4d33932cc65c3a9314c0df028a1f396c1676fdf88e5982ef3d0371db",
+    "stage5_swin_tiny_session_224_lr0.0001_r4": "a086ae1a12cd51e7ae083f4ef7dac6ff8bdc427286262e6433b09624d1e1b6ad",
+    "stage5_swin_tiny_session_224_lr0.0001_r5": "7e425197d3b942e493c5e7a721c225f091d6219531c6902180d6e5e2406e04cc"
+  }
+}
