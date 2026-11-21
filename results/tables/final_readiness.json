@@ -24,6 +24,10 @@
       "status": "present",
       "stage": "Stage 5 paired test (branch stage5/paired-conditions)"
     },
+    "paired_committee": {
+      "status": "present",
+      "stage": "Stage 11 paired test (branch stage11/paired-committee-convnext)"
+    },
     "paired_locked": {
       "status": "present",
       "stage": "Stage 7 (locked split)"
@@ -298,13 +302,13 @@
       "id": "O7",
       "commitment": "Parameters, storage, inference latency; assess compressibility for on-device use",
       "delivered_by": "Stage 13",
-      "document_status": "\u2b1c",
+      "document_status": "\u2705 2026-11-21 (`docs/reports/cost_report.md`, `results/tables/cost_results.csv`, `cost_compression.csv`; compressibility: fewer tiles and distillation help, the 8-bit encoder fails, ONNX on the CPU 0.93 s per photo)",
       "status": "present",
       "missing": []
     }
   ],
   "present_counts": {
-    "tables": 14,
+    "tables": 15,
     "figures": 8,
     "dataset_reports": 3,
     "commitments": 19
