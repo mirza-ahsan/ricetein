@@ -52,24 +52,30 @@ def test_an_existing_cache_is_never_overwritten(folders):
         importer.check(folders[0], EXPECTED, folders[1])
 
 
-def test_a_paddy_cache_is_checked_against_the_paddy_spec_and_a_stage_6_cache_against_its_own(monkeypatch):
-    seen = []
-    monkeypatch.setattr(importer.paddy_embed, "description_caches", lambda c: {"paddy_e1_native": {"kind": "tiles"}})
-    monkeypatch.setattr(importer.paddy_embed, "cache_spec", lambda c, s: seen.append("paddy") or {"p": 1})
-    monkeypatch.setattr(importer.embed, "cache_spec", lambda c: seen.append("stage6") or {"s": 1})
-    assert importer.plan("paddy_e1_native")[0] == {"p": 1}
-    assert importer.plan("e2_convnext_tiny")[0] == {"s": 1}
-    assert seen == ["paddy", "stage6"]
+def test_the_spec_comes_from_the_paddy_config_for_a_paddy_cache_and_the_embed_config_for_a_stage_6_cache():
+    paddy = importer.load_config(importer.PADDY)
+    name, cache = next(iter(importer.paddy_embed.description_caches(paddy).items()))
+    assert importer.plan(name)[0] == importer.paddy_embed.cache_spec(paddy, cache)
+    config = importer.load_config("configs/embed/e3_dinov2_vitb14.yaml")
+    assert importer.plan("e3_dinov2_vitb14")[0] == importer.embed.cache_spec(config)
 
 
-def bring(monkeypatch, tmp_path, validate):
+def test_a_stage_6_config_that_describes_another_cache_is_refused(monkeypatch):
+    real = importer.load_config
+    monkeypatch.setattr(importer, "load_config", lambda path: real("configs/embed/e3_dinov2_vitb14.yaml") if "embed/" in path else real(path))
+    with pytest.raises(ValueError, match="describes the cache"):
+        importer.plan("e4_dinov3_vits16")
+
+
+def bring(monkeypatch, tmp_path, validate, spec_sha256="abc"):
     monkeypatch.setattr(importer, "REPO_ROOT", tmp_path)
     monkeypatch.setattr(importer, "cache_folder", lambda name, write=False: tmp_path / "cache" / name)
     monkeypatch.setattr(importer, "plan", lambda name: (EXPECTED, validate))
     source = tmp_path / "kaggle" / "outputs" / "k" / "cache" / "x"
     source.mkdir(parents=True)
     (source / "spec.json").write_text(json.dumps(EXPECTED))
-    (source / "complete.json").write_text(json.dumps({"spec_sha256": "abc"}))
+    (source / "complete.json").write_text(json.dumps({"spec_sha256": spec_sha256}))
+    (source / "photo.npz").write_bytes(b"data")
     return importer.bring_in("k", "x")
 
 
@@ -89,3 +95,18 @@ def test_a_cache_that_fails_validation_is_renamed_not_left_in_place(monkeypatch,
     with pytest.raises(ValueError, match="invalid descriptor arrays"):
         bring(monkeypatch, tmp_path, broken)
     assert not (tmp_path / "cache" / "x").exists() and (tmp_path / "cache" / "x_rejected1").exists()
+
+
+def test_a_manifest_that_does_not_match_the_validated_cache_is_rejected(monkeypatch, tmp_path):
+    with pytest.raises(ValueError, match="manifest from Kaggle does not match"):
+        bring(monkeypatch, tmp_path, lambda: {"spec_sha256": "other"})
+    assert (tmp_path / "cache" / "x_rejected" / "photo.npz").read_bytes() == b"data"      # kept, not deleted
+
+
+def test_an_interrupted_validation_does_not_leave_an_unchecked_cache_in_place(monkeypatch, tmp_path):
+    def interrupted():
+        raise KeyboardInterrupt
+
+    with pytest.raises(KeyboardInterrupt):
+        bring(monkeypatch, tmp_path, interrupted)
+    assert not (tmp_path / "cache" / "x").exists() and (tmp_path / "cache" / "x_rejected").exists()
