@@ -61,6 +61,8 @@ RATER_KINDS = ("model", "human")
 PADDY_CONFIG = "configs/paddy_zero_shot.yaml"
 PADDY_ZOOM = "native"  # the Stage 10 headline zoom; the only one used here
 PADDY_TOLERANCE = 1e-3  # no-removal probabilities must match the saved Stage 10 ones to this
+PREDICTION_FILES = {"val": "predictions.csv", "test": "test_predictions.csv"}  # an unknown partition raises
+ATTENTION_FILES = {"val": "attention_val.npz", "test": "attention.npz"}
 SEED_TAGS = {0: "", 1: "_s1", 2: "_s2"}  # model training seeds; only seed 0 was tested
 ROUNDS = (1, 2, 3, 4, 5)
 KS = (1, 2, 4, 8, 16)
@@ -345,17 +347,25 @@ def draw_heatmap(
 # ---------------------------------------------------------------- files of the runs
 
 
+def paddy_predictions(run: str) -> Path:
+    """The saved Stage 10 predictions of one run at the native zoom."""
+    return pz.paths(run, PADDY_ZOOM)[0]
+
+
 def read_run_predictions(partition: str) -> pd.DataFrame:
     """Seed-0 predictions of the five rounds on ``partition`` (Paddy: Stage 10 ones, native zoom)."""
-    name = {"test": "test_predictions.csv", "paddy": f"paddy_predictions_{PADDY_ZOOM}.csv"}.get(
-        partition, "predictions.csv"
-    )
     root = get_default_runs_dir()
-    return pd.concat([pd.read_csv(root / run_name(0, r) / name) for r in ROUNDS], ignore_index=True)
+    paths = [
+        paddy_predictions(run_name(0, r))
+        if partition == "paddy"
+        else root / run_name(0, r) / PREDICTION_FILES[partition]
+        for r in ROUNDS
+    ]
+    return pd.concat([pd.read_csv(path) for path in paths], ignore_index=True)
 
 
 def read_attention(run: str, partition: str) -> dict[str, np.ndarray]:
-    path = get_default_runs_dir() / run / ("attention.npz" if partition == "test" else "attention_val.npz")
+    path = get_default_runs_dir() / run / ATTENTION_FILES[partition]
     with np.load(path) as saved:
         return {key: saved[key] for key in saved.files}
 
@@ -442,7 +452,7 @@ class PaddyBags:
 def check_paddy_predictions(declaration: dict) -> None:
     """The saved Stage 10 predictions (they pick examples, check deletion) are the declared ones."""
     for name, saved in declaration["paddy"]["predictions_sha256"].items():
-        if digest(get_default_runs_dir() / name / f"paddy_predictions_{PADDY_ZOOM}.csv") != saved:
+        if digest(paddy_predictions(name)) != saved:
             raise ValueError(f"{name}: Paddy predictions changed after the declaration")
 
 
@@ -463,22 +473,19 @@ def paddy_run(name: str, declaration: dict, config: dict, device: torch.device, 
     return model, PaddyBags(config, parts, ids)
 
 
-@torch.inference_mode()
 def attention_of(model: MILModel, bags, device: torch.device) -> dict[str, np.ndarray]:
     """Attention weights over the real tiles of every photo of ``bags``."""
-    out = {}
-    for tiles, mask, _, rows in bags:
-        weights = model(tiles.to(device), mask.to(device))[1].cpu()
-        for i, row in enumerate(rows):
-            out[bags.photo_ids[row]] = weights[i, : int(mask[i].sum())].numpy()
-    return out
+    rows, _, weights = tm.predict(model, bags, device)
+    return {bags.photo_ids[row]: w for row, w in zip(rows, weights)}
+
+
+def compute_device() -> torch.device:
+    return torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
 def check_against_stage10(long: pd.DataFrame, name: str, classes: list[str]) -> None:
     """With nothing removed, each photo's true-class probability must be the one Stage 10 saved."""
-    saved = pd.read_csv(get_default_runs_dir() / name / f"paddy_predictions_{PADDY_ZOOM}.csv").set_index(
-        "photo_id"
-    )
+    saved = pd.read_csv(paddy_predictions(name)).set_index("photo_id")
     none = long[long["condition"] == "none"].set_index("photo_id")
     probs = saved.loc[none.index, [f"prob_{c}" for c in classes]].to_numpy()
     if not np.allclose(
@@ -526,14 +533,13 @@ def heatmaps(partition: str) -> None:
     examples = pd.read_csv(OUT / f"examples_{partition}.csv")
     photos = Photos(partition)
     if paddy:  # no saved attention for Paddy photos: the declared model is run on the chosen photos' bags
-        config, device, attention = (
-            paddy_setup(declaration),
-            torch.device("cuda" if torch.cuda.is_available() else "cpu"),
-            {},
-        )
-        for r, chosen in examples.groupby("round"):
-            model, bags = paddy_run(run_name(0, r), declaration, config, device, list(chosen["photo_id"]))
-            attention[r] = attention_of(model, bags, device)
+        config, device = paddy_setup(declaration), compute_device()
+        attention = {
+            r: attention_of(
+                *paddy_run(run_name(0, r), declaration, config, device, list(chosen["photo_id"])), device
+            )
+            for r, chosen in examples.groupby("round")
+        }
     else:
         attention = {r: read_attention(run_name(0, r), partition) for r in ROUNDS}
     for row in examples.itertuples():
@@ -617,10 +623,7 @@ def plan() -> None:
             "photos": manifest["photos"],
             "split_sha256": digest(REPO_ROOT / paddy_config["paddy"]["split_file"]),
             "bootstrap": "photo only: no capture blocks; a photo's gap is averaged over the five models",
-            "predictions_sha256": {
-                name: digest(root / name / f"paddy_predictions_{PADDY_ZOOM}.csv")
-                for name in runs_for("paddy")
-            },
+            "predictions_sha256": {name: digest(paddy_predictions(name)) for name in runs_for("paddy")},
         },
         "explain_sha256": digest(Path(__file__)),
         "test_runs": [n for n, v in runs.items() if v["tested"]],
@@ -677,8 +680,7 @@ def load_run(name: str, declaration: dict):
 def deletion(partition: str) -> None:
     declaration = start_marker(partition, "deletion")
     names = names_for(partition, declaration)
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    paddy = partition == "paddy"
+    device, paddy = compute_device(), partition == "paddy"
     paddy_config = paddy_setup(declaration) if paddy else None
     for name in names:
         scores_path, photos_path = (
@@ -727,14 +729,10 @@ def background(partition: str) -> None:
         OUT / ("background_fraction_paddy" if paddy else "background_fraction"),
     )
     if paddy:
-        device, paddy_config, attention = (
-            torch.device("cuda" if torch.cuda.is_available() else "cpu"),
-            paddy_setup(declaration),
-            {},
-        )
-        for name in names:
-            model, bags = paddy_run(name, declaration, paddy_config, device)
-            attention[name] = attention_of(model, bags, device)
+        paddy_config, device = paddy_setup(declaration), compute_device()
+        attention = {
+            name: attention_of(*paddy_run(name, declaration, paddy_config, device), device) for name in names
+        }
     else:
         attention = {name: read_attention(name, partition) for name in names}
     wanted = sorted({photo_id for weights in attention.values() for photo_id in weights})
@@ -803,7 +801,7 @@ def deletion_summary(
     random = scores[scores["condition"] == "random"].groupby(["run", "round", "k"]).mean(numeric_only=True)
     top = scores[scores["condition"] == "top"].set_index(["run", "round", "k"])
     full_f1 = scores[scores["condition"] == "none"]["macro_f1"].mean()
-    rows = []
+    rows, suffix = [], "" if blocks is not None else " (photo range only)"
     for k in sorted(top.index.get_level_values("k").unique()):
         t, rnd = top.xs(k, level="k"), random.xs(k, level="k")
         p = photos[photos["k"] == k]
@@ -819,19 +817,16 @@ def deletion_summary(
             p["true_class"].to_numpy(), settings["resamples"], settings["stratified"], 0
         )
         low, high = bootstrap_range(gap, photo_sets, settings["confidence"])
-        ranges = {"gap_low": low, "gap_high": high}
+        ranges, lows = {"gap_low": low, "gap_high": high}, [low]
         if blocks is not None:
             block_sets = followup_report.block_samples(
                 p["photo_id"].map(blocks).to_numpy(), settings["resamples"], 0
             )
             block_low, block_high = bootstrap_range(gap, block_sets, settings["confidence"])
             ranges |= {"gap_block_low": block_low, "gap_block_high": block_high}
+            lows.append(block_low)
         wins = int((rnd["p_true"] > t["p_true"]).sum())
-        better = (
-            ranges["gap_low"] > 0
-            and ranges.get("gap_block_low", 1) > 0
-            and wins >= comparison["min_round_wins"]
-        )
+        better = min(lows) > 0 and wins >= comparison["min_round_wins"]
         rows.append(
             {
                 "k": k,
@@ -845,8 +840,7 @@ def deletion_summary(
                 **ranges,
                 "round_wins": wins,
                 "rounds": len(t),
-                "verdict": ("top-k matters more than random-k" if better else "no clear difference")
-                + ("" if blocks is not None else " (photo range only)"),
+                "verdict": ("top-k matters more than random-k" if better else "no clear difference") + suffix,
             }
         )
     return pd.DataFrame(rows)
@@ -1029,12 +1023,16 @@ def rating_summary(ratings: pd.DataFrame, examples: pd.DataFrame) -> dict:
 def ratings_section() -> list[str]:
     title = "## Blind rating of the heat maps (Objective 6)"
     examples_path = OUT / "examples_val.csv"
-    if not RATINGS.exists() or not examples_path.exists() or RATINGS.read_text().count("\n") < 2:
+    ratings = pd.read_csv(RATINGS) if RATINGS.exists() else pd.DataFrame()
+    if ratings.empty or not examples_path.exists():
         return [title, "", "No ratings yet.", ""]
-    summary = rating_summary(pd.read_csv(RATINGS), pd.read_csv(examples_path))
+    summary = rating_summary(ratings, pd.read_csv(examples_path))
     TABLES.mkdir(parents=True, exist_ok=True)
     summary["shares"].reset_index().to_csv(TABLES / "explain_ratings.csv", index=False)
-    show = lambda table: md_table((table * 100).round(1).reset_index())  # noqa: E731
+
+    def show(table: pd.DataFrame) -> str:
+        return md_table((table * 100).round(1).reset_index())
+
     raters = ", ".join(f"`{name}` ({kind})" for name, kind in summary["raters"].items())
     return [
         title,

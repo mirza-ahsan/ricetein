@@ -297,7 +297,7 @@ def test_paint_puts_the_heat_on_the_attended_tile_and_grid_check_catches_a_wrong
 def test_test_photos_need_the_declaration_and_the_marker_never_restarts_under_another_plan(
     tmp_path, monkeypatch
 ):
-    monkeypatch.setattr(ex, "get_default_runs_dir", lambda: tmp_path)
+    use_runs_dir(monkeypatch, tmp_path)
     monkeypatch.setattr(ex, "require_clean_code", lambda: "abc123")
     with pytest.raises(RuntimeError, match="plan"):
         ex.start_marker("test", "deletion")
@@ -335,6 +335,12 @@ def test_example_list_survives_the_csv_round_trip_that_select_uses_to_check_itse
 # --------------------------------------------- Paddy Doctor extension (handbook §24, 2026-11-21)
 
 
+def use_runs_dir(monkeypatch, path):
+    """Point this module and the Stage 10 module (whose file names it reuses) at the runs folder ``path``."""
+    for module in (ex, ex.pz):
+        monkeypatch.setattr(module, "get_default_runs_dir", lambda: path)
+
+
 def paddy_runs(root):
     """The fifteen runs `plan` hashes; the five seed-0 ones also have test and saved Stage 10 predictions."""
     for name in ex.runs_for("val"):
@@ -351,7 +357,7 @@ def paddy_runs(root):
 
 
 def plan_with_paddy(tmp_path, monkeypatch):
-    monkeypatch.setattr(ex, "get_default_runs_dir", lambda: tmp_path)
+    use_runs_dir(monkeypatch, tmp_path)
     monkeypatch.setattr(ex, "require_clean_code", lambda: "abc123")
     monkeypatch.setattr(
         ex, "verify_paddy_cache", lambda config, name: {"spec_sha256": "f" * 64, "photos": 8086}
@@ -377,7 +383,7 @@ def test_plan_declares_the_paddy_extension_with_the_same_five_models(tmp_path, m
 def test_paddy_photos_need_a_plan_that_has_the_extension_and_their_own_run_once_markers(
     tmp_path, monkeypatch
 ):
-    monkeypatch.setattr(ex, "get_default_runs_dir", lambda: tmp_path)
+    use_runs_dir(monkeypatch, tmp_path)
     monkeypatch.setattr(ex, "require_clean_code", lambda: "abc123")
     with pytest.raises(RuntimeError, match="plan"):
         ex.start_marker("paddy", "deletion")
@@ -400,7 +406,7 @@ def test_paddy_photos_need_a_plan_that_has_the_extension_and_their_own_run_once_
 
 
 def test_paddy_examples_follow_the_rule_on_the_saved_stage_10_predictions_only(tmp_path, monkeypatch):
-    declaration = plan_with_paddy(tmp_path, monkeypatch)
+    plan_with_paddy(tmp_path, monkeypatch)
     monkeypatch.setattr(ex, "OUT", tmp_path / "explain")
     monkeypatch.setattr(ex, "RATINGS", tmp_path / "ratings.csv")
     for name in ex.runs_for("paddy"):  # test photos must not be needed: Paddy reads its own predictions only
@@ -417,11 +423,10 @@ def test_paddy_examples_follow_the_rule_on_the_saved_stage_10_predictions_only(t
     saved.write_text(saved.read_text() + "\n")  # a predictions file changed after the declaration
     with pytest.raises(ValueError, match="changed after the declaration"):
         ex.select("paddy")
-    assert declaration["paddy"]["predictions_sha256"]
 
 
 def test_paddy_select_is_refused_before_the_plan(tmp_path, monkeypatch):
-    monkeypatch.setattr(ex, "get_default_runs_dir", lambda: tmp_path)
+    use_runs_dir(monkeypatch, tmp_path)
     monkeypatch.setattr(ex, "OUT", tmp_path / "explain")
     with pytest.raises(RuntimeError, match="plan"):
         ex.select("paddy")
@@ -490,7 +495,7 @@ def test_paddy_bags_can_be_limited_to_chosen_photos_and_attention_matches_the_he
 
 
 def test_no_removal_probabilities_must_match_the_saved_stage_10_ones(tmp_path, monkeypatch):
-    monkeypatch.setattr(ex, "get_default_runs_dir", lambda: tmp_path)
+    use_runs_dir(monkeypatch, tmp_path)
     run = tmp_path / "r"
     run.mkdir()
     probs = np.array([[0.7, 0.1, 0.1, 0.1], [0.1, 0.6, 0.2, 0.1]])
@@ -520,19 +525,15 @@ def test_photo_only_verdict_averages_the_round_models_per_photo_and_needs_no_blo
     assert none["verdict"] == "no clear difference (photo range only)"
 
 
-def test_photo_only_range_resamples_photos_not_rows():
+def test_photo_only_range_resamples_photos_not_rows(monkeypatch):
     """Each round-model sees every photo; rows of one photo must stay together and be averaged first."""
     scores, photos, _ = synthetic_deletion([0.3] * 8, 5)
     photos = photos.assign(photo_id=photos["photo_id"].str.split("_").str[1])
     offset = photos["round"].map({1: 0.2, 2: -0.2, 3: 0.1, 4: -0.1, 5: 0.0})  # cancels in the photo mean
     photos = photos.assign(p_random=photos["p_random"] + offset)
-    sizes = []
-    real = ex.stats.resample_indices
-    ex.stats.resample_indices = lambda *a: sizes.append(len(a[0])) or real(*a)
-    try:
-        summary = ex.deletion_summary(scores, photos, None, SETTINGS, RULE).iloc[0]
-    finally:
-        ex.stats.resample_indices = real
+    sizes, real = [], ex.stats.resample_indices
+    monkeypatch.setattr(ex.stats, "resample_indices", lambda *a: sizes.append(len(a[0])) or real(*a))
+    summary = ex.deletion_summary(scores, photos, None, SETTINGS, RULE).iloc[0]
     assert sizes == [40] and abs(summary["gap_p_true"] - 0.3) < 0.02  # 40 photos, not 200 rows
 
 
@@ -542,7 +543,7 @@ class FakePhotos:
     tile = 224
 
     def __init__(self, partition="paddy"):
-        self.partition = partition
+        pass
 
     def rgb(self, photo_id):
         return np.random.default_rng(len(photo_id)).integers(0, 255, (1120, 896, 3), dtype=np.uint8)
@@ -568,8 +569,7 @@ def paddy_world(tmp_path, monkeypatch):
     }
     real = ex.load_config
     monkeypatch.setattr(ex, "load_config", lambda name: fake if name == ex.PADDY_CONFIG else real(name))
-    for module in (ex, ex.pz):
-        monkeypatch.setattr(module, "get_default_runs_dir", lambda: tmp_path)
+    use_runs_dir(monkeypatch, tmp_path)
     monkeypatch.setattr(ex, "require_clean_code", lambda: "abc123")
     monkeypatch.setattr(ex, "verify_paddy_cache", lambda config, name: {"spec_sha256": "f" * 64, "photos": 5})
     monkeypatch.setattr(ex, "Photos", FakePhotos)
@@ -701,7 +701,7 @@ def sheet(n=10):
     )
 
 
-def ratings_of(answers, kinds=None):
+def ratings_of(answers):
     rows = []
     for rater, given in answers.items():
         for i, answer in enumerate(given):
@@ -754,7 +754,8 @@ def test_rating_summary_gives_shares_agreement_and_checks_the_file():
 
 
 def test_report_reads_the_ratings_file(tmp_path, monkeypatch):
-    paddy_world(tmp_path, monkeypatch)
+    for name, path in (("OUT", "explain"), ("TABLES", "tables"), ("RATINGS", "ratings.csv")):
+        monkeypatch.setattr(ex, name, tmp_path / path)
     (tmp_path / "explain").mkdir()
     sheet().to_csv(tmp_path / "explain" / "examples_val.csv", index=False)
     assert ex.ratings_section()[2] == "No ratings yet."
