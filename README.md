@@ -40,7 +40,7 @@ All numbers are from the final tables in `results/tables/`, which are built from
 
 **Partition order** (`final_partition_order.csv`): augmenting the photos before splitting them raises pooled test macro-F1 by 17.2 points (EfficientNetV2-S) and 11.5 points (attention MIL) over the correct protocol. Split order matters.
 
-**Cost** (`final_cost.csv`; one machine, RTX 4060 and Ryzen 7 7700): the tile method needs about 79 encoder passes per photo. Attention MIL takes 0.31 s per photo on the GPU and 5.36 s on the CPU (328 MB on disk); ConvNeXt-T at 448 px takes 0.05 s and 0.12 s (106 MB).
+**Cost** (`final_cost.csv`; one machine, RTX 4060 and Ryzen 7 7700): the tile method needs about 79 encoder passes per photo. Attention MIL takes 0.31 s per photo on the GPU and 5.36 s on the CPU (328 MB on disk); ConvNeXt-T at 448 px takes 0.0472 s and 0.115 s (106 MB).
 
 ## Testing protocol
 
